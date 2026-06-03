@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global user registry (email-keyed)
+    match /users/{email} {
+      allow read, write: if request.auth != null && request.auth.token.email == email;
+
+      match /settings/{doc} {
+        allow read, write: if request.auth != null && request.auth.token.email == email;
+      }
+    }
+
+    // Multi-tenant trip data — strict isolation
+    match /trips/{tripId} {
+
+      // Helper: check membership
+      function isMember() {
+        return request.auth != null &&
+          exists(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email));
+      }
+
+      // Helper: check admin role
+      function isAdmin() {
+        return isMember() &&
+          get(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)).data.role == 'admin';
+      }
+
+      // Helper: check editor or admin
+      function canWrite() {
+        return isMember() &&
+          get(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)).data.role in ['admin', 'editor'];
+      }
+
+      // Trip profile — only members can read, only admins can write
+      match /profile/{doc} {
+        allow read: if isMember();
+        allow write: if isAdmin();
+      }
+
+      // Users subcollection — only admins manage membership
+      match /users/{userEmail} {
+        allow read: if isMember();
+        allow write: if isAdmin();
+      }
+
+      // Settings — admin only
+      match /settings/{doc} {
+        allow read: if isMember();
+        allow write: if isAdmin();
+      }
+
+      // Shared AI context — members can read, editors/admins write
+      match /ai_context/{doc} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+
+      // Operational collections — members read, editors/admins write
+      match /itinerary/{docId} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+
+      match /tasks/{docId} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+
+      match /task_categories/{docId} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+
+      match /expenses/{docId} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+
+      match /group_chat/{docId} {
+        // All members can post to group chat
+        allow read: if isMember();
+        allow create: if isMember() && request.resource.data.authorEmail == request.auth.token.email;
+        allow update, delete: if isAdmin();
+      }
+
+      match /documents/{docId} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+
+      match /locations/{docId} {
+        // Users can only write their own location
+        allow read: if isMember();
+        allow write: if isMember() && docId == request.auth.token.email;
+      }
+
+      match /journal/{docId} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+
+      match /packing/{docId} {
+        allow read: if isMember();
+        allow write: if canWrite();
+      }
+    }
+  }
+}
