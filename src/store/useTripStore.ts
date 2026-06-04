@@ -64,15 +64,23 @@ export type OfflineMutation = {
   timestamp: number;
 };
 
+export interface AvailableTrip {
+  id: string;
+  name: string;
+  destinations: string[];
+}
+
 interface TripState {
   currentTripId: string | null;
   tripProfile: TripProfile | null;
+  availableTrips: AvailableTrip[];
   days: ItineraryDay[];
   offlineQueue: OfflineMutation[];
   isOnline: boolean;
 
   setCurrentTrip: (tripId: string | null) => void;
   setTripProfile: (profile: TripProfile | null) => void;
+  setAvailableTrips: (trips: AvailableTrip[]) => void;
   setDays: (days: ItineraryDay[]) => void;
   enqueueOfflineMutation: (mutation: Omit<OfflineMutation, 'id' | 'timestamp'>) => void;
   dequeueOfflineMutation: (id: string) => void;
@@ -86,12 +94,14 @@ export const useTripStore = create<TripState>()(
     (set, get) => ({
       currentTripId: null,
       tripProfile: null,
+      availableTrips: [],
       days: [],
       offlineQueue: [],
       isOnline: navigator.onLine,
 
       setCurrentTrip: (tripId) => set({ currentTripId: tripId }),
       setTripProfile: (profile) => set({ tripProfile: profile }),
+      setAvailableTrips: (trips) => set({ availableTrips: trips }),
       setDays: (days) => set({ days }),
 
       enqueueOfflineMutation: (mutation) =>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { doc, setDoc, updateDoc, collection, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
@@ -53,6 +53,7 @@ export default function SettingsView() {
   const [saved, setSaved] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [addingUser, setAddingUser] = useState(false);
+  const [autoBackupInterval, setAutoBackupInterval] = useState('0');
 
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const isAdmin = appUser?.role === 'admin';
@@ -76,8 +77,13 @@ export default function SettingsView() {
         name: newUserEmail.trim().split('@')[0],
         role: 'viewer',
       });
+      if (tripProfile) {
+        await setDoc(doc(db, 'users', newUserEmail.trim()), {
+          trips: arrayUnion({ id: currentTripId, name: tripProfile.name, destinations: tripProfile.destinations })
+        }, { merge: true });
+      }
       setNewUserEmail('');
-      showToast({ type: 'success', message: 'User added as viewer.' });
+      showToast({ type: 'success', message: t('settings.userAdded') });
     } catch {
       showToast({ type: 'error', message: t('app.error') });
     } finally {
@@ -98,7 +104,19 @@ export default function SettingsView() {
     a.download = `travel-backup-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast({ type: 'success', message: 'Backup exported!' });
+    showToast({ type: 'success', message: t('settings.backupExported') });
+  };
+
+  const deleteCurrentTrip = async () => {
+    if (!currentTripId || !tripProfile) return;
+    if (!window.confirm(t('settings.confirmDeleteTrip', 'Are you sure you want to delete this trip? This action cannot be undone.'))) return;
+    try {
+      await deleteDoc(doc(db, 'trips', currentTripId, 'profile', 'main'));
+      useTripStore.getState().setCurrentTrip(null);
+      showToast({ type: 'success', message: t('settings.tripDeleted', 'Trip deleted successfully') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    }
   };
 
   return (
@@ -153,7 +171,7 @@ export default function SettingsView() {
                 {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-1">Stored in localStorage only — never sent to Firestore</p>
+            <p className="text-xs text-slate-400 mt-1">{t('settings.apiKeyHelp')}</p>
           </div>
         )}
 
@@ -272,7 +290,7 @@ export default function SettingsView() {
               {t('settings.addUser')}
             </button>
           </div>
-          <p className="text-xs text-slate-400">New users are added as viewers. Change roles in Firestore.</p>
+          <p className="text-xs text-slate-400">{t('settings.addUserHelp')}</p>
         </section>
       )}
 
@@ -301,8 +319,8 @@ export default function SettingsView() {
           <Download size={18} className="text-brand-500" />
           {t('settings.backup')}
         </h3>
-        <div className="flex gap-3">
-          <button id="btn-export-backup" onClick={exportBackup} className="btn-secondary flex items-center gap-2 flex-1">
+        <div className="flex gap-3 mt-4">
+          <button id="btn-export-backup" onClick={exportBackup} className="btn-secondary flex items-center gap-2 flex-1 justify-center">
             <Download size={16} /> {t('settings.exportBackup')}
           </button>
           <label className="btn-secondary flex items-center gap-2 flex-1 cursor-pointer justify-center">
@@ -314,16 +332,47 @@ export default function SettingsView() {
               reader.onload = ev => {
                 try {
                   const data = JSON.parse(ev.target?.result as string);
-                  showToast({ type: 'info', message: `Backup from ${data.exportedAt?.split('T')[0] ?? 'unknown date'} loaded.` });
+                  showToast({ type: 'info', message: t('settings.backupLoaded', { date: data.exportedAt?.split('T')[0] ?? 'unknown date' }) });
                 } catch {
-                  showToast({ type: 'error', message: 'Invalid backup file.' });
+                  showToast({ type: 'error', message: t('settings.backupError') });
                 }
               };
               reader.readAsText(f);
             }} />
           </label>
         </div>
+        
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('settings.autoBackup', 'Auto Backup Interval')}</label>
+            <p className="text-xs text-slate-400">{t('settings.autoBackupHelp', 'Automatic backup feature is coming soon')}</p>
+          </div>
+          <select 
+            value={autoBackupInterval}
+            onChange={e => setAutoBackupInterval(e.target.value)}
+            className="input-base text-sm py-1.5 w-32"
+          >
+            <option value="0">{t('settings.disabled', 'Disabled')}</option>
+            <option value="6">6 {t('settings.hours', 'Hours')}</option>
+            <option value="12">12 {t('settings.hours', 'Hours')}</option>
+            <option value="24">24 {t('settings.hours', 'Hours')}</option>
+          </select>
+        </div>
       </section>
+
+      {/* ── Danger Zone ─────────────────────────────────────────────────── */}
+      {isAdmin && currentTripId && (
+        <section className="card p-5 space-y-4 border border-red-100 dark:border-red-900/30">
+          <h3 className="font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+            <Trash2 size={18} />
+            {t('settings.dangerZone', 'Danger Zone')}
+          </h3>
+          <button onClick={deleteCurrentTrip} className="w-full py-2.5 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2">
+            <Trash2 size={16} />
+            {t('settings.deleteTrip', 'Delete Current Trip')}
+          </button>
+        </section>
+      )}
 
       {/* App version */}
       <p className="text-xs text-center text-slate-400 dark:text-slate-600 pb-2">

@@ -143,6 +143,6 @@ Return ONLY valid JSON matching this schema:
     return generatedDays;
   } catch (error) {
     console.error('Itinerary generation failed', error);
-    return [];
+    throw error;
   }
 }

@@ -26,7 +26,7 @@ interface Expense {
   createdAt: number;
 }
 
-const CATEGORIES = ['מסעדה', 'סופרמרקט', 'תחבורה', 'מתנות', 'ביגוד', 'אחר'];
+const CATEGORIES = ['food', 'supermarket', 'transportation', 'gifts', 'clothing', 'other'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'ISK', 'JPY', 'AUD', 'CAD', 'DKK', 'NOK', 'SEK'];
 
 // Simple hardcoded rates relative to USD (real app would use an exchange API)
@@ -54,7 +54,7 @@ export default function ExpensesView() {
   const [isScanning, setIsScanning] = useState(false);
   const [form, setForm] = useState({
     store: '', amount: '', currency: 'USD',
-    category: 'אחר', amountConverted: '', notes: '',
+    category: 'other', amountConverted: '', notes: '',
   });
   const fileRef = useRef<HTMLInputElement>(null!);
 
@@ -80,15 +80,15 @@ export default function ExpensesView() {
       reader.readAsDataURL(file);
       reader.onload = async () => {
         const base64 = (reader.result as string).split(',')[1];
-        const prompt = `Analyze this receipt image. Return ONLY valid JSON: {"store":"string","amount":number,"currency":"ISK or EUR or USD etc","category":"מסעדה|סופרמרקט|תחבורה|מתנות|ביגוד|אחר"}`;
+        const prompt = `Analyze this receipt image. Return ONLY valid JSON: {"store":"string","amount":number,"currency":"ISK or EUR or USD etc","category":"food|supermarket|transportation|gifts|clothing|other"}`;
         const text = await callAI(prompt, getProviderForTask('vision'), { isJson: true, base64Image: base64, mimeType: file.type });
-        const result = parseAIJson<{ store: string; amount: number; currency: string; category: string }>(text, { store: '', amount: 0, currency: 'USD', category: 'אחר' });
+        const result = parseAIJson<{ store: string; amount: number; currency: string; category: string }>(text, { store: '', amount: 0, currency: 'USD', category: 'other' });
         const converted = (toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1)).toFixed(2);
         setForm({
           store: result.store ?? '',
           amount: String(result.amount ?? ''),
           currency: result.currency ?? 'USD',
-          category: result.category ?? 'אחר',
+          category: result.category ?? 'other',
           amountConverted: converted,
           notes: '',
         });
@@ -132,8 +132,8 @@ export default function ExpensesView() {
       await addDoc(collection(db, 'trips', currentTripId, 'expenses'), payload);
     }
     setShowForm(false); setEditingId(null);
-    setForm({ store: '', amount: '', currency: 'USD', category: 'אחר', amountConverted: '', notes: '' });
-    showToast({ type: 'success', message: 'Expense saved!' });
+    setForm({ store: '', amount: '', currency: 'USD', category: 'other', amountConverted: '', notes: '' });
+    showToast({ type: 'success', message: t('expenses.expenseSaved') });
   };
 
   const totalUSD = expenses.reduce((acc, ex) => acc + toUSD(ex.amount, ex.currency), 0);
@@ -151,7 +151,7 @@ export default function ExpensesView() {
       {budget > 0 && (
         <div className="card p-4">
           <div className="flex justify-between text-sm mb-2">
-            <span className="font-medium text-slate-700 dark:text-slate-300">תקציב</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">{t('expenses.budget')}</span>
             <span className={`font-bold ${budgetPct > 90 ? 'text-red-500' : budgetPct > 70 ? 'text-amber-500' : 'text-green-600'}`}>
               {totalConverted.toFixed(0)} / {budget} {targetCurrency}
             </span>
@@ -162,7 +162,7 @@ export default function ExpensesView() {
               style={{ width: `${budgetPct}%` }}
             />
           </div>
-          <p className="text-xs text-slate-400 mt-1">{budgetPct.toFixed(0)}% used · ≈{(totalConverted / Math.max(expenses.length, 1)).toFixed(0)} {targetCurrency}/expense avg</p>
+          <p className="text-xs text-slate-400 mt-1">{budgetPct.toFixed(0)}% {t('expenses.used')} · ≈{(totalConverted / Math.max(expenses.length, 1)).toFixed(0)} {targetCurrency} {t('expenses.avgPerExpense')}</p>
         </div>
       )}
 
@@ -180,7 +180,7 @@ export default function ExpensesView() {
           </button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScan} />
           <button
-            onClick={() => { setForm({ store: '', amount: '', currency: 'USD', category: 'אחר', amountConverted: '', notes: '' }); setEditingId(null); setShowForm(true); }}
+            onClick={() => { setForm({ store: '', amount: '', currency: 'USD', category: 'other', amountConverted: '', notes: '' }); setEditingId(null); setShowForm(true); }}
             id="btn-add-expense"
             className="btn-secondary flex items-center gap-2 flex-1"
           >
@@ -202,7 +202,7 @@ export default function ExpensesView() {
               {CURRENCIES.map(c => <option key={c}>{c}</option>)}
             </select>
             <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="input-base">
-              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              {CATEGORIES.map(c => <option key={c} value={c}>{t(`expenses.categories.${c}`)}</option>)}
             </select>
             <input type="number" step="0.01" placeholder={`${t('expenses.convertedAmount')} (${targetCurrency})`} value={form.amountConverted} onChange={e => setForm({ ...form, amountConverted: e.target.value })} className="input-base" />
             <div className="col-span-2 sm:col-span-2 flex gap-2 items-center border border-slate-200 dark:border-slate-700 rounded-xl px-3 bg-white dark:bg-slate-800">
@@ -234,7 +234,7 @@ export default function ExpensesView() {
               {expenses.length === 0 ? (
                 <tr><td colSpan={5} className="p-8 text-center text-slate-400">
                   <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  No expenses yet
+                  {t('expenses.noExpenses')}
                 </td></tr>
               ) : (
                 expenses.map(ex => (
@@ -247,7 +247,7 @@ export default function ExpensesView() {
                       {(ex.amountConverted || 0).toFixed(2)} <span className="text-xs font-normal text-slate-400">{ex.targetCurrency}</span>
                     </td>
                     <td className="p-3">
-                      <span className="badge bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{ex.category}</span>
+                      <span className="badge bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{t(`expenses.categories.${ex.category}`)}</span>
                     </td>
                     {canWrite && (
                       <td className="p-3">

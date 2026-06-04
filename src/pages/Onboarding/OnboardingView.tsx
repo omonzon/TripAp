@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type TripProfile } from '@/store/useTripStore';
@@ -90,6 +90,11 @@ export default function OnboardingView() {
       // Save active trip ID to user settings
       await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), { activeTripId: tripId }, { merge: true });
 
+      // Add to user's trips list
+      await setDoc(doc(db, 'users', appUser.email), {
+        trips: arrayUnion({ id: tripId, name: profile.name, destinations: profile.destinations })
+      }, { merge: true });
+
       setTripProfile(profile);
       setCurrentTrip(tripId);
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
@@ -134,12 +139,12 @@ export default function OnboardingView() {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step1')}</h2>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.tripName')}</label>
-              <input id="trip-name" className="input-base" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Iceland Adventure 2025" />
+              <input id="trip-name" className="input-base" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('onboarding.tripNamePlaceholder')} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.destinations')}</label>
-              <input id="trip-destinations" className="input-base" value={form.destinations} onChange={(e) => setForm({ ...form, destinations: e.target.value })} placeholder="Reykjavik, Amsterdam, Paris" />
-              <p className="text-xs text-slate-400 mt-1">Separate multiple destinations with commas</p>
+              <input id="trip-destinations" className="input-base" value={form.destinations} onChange={(e) => setForm({ ...form, destinations: e.target.value })} placeholder={t('onboarding.destinationsPlaceholder')} />
+              <p className="text-xs text-slate-400 mt-1">{t('onboarding.destinationsHelp')}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -171,7 +176,7 @@ export default function OnboardingView() {
               </div>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              You can invite more participants from Settings after the trip is created.
+              {t('onboarding.step2Help')}
             </p>
           </div>
         )}
@@ -186,7 +191,7 @@ export default function OnboardingView() {
                 <input id="trip-budget" type="number" className="input-base" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="5000" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Currency</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.currency')}</label>
                 <select id="trip-currency" className="input-base" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
                   {['USD','EUR','GBP','ILS','ISK','JPY','AUD','CAD'].map((c) => <option key={c}>{c}</option>)}
                 </select>
@@ -212,7 +217,7 @@ export default function OnboardingView() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Preferences & interests</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.preferencesLabel')}</label>
               <textarea
                 id="trip-preferences"
                 className="input-base h-28 resize-none"
@@ -220,7 +225,7 @@ export default function OnboardingView() {
                 onChange={(e) => setForm({ ...form, preferences: e.target.value })}
                 placeholder={t('onboarding.preferences')}
               />
-              <p className="text-xs text-slate-400 mt-1">The AI will use this to personalize your itinerary</p>
+              <p className="text-xs text-slate-400 mt-1">{t('onboarding.preferencesHelp')}</p>
             </div>
           </div>
         )}
@@ -232,8 +237,7 @@ export default function OnboardingView() {
             <div className="card p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 flex gap-3">
               <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                <strong>Semantic AI extraction:</strong> Paste any booking confirmations, email text, or itinerary details.
-                The AI will extract flights, hotels, tours as <em>fixed constraints</em> that cannot be moved.
+                <strong>{t('onboarding.semanticHelp1')}</strong> {t('onboarding.semanticHelp2')}
               </p>
             </div>
             <textarea
@@ -247,7 +251,7 @@ export default function OnboardingView() {
             {constraintCount > 0 && (
               <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium">
                 <CheckCircle2 size={16} />
-                {t('onboarding.constraintsFound', { count: constraintCount })} locked to your itinerary
+                {t('onboarding.constraintsFound', { count: constraintCount })} {t('onboarding.lockedToItinerary')}
               </div>
             )}
           </div>
@@ -259,12 +263,12 @@ export default function OnboardingView() {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step5')}</h2>
             <div className="space-y-3">
               {[
-                { label: 'Trip Name', value: form.name || '—' },
-                { label: 'Destinations', value: form.destinations || '—' },
-                { label: 'Dates', value: form.startDate && form.endDate ? `${form.startDate} → ${form.endDate}` : '—' },
-                { label: 'Budget', value: form.budget ? `${form.budget} ${form.currency}` : '—' },
-                { label: 'Pace', value: form.pace },
-                { label: 'Fixed bookings', value: constraintCount > 0 ? `${constraintCount} detected` : 'None' },
+                { label: t('onboarding.tripName'), value: form.name || '—' },
+                { label: t('onboarding.destinations'), value: form.destinations || '—' },
+                { label: t('onboarding.dates'), value: form.startDate && form.endDate ? `${form.startDate} → ${form.endDate}` : '—' },
+                { label: t('onboarding.budget'), value: form.budget ? `${form.budget} ${form.currency}` : '—' },
+                { label: t('onboarding.pace'), value: t(`onboarding.${form.pace}`) },
+                { label: t('onboarding.fixedBookings'), value: constraintCount > 0 ? t('onboarding.constraintsFound', { count: constraintCount }) : t('onboarding.none') },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
                   <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
@@ -300,7 +304,7 @@ export default function OnboardingView() {
             {isExtracting ? (
               <><Loader2 size={16} className="animate-spin" /> {t('onboarding.analyzing')}</>
             ) : (
-              <><Sparkles size={16} /> Analyze & Continue</>
+              <><Sparkles size={16} /> {t('onboarding.analyzeContinue')}</>
             )}
           </button>
         )}
@@ -315,7 +319,7 @@ export default function OnboardingView() {
             {generating ? (
               <><Loader2 size={16} className="animate-spin" /> {t('onboarding.generating')}</>
             ) : (
-              <><Globe size={16} /> Create Trip</>
+              <><Globe size={16} /> {t('onboarding.createTrip')}</>
             )}
           </button>
         )}

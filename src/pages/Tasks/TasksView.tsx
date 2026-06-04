@@ -24,7 +24,7 @@ interface Task {
   reminderDate?: string;
 }
 
-const PRIORITIES = { low: { label: 'נמוך', color: 'text-slate-400 bg-slate-100 dark:bg-slate-700' }, medium: { label: 'בינוני', color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30' }, high: { label: 'גבוה', color: 'text-red-600 bg-red-50 dark:bg-red-900/30' } };
+const PRIORITIES = { low: { color: 'text-slate-400 bg-slate-100 dark:bg-slate-700' }, medium: { color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30' }, high: { color: 'text-red-600 bg-red-50 dark:bg-red-900/30' } };
 
 export default function TasksView() {
   const { t } = useTranslation();
@@ -58,7 +58,7 @@ export default function TasksView() {
       authorEmail: appUser.email, createdAt: Date.now(),
     });
     setNewTask('');
-    showToast({ type: 'success', message: 'Task added!' });
+    showToast({ type: 'success', message: t('tasks.taskAdded') });
   };
 
   const toggle = async (task: Task) => {
@@ -104,7 +104,7 @@ export default function TasksView() {
           <div className="flex gap-2 flex-wrap">
             {(['low', 'medium', 'high'] as Task['priority'][]).map(p => (
               <button key={p} onClick={() => setPriority(p)} className={`badge border-2 cursor-pointer transition-all ${priority === p ? 'border-brand-500' : 'border-transparent'} ${PRIORITIES[p].color}`}>
-                {PRIORITIES[p].label}
+                {t(`tasks.${p}`)}
               </button>
             ))}
           </div>
@@ -115,7 +115,7 @@ export default function TasksView() {
       <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
         {(['all', 'pending', 'done'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${filter === f ? 'bg-white dark:bg-slate-700 shadow-sm text-brand-700 dark:text-brand-300' : 'text-slate-500 dark:text-slate-400'}`}>
-            {f === 'all' ? 'הכל' : f === 'pending' ? t('tasks.pending') : t('tasks.completed')}
+            {f === 'all' ? t('tasks.all') : f === 'pending' ? t('tasks.pending') : t('tasks.completed')}
           </button>
         ))}
       </div>
@@ -134,7 +134,7 @@ export default function TasksView() {
                 {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
               </button>
               <p className={`flex-1 text-sm text-slate-800 dark:text-white ${task.completed ? 'line-through text-slate-400' : ''}`} dir="auto">{task.text}</p>
-              <span className={`badge text-[10px] ${PRIORITIES[task.priority]?.color}`}>{PRIORITIES[task.priority]?.label}</span>
+              <span className={`badge text-[10px] ${PRIORITIES[task.priority]?.color}`}>{t(`tasks.${task.priority}`)}</span>
               {canWrite && (
                 <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all">
                   <Trash2 size={14} />

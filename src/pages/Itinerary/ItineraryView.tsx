@@ -118,10 +118,10 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
         {[
-          { label: 'שעה', val: item.flightData?.time ?? '--:--' },
-          { label: 'סטטוס', val: item.flightData?.status ?? '-', highlight: true },
-          { label: 'טרמינל/שער', val: `${item.flightData?.terminal ? `T${item.flightData.terminal}/` : ''}${item.flightData?.gate ?? '-'}` },
-          { label: 'דלפק', val: item.flightData?.checkin ?? '-' },
+          { label: t('itinerary.flight.time'), val: item.flightData?.time ?? '--:--' },
+          { label: t('itinerary.flight.status'), val: item.flightData?.status ?? '-', highlight: true },
+          { label: t('itinerary.flight.terminalGate'), val: `${item.flightData?.terminal ? `T${item.flightData.terminal}/` : ''}${item.flightData?.gate ?? '-'}` },
+          { label: t('itinerary.flight.checkin'), val: item.flightData?.checkin ?? '-' },
         ].map(({ label, val, highlight }) => (
           <div key={label} className="bg-white dark:bg-slate-800 p-2 rounded shadow-sm text-center">
             <span className="block text-slate-400 mb-1">{label}</span>
@@ -252,7 +252,7 @@ export default function ItineraryView() {
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
         {canWrite && (
           <button onClick={handleAddDay} className="btn-secondary flex items-center gap-2 text-sm py-2">
-            <Plus size={15} /> יום חדש
+            <Plus size={15} /> {t('itinerary.newDay')}
           </button>
         )}
       </div>
@@ -308,13 +308,13 @@ export default function ItineraryView() {
                 className="btn-primary flex items-center gap-2 py-3 px-6 text-base font-bold bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 shadow-lg"
               >
                 <Sparkles size={20} className="text-yellow-300" /> 
-                Build Trip with AI Wizard
+                {t('itinerary.buildTripAI')}
               </button>
               <button 
                 onClick={handleAddDay} 
                 className="btn-secondary py-3 px-6 text-sm"
               >
-                Add Manual Day
+                {t('itinerary.addManualDay')}
               </button>
             </div>
           )}
