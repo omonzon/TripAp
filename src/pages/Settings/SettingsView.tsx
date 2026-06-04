@@ -4,7 +4,7 @@ import { doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion } fro
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
-  Trash2, Plus, Loader2,
+  Trash2, Plus, Loader2, Camera,
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -39,7 +39,7 @@ const TASK_LABELS: Record<TaskType, string> = {
 
 export default function SettingsView() {
   const { t } = useTranslation();
-  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage } = useAuthStore();
+  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, autoBackupInterval, setAutoBackupInterval } = useAuthStore();
   const { currentTripId, tripProfile } = useTripStore();
   const {
     providerType, apiKey, models, localUrl, localModelName,
@@ -53,7 +53,8 @@ export default function SettingsView() {
   const [saved, setSaved] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [addingUser, setAddingUser] = useState(false);
-  const [autoBackupInterval, setAutoBackupInterval] = useState('0');
+  const [newUserRole, setNewUserRole] = useState<'viewer' | 'editor' | 'admin'>('viewer');
+  const [newAlbumUrl, setNewAlbumUrl] = useState('');
 
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const isAdmin = appUser?.role === 'admin';
@@ -75,7 +76,7 @@ export default function SettingsView() {
       await setDoc(doc(db, 'trips', currentTripId, 'users', newUserEmail.trim()), {
         email: newUserEmail.trim(),
         name: newUserEmail.trim().split('@')[0],
-        role: 'viewer',
+        role: newUserRole,
       });
       if (tripProfile) {
         await setDoc(doc(db, 'users', newUserEmail.trim()), {
@@ -114,6 +115,32 @@ export default function SettingsView() {
       await deleteDoc(doc(db, 'trips', currentTripId, 'profile', 'main'));
       useTripStore.getState().setCurrentTrip(null);
       showToast({ type: 'success', message: t('settings.tripDeleted', 'Trip deleted successfully') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    }
+  };
+
+  const addAlbumUrl = async () => {
+    if (!newAlbumUrl.trim() || !currentTripId) return;
+    try {
+      const albums = tripProfile?.photoAlbums || [];
+      await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
+        photoAlbums: [...albums, newAlbumUrl.trim()]
+      });
+      setNewAlbumUrl('');
+      showToast({ type: 'success', message: t('settings.albumAdded', 'Album added!') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    }
+  };
+
+  const removeAlbumUrl = async (url: string) => {
+    if (!currentTripId) return;
+    try {
+      const albums = (tripProfile?.photoAlbums || []).filter(u => u !== url);
+      await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
+        photoAlbums: albums
+      });
     } catch {
       showToast({ type: 'error', message: t('app.error') });
     }
@@ -280,6 +307,15 @@ export default function SettingsView() {
               placeholder="user@email.com"
               className="input-base flex-1 text-sm"
             />
+            <select
+              value={newUserRole}
+              onChange={e => setNewUserRole(e.target.value as any)}
+              className="input-base text-sm w-28 shrink-0"
+            >
+              <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
+              <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
+              <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
+            </select>
             <button
               id="btn-add-user"
               onClick={addUser}
@@ -345,11 +381,11 @@ export default function SettingsView() {
         <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('settings.autoBackup', 'Auto Backup Interval')}</label>
-            <p className="text-xs text-slate-400">{t('settings.autoBackupHelp', 'Automatic backup feature is coming soon')}</p>
+            <p className="text-xs text-slate-400">{t('settings.autoBackupHelp', 'Backups are stored safely in cloud storage')}</p>
           </div>
           <select 
-            value={autoBackupInterval}
-            onChange={e => setAutoBackupInterval(e.target.value)}
+            value={autoBackupInterval.toString()}
+            onChange={e => setAutoBackupInterval(parseInt(e.target.value, 10))}
             className="input-base text-sm py-1.5 w-32"
           >
             <option value="0">{t('settings.disabled', 'Disabled')}</option>
@@ -359,6 +395,48 @@ export default function SettingsView() {
           </select>
         </div>
       </section>
+
+      {/* ── Trip Albums ─────────────────────────────────────────────────── */}
+      {currentTripId && tripProfile && (
+        <section className="card p-5 space-y-4">
+          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Camera size={18} className="text-brand-500" />
+            {t('settings.photoAlbums', 'Photo Albums (Links)')}
+          </h3>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={newAlbumUrl}
+              onChange={e => setNewAlbumUrl(e.target.value)}
+              placeholder="https://photos.app.goo.gl/..."
+              className="input-base flex-1 text-sm"
+              dir="ltr"
+            />
+            <button
+              onClick={addAlbumUrl}
+              disabled={!newAlbumUrl.trim()}
+              className="btn-primary flex items-center gap-2 shrink-0"
+            >
+              <Plus size={16} />
+              {t('app.add', 'Add')}
+            </button>
+          </div>
+          
+          <div className="space-y-2 mt-2">
+            {(tripProfile.photoAlbums || []).map((url, i) => (
+              <div key={i} className="flex justify-between items-center bg-slate-50 dark:bg-slate-900 p-2 rounded border border-slate-100 dark:border-slate-800">
+                <a href={url} target="_blank" rel="noreferrer" className="text-sm text-brand-600 dark:text-brand-400 hover:underline truncate mr-2" dir="ltr">{url}</a>
+                <button onClick={() => removeAlbumUrl(url)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {!(tripProfile.photoAlbums?.length) && (
+              <p className="text-xs text-slate-400">{t('settings.noAlbums', 'No photo albums added yet.')}</p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── Danger Zone ─────────────────────────────────────────────────── */}
       {isAdmin && currentTripId && (

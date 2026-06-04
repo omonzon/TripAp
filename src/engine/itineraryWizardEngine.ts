@@ -1,5 +1,6 @@
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile, ItineraryDay, ItineraryItem } from '@/store/useTripStore';
+import { useAIStore } from '@/store/useAIStore';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 
@@ -14,50 +15,7 @@ export interface WizardAnswers {
   transport: string;
 }
 
-const STAGE_PROMPTS: Record<WizardStage, string> = {
-  origin: 'Suggest 3 starting points (cities or airports) for this trip. Focus on ease of access.',
-  regions: 'Suggest 3 high-level route strategies or regions to focus on.',
-  sites: 'Suggest 5 must-see attractions or hidden gems that fit this profile.',
-  food: 'Suggest 3 culinary strategies or specific iconic restaurants/dishes.',
-  hotels: 'Suggest 3 accommodation strategies (e.g. boutique in center, resort, budget).',
-  transport: 'Suggest 3 transportation strategies (e.g. rent a car, bullet trains, domestic flights).',
-};
 
-export async function suggestWizardOptions(
-  stage: WizardStage,
-  profile: TripProfile,
-  previousAnswers: Partial<WizardAnswers>,
-  provider: AIProvider,
-  language: string = 'he'
-): Promise<string[]> {
-  const context = `
-Trip: ${profile.destinations.join(', ')}
-Pace: ${profile.pace}
-Budget: ${profile.budget} ${profile.currency}
-Preferences: ${profile.preferences}
-Previous choices: ${JSON.stringify(previousAnswers)}
-Language: ${language === 'he' ? 'Hebrew' : 'English'}
-  `;
-
-  const prompt = `You are a master travel agent. Based on the context, ${STAGE_PROMPTS[stage]}
-Return ONLY valid JSON matching this schema:
-{
-  "suggestions": ["Option 1", "Option 2", "Option 3"]
-}`;
-
-  try {
-    const result = await callAI(
-      [{ role: 'user', text: `${context}\n\n${prompt}` }],
-      provider,
-      { isJson: true, maxRetries: 2 }
-    );
-    const parsed = parseAIJson<{ suggestions: string[] }>(result, { suggestions: [] });
-    return parsed.suggestions || [];
-  } catch (error) {
-    console.error('AI suggestion failed', error);
-    return [];
-  }
-}
 
 export async function generateFinalItinerary(
   profile: TripProfile,
@@ -79,6 +37,7 @@ User's explicit choices:
 - Hotels: ${answers.hotels}
 - Transport: ${answers.transport}
 Language: ${language === 'he' ? 'Hebrew' : 'English'}
+${useAIStore.getState().getUnifiedContext()}
   `;
 
   // Calculate number of days

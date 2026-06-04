@@ -8,7 +8,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AIProvider } from '@/services/ai';
 import type { SemanticGraph } from '@/engine/semanticEngine';
-import { mergeGraphs } from '@/engine/semanticEngine';
+import { mergeGraphs, graphToContext } from '@/engine/semanticEngine';
+import { useTripStore } from '@/store/useTripStore';
 
 // Task types mapped to different models for cost/speed optimization
 export type TaskType = 'chat' | 'itinerary' | 'extraction' | 'vision' | 'translation';
@@ -50,6 +51,7 @@ interface AIState {
   setModel: (task: TaskType, model: string) => void;
   setLocalConfig: (url: string, modelName: string) => void;
   getProviderForTask: (task: TaskType) => AIProvider;
+  getUnifiedContext: () => string;
   updateTripGraph: (patch: SemanticGraph) => void;
   clearTripGraph: () => void;
   setExtracting: (val: boolean) => void;
@@ -88,6 +90,17 @@ export const useAIStore = create<AIState>()(
           return { type: 'ollama', model: localModelName, localUrl };
         }
         return { type: providerType, apiKey, model: models[task] };
+      },
+
+      getUnifiedContext: () => {
+        const { tripGraph } = get();
+        const profile = useTripStore.getState().tripProfile;
+        if (!profile) return '';
+        let ctx = `[Global Trip Context]\n- Name: ${profile.name}\n- Destinations: ${profile.destinations.join(', ')}\n- Dates: ${profile.startDate} to ${profile.endDate}\n- Pace: ${profile.pace}\n- Budget: ${profile.budget} ${profile.currency}\n- Preferences: ${profile.preferences}\n`;
+        if (tripGraph && tripGraph.nodes.length > 0) {
+           ctx += `\n[Semantic Memory / Constraints]\n${graphToContext(tripGraph)}\n`;
+        }
+        return ctx;
       },
 
       updateTripGraph: (patch) =>

@@ -17,6 +17,8 @@ interface AuthState {
   loginError: string | null;
   isDarkMode: boolean;
   language: 'en' | 'he' | 'fr' | 'de' | 'es' | 'nl' | 'is';
+  autoBackupInterval: number;
+  lastBackupTime: number;
 
   setFirebaseUser: (user: User | null) => void;
   setAppUser: (user: AppUser | null) => void;
@@ -24,6 +26,8 @@ interface AuthState {
   setLoginError: (err: string | null) => void;
   toggleDarkMode: () => void;
   setLanguage: (lang: AuthState['language']) => void;
+  setAutoBackupInterval: (hours: number) => void;
+  setLastBackupTime: (time: number) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -35,6 +39,8 @@ export const useAuthStore = create<AuthState>()(
       loginError: null,
       isDarkMode: true,
       language: 'he',
+      autoBackupInterval: 0,
+      lastBackupTime: 0,
 
       setFirebaseUser: (user) => set({ firebaseUser: user }),
       setAppUser: (user) => set({ appUser: user }),
@@ -49,6 +55,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setLanguage: (lang) => set({ language: lang }),
+      setAutoBackupInterval: (hours) => set({ autoBackupInterval: hours }),
+      setLastBackupTime: (time) => set({ lastBackupTime: time }),
     }),
     {
       name: 'auth-store',
@@ -56,6 +64,8 @@ export const useAuthStore = create<AuthState>()(
       partialize: (s) => ({
         isDarkMode: s.isDarkMode,
         language: s.language,
+        autoBackupInterval: s.autoBackupInterval,
+        lastBackupTime: s.lastBackupTime,
       }),
     },
   ),

@@ -11,23 +11,14 @@ import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
 
 export default function AIAssistantView() {
-  const { t } = useTranslation();
-  const { getProviderForTask, tripGraph } = useAIStore();
+  const { t, i18n } = useTranslation();
+  const { getProviderForTask, getUnifiedContext, tripGraph } = useAIStore();
   const { tripProfile } = useTripStore();
 
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  const systemInstruction = `You are an expert AI travel assistant for the trip: "${tripProfile?.name ?? 'this trip'}".
-Destinations: ${tripProfile?.destinations?.join(', ') ?? 'unknown'}.
-Dates: ${tripProfile?.startDate ?? '?'} to ${tripProfile?.endDate ?? '?'}.
-Preferences: ${tripProfile?.preferences ?? 'none specified'}.
-Reply in the same language the user writes in (Hebrew or English).
-Be helpful, concise, and specific to the trip context.
-
-${tripGraph ? `TRIP KNOWLEDGE GRAPH CONTEXT:\n${graphToContext(tripGraph)}` : ''}`;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,7 +33,13 @@ ${tripGraph ? `TRIP KNOWLEDGE GRAPH CONTEXT:\n${graphToContext(tripGraph)}` : ''
     setIsLoading(true);
     try {
       const history: AIMessage[] = [...messages, userMsg];
-      const reply = await callAI(history, getProviderForTask('chat'), { systemInstruction });
+      const language = i18n.language === 'he' ? 'Hebrew' : 'English';
+      const systemInstruction = `You are a helpful travel assistant for the trip. 
+${getUnifiedContext()}
+Answer questions based on the trip context. Keep responses concise and formatted in markdown.
+Reply in the following language: ${language}`;
+
+      const reply = await callAI(history, getProviderForTask('chat'), { systemInstruction, maxRetries: 1 });
       setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
     } catch (err: unknown) {
       const isRateLimit = err instanceof Error && err.message.includes('429');

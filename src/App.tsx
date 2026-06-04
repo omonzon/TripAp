@@ -11,6 +11,7 @@ import { AuthScreen } from '@/components/auth/AuthScreen';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { TabBar } from '@/components/layout/TabBar';
 import { Toast } from '@/components/ui/Toast';
+import { createFullBackup } from '@/services/backupService';
 import '@/i18n';
 
 // Lazy-load all heavy tab views
@@ -47,7 +48,7 @@ function PageLoader() {
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const { firebaseUser, appUser, authLoading, isDarkMode, language } = useAuthStore();
+  const { firebaseUser, appUser, authLoading, isDarkMode, language, autoBackupInterval, lastBackupTime, setLastBackupTime } = useAuthStore();
   const { currentTripId, isOnline, setOnline } = useTripStore();
   const [activeTab, setActiveTab] = React.useState<TabId>('itinerary');
 
@@ -72,6 +73,24 @@ export default function App() {
     window.addEventListener('offline', down);
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
   }, [setOnline]);
+
+  // Auto Backup worker
+  useEffect(() => {
+    if (!currentTripId || !appUser?.email || autoBackupInterval === 0 || !isOnline) return;
+
+    const checkAndBackup = async () => {
+      const now = Date.now();
+      const intervalMs = autoBackupInterval * 60 * 60 * 1000;
+      if (now - lastBackupTime >= intervalMs) {
+        await createFullBackup(currentTripId, appUser.email);
+        setLastBackupTime(now);
+      }
+    };
+
+    checkAndBackup();
+    const timer = setInterval(checkAndBackup, 15 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [currentTripId, appUser?.email, autoBackupInterval, lastBackupTime, isOnline, setLastBackupTime]);
 
   if (authLoading) {
     return (

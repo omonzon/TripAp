@@ -2,6 +2,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile } from '@/store/useTripStore';
+import { useAIStore } from '@/store/useAIStore';
 
 export interface GeneratedTask {
   text: string;
@@ -10,13 +11,22 @@ export interface GeneratedTask {
 }
 
 const TASK_GENERATION_PROMPT = `You are an expert travel planner AI. 
-Based on the provided trip profile, generate a list of 10-15 essential and highly relevant tasks that need to be done before or during the trip.
+Based on the provided trip profile and context, generate a comprehensive list of 15-20 essential tasks covering the entire trip lifecycle.
+
+Include smart suggestions based on the specific destination, pace, and preferences. 
+Specifically include items for:
+1. Pre-trip: Planning, bookings, documents.
+2. Packaging: Smart packing list tailored to this specific destination and weather/climate.
+3. During Trip: Things to do, logistical reminders, location-based tasks.
+4. Post-trip: Organizing photos, settling expenses, memory journaling.
 
 Group them into these specific categories (use exactly these strings):
+- תכנון לפני נסיעה (Pre-trip)
 - אריזה (Packaging)
-- הזמנות (Ordering/Bookings)
-- תכנון (Planning)
+- הזמנות (Bookings)
 - מסמכים (Documents)
+- במהלך הטיול (During Trip)
+- אחרי הטיול (Post-trip)
 - כללי (General)
 
 Assign a priority ('low', 'medium', 'high') to each task.
@@ -41,8 +51,8 @@ Trip Name: ${tripProfile.name}
 Destinations: ${tripProfile.destinations.join(', ')}
 Dates: ${tripProfile.startDate} to ${tripProfile.endDate}
 Pace: ${tripProfile.pace}
-Preferences: ${tripProfile.preferences}
-Language for tasks: ${language === 'he' ? 'Hebrew' : 'English'}
+Language: ${language === 'he' ? 'Hebrew' : 'English'}
+${useAIStore.getState().getUnifiedContext()}
 `;
 
     const result = await callAI(

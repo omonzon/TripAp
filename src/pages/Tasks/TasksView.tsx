@@ -5,11 +5,13 @@ import {
   doc, query, orderBy,
 } from 'firebase/firestore';
 import {
-  CheckSquare, Square, Trash2, Plus, Loader2, Bell,
+  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
+import { useAIStore } from '@/store/useAIStore';
+import { generateTripTasks } from '@/engine/taskGenerator';
 import { DictationButton } from '@/components/features/DictationButton';
 import { showToast } from '@/components/ui/Toast';
 
@@ -28,11 +30,13 @@ const PRIORITIES = { low: { color: 'text-slate-400 bg-slate-100 dark:bg-slate-70
 
 export default function TasksView() {
   const { t } = useTranslation();
-  const { appUser } = useAuthStore();
-  const { currentTripId } = useTripStore();
+  const { appUser, language } = useAuthStore();
+  const { currentTripId, tripProfile } = useTripStore();
+  const { getProviderForTask } = useAIStore();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generatingTasks, setGeneratingTasks] = useState(false);
   const [newTask, setNewTask] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [category, setCategory] = useState('כללי');
@@ -61,6 +65,19 @@ export default function TasksView() {
     showToast({ type: 'success', message: t('tasks.taskAdded') });
   };
 
+  const handleGenerateSmartTasks = async () => {
+    if (!currentTripId || !appUser || !tripProfile) return;
+    setGeneratingTasks(true);
+    try {
+      await generateTripTasks(tripProfile, getProviderForTask('chat'), language, appUser.email);
+      showToast({ type: 'success', message: t('tasks.smartTasksGenerated', 'Smart tasks generated!') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    } finally {
+      setGeneratingTasks(false);
+    }
+  };
+
   const toggle = async (task: Task) => {
     if (!currentTripId) return;
     await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { completed: !task.completed });
@@ -85,6 +102,13 @@ export default function TasksView() {
       {/* Add task */}
       {canWrite && (
         <div className="card p-4 space-y-3">
+          <div className="flex justify-between items-center mb-1">
+            <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('tasks.addManual', 'Add Task')}</h3>
+            <button onClick={handleGenerateSmartTasks} disabled={generatingTasks} className="btn-secondary text-xs py-1 px-3 flex items-center gap-1.5 transition-all">
+              {generatingTasks ? <Loader2 size={12} className="animate-spin text-brand-500" /> : <Sparkles size={12} className="text-amber-500" />}
+              {t('tasks.generateSmart', 'AI Smart Tasks')}
+            </button>
+          </div>
           <form onSubmit={addTask} className="flex gap-2">
             <div className="flex flex-1 gap-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 items-center">
               <input

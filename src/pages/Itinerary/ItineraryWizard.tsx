@@ -6,7 +6,6 @@ import { useAIStore } from '@/store/useAIStore';
 import {
   WizardStage,
   WizardAnswers,
-  suggestWizardOptions,
   generateFinalItinerary
 } from '@/engine/itineraryWizardEngine';
 import { doc, collection, writeBatch } from 'firebase/firestore';
@@ -32,9 +31,6 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
   const [answers, setAnswers] = useState<WizardAnswers>({
     origin: '', regions: '', sites: '', food: '', hotels: '', transport: ''
   });
-  
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -54,41 +50,13 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
   }, [currentStageIdx]);
 
   useEffect(() => {
-    if (!tripProfile) return;
-    let isMounted = true;
-    
-    const loadSuggestions = async () => {
-      setIsLoadingSuggestions(true);
-      setSuggestions([]);
-      const opts = await suggestWizardOptions(
-        currentStage.id, 
-        tripProfile, 
-        answers, 
-        getProviderForTask('itinerary'), 
-        i18n.language
-      );
-      if (isMounted) {
-        setSuggestions(opts);
-        setIsLoadingSuggestions(false);
+    if (categoriesContainerRef.current) {
+      const activeBtn = categoriesContainerRef.current.children[currentStageIdx] as HTMLElement;
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
-    };
-    
-    loadSuggestions();
-    
-    return () => { isMounted = false; };
-  }, [currentStageIdx, tripProfile, i18n.language]);
-
-  const handleSelect = (choice: string) => {
-    setAnswers(prev => {
-      const current = prev[currentStage.id];
-      if (current.includes(choice)) {
-        // Simple toggle off
-        const updated = current.replace(choice, '').replace(/^,\s*/, '').replace(/,\s*$/, '').replace(/,\s*,/g, ',');
-        return { ...prev, [currentStage.id]: updated.trim() };
-      }
-      return { ...prev, [currentStage.id]: current ? current + ', ' + choice : choice };
-    });
-  };
+    }
+  }, [currentStageIdx]);
 
   const handleBack = () => {
     if (currentStageIdx > 0) setCurrentStageIdx(prev => prev - 1);
@@ -177,33 +145,14 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
             <p className="text-slate-500 dark:text-slate-400 text-sm">{t('wizard.subtitle')}</p>
           </div>
 
-          <div className="space-y-3">
-            {isLoadingSuggestions ? (
-              <div className="flex flex-col items-center justify-center p-8 space-y-3 text-slate-400">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-                <p className="text-sm animate-pulse">{t('wizard.thinking')}</p>
-              </div>
-            ) : (
-              suggestions.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSelect(s)}
-                  className={`w-full text-start p-4 rounded-xl border-2 transition-all ${answers[currentStage.id].includes(s) ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30' : 'border-slate-200 dark:border-slate-700 hover:border-brand-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}
-                >
-                  <p className="text-sm text-slate-700 dark:text-slate-300">{s}</p>
-                </button>
-              ))
-            )}
-          </div>
-
-          <div className="pt-4 border-t dark:border-slate-700">
+          <div className="pt-4 dark:border-slate-700">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('wizard.manualInput')}</label>
             <textarea
               value={answers[currentStage.id]}
               onChange={e => setAnswers(prev => ({ ...prev, [currentStage.id]: e.target.value }))}
               placeholder={t('wizard.manualPlaceholder')}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-brand-500 focus:ring-2 focus:ring-brand-500 dark:text-white"
-              rows={3}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-brand-500 focus:ring-2 focus:ring-brand-500 dark:text-white min-h-[150px]"
+              rows={5}
             />
           </div>
         </div>

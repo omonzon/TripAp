@@ -18,6 +18,7 @@ export interface TripProfile {
   currency: string;
   pace: 'relaxed' | 'moderate' | 'intense';
   preferences: string; // free text → semantic extraction
+  photoAlbums?: string[];
   phase: TripPhase;
 }
 
