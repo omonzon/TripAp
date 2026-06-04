@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   onSnapshot, query, collection, doc,
@@ -152,6 +153,7 @@ export default function ItineraryView() {
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [dayToDelete, setDayToDelete] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const canWrite = appUser?.role === 'admin' || appUser?.role === 'editor';
@@ -161,7 +163,7 @@ export default function ItineraryView() {
     if (!currentTripId) return;
     const q = query(
       collection(db, 'trips', currentTripId, 'itinerary'),
-      orderBy('order', 'asc'),
+      orderBy('isoDate', 'asc'),
     );
     const unsub = onSnapshot(q, snap => {
       setDays(snap.docs.map(d => ({ docId: d.id, ...d.data() } as ItineraryDay)));
@@ -215,19 +217,44 @@ export default function ItineraryView() {
     }
   };
 
-  // ── Add empty day ─────────────────────────────────────────────────────────
   const handleAddDay = async () => {
     if (!currentTripId || !canWrite) return;
-    const order = (days[days.length - 1]?.order ?? 0) + 1;
+    
+    // Find the max isoDate or default to today
+    const maxIsoDate = days.length > 0 ? days[days.length - 1].isoDate : new Date().toISOString().split('T')[0];
+    const nextDate = new Date(maxIsoDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    
     const newDay = {
       id: `day_custom_${Date.now()}`,
       title: 'New Day',
-      date: new Date().toLocaleDateString(),
-      isoDate: new Date().toISOString().split('T')[0],
-      order,
+      date: nextDate.toLocaleDateString(),
+      isoDate: nextDate.toISOString().split('T')[0],
       items: [],
     };
     await addDoc(collection(db, 'trips', currentTripId, 'itinerary'), newDay);
+  };
+
+  const confirmDeleteDay = async () => {
+    if (!currentTripId || !canWrite || !dayToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'trips', currentTripId, 'itinerary', dayToDelete));
+      showToast({ type: 'success', message: t('app.deleted', 'Deleted successfully') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    } finally {
+      setDayToDelete(null);
+    }
+  };
+
+  const handleUpdateDayDate = async (dayDocId: string, newIsoDate: string) => {
+    if (!currentTripId || !canWrite) return;
+    const dateObj = new Date(newIsoDate);
+    if (isNaN(dateObj.getTime())) return;
+    await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), {
+      isoDate: newIsoDate,
+      date: dateObj.toLocaleDateString()
+    });
   };
 
   // ── Drag & drop ───────────────────────────────────────────────────────────
@@ -335,9 +362,25 @@ export default function ItineraryView() {
                   <Lock size={12} className="inline ms-2 text-brand-500" aria-label="Contains fixed bookings" />
                 )}
               </h3>
-              <span className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-medium">
-                {day.date}
-              </span>
+              <div className="flex items-center gap-2">
+                {canWrite ? (
+                  <input
+                    type="date"
+                    value={day.isoDate || ''}
+                    onChange={(e) => handleUpdateDayDate(day.docId, e.target.value)}
+                    className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 focus:outline-none focus:border-brand-500"
+                  />
+                ) : (
+                  <span className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-medium">
+                    {day.date}
+                  </span>
+                )}
+                {canWrite && (
+                  <button onClick={() => setDayToDelete(day.docId)} className="p-1.5 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-700 hover:bg-slate-100 rounded-lg transition-all" title={t('app.delete')}>
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Items */}
@@ -453,6 +496,28 @@ export default function ItineraryView() {
       )}
       
       {showWizard && <ItineraryWizard onClose={() => setShowWizard(false)} />}
+
+      {/* Delete Day Modal */}
+      {dayToDelete && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 dark:border-slate-800 text-center space-y-4">
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              {t('itinerary.confirmDeleteDay', 'Delete entire day?')}
+            </h3>
+            <p className="text-sm text-slate-500">
+              {t('app.cannotUndo', 'This action cannot be undone. All items inside this day will be lost.')}
+            </p>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setDayToDelete(null)} className="flex-1 btn-secondary py-2">{t('app.cancel', 'Cancel')}</button>
+              <button onClick={confirmDeleteDay} className="flex-1 btn-primary py-2 bg-red-500 hover:bg-red-600 border-red-500 shadow-red-500/20">{t('app.delete', 'Delete')}</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

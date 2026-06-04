@@ -9,6 +9,8 @@ import { useAIStore } from '@/store/useAIStore';
 import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
 import { generateTripTasks } from '@/engine/taskGenerator';
 import { showToast } from '@/components/ui/Toast';
+import { restoreTripFromFile } from '@/services/backupService';
+import { UploadCloud } from 'lucide-react';
 
 const STEPS = 5;
 
@@ -32,6 +34,7 @@ export default function OnboardingView() {
   });
   const [constraintCount, setConstraintCount] = useState(0);
   const [generating, setGenerating] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS));
   const back = () => setStep((s) => Math.max(s - 1, 1));
@@ -110,7 +113,35 @@ export default function OnboardingView() {
     }
   };
 
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !appUser) return;
+    
+    setRestoring(true);
+    try {
+      showToast({ type: 'info', message: 'Restoring trip...' });
+      const newTripId = await restoreTripFromFile(file, appUser.email, appUser.name);
+      showToast({ type: 'success', message: 'Trip restored successfully! 🎉' });
+      // The store is updated, and the user will be redirected.
+    } catch (err) {
+      showToast({ type: 'error', message: 'Failed to restore trip from file.' });
+    } finally {
+      setRestoring(false);
+      if (e.target) e.target.value = ''; // clear input
+    }
+  };
+
   const progress = ((step - 1) / (STEPS - 1)) * 100;
+
+  if (restoring) {
+    return (
+      <div className="max-w-2xl mx-auto flex flex-col items-center justify-center py-20 animate-fade-in">
+        <Loader2 className="w-12 h-12 text-brand-500 animate-spin mb-4" />
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Restoring your trip...</h2>
+        <p className="text-slate-500 mt-2">Please wait while we set everything up.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
@@ -324,6 +355,17 @@ export default function OnboardingView() {
           </button>
         )}
       </div>
+
+      {step === 1 && (
+        <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{t('onboarding.orRestore', 'Already have a trip backup file?')}</p>
+          <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700">
+            <UploadCloud size={16} />
+            {t('onboarding.restoreBtn', 'Restore Trip from File')}
+            <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
+          </label>
+        </div>
+      )}
     </div>
   );
 }

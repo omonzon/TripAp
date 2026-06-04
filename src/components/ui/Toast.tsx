@@ -8,6 +8,10 @@ export interface ToastMessage {
   type: ToastType;
   message: string;
   duration?: number;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 // Global toast state (simple pub/sub without adding another store)
@@ -63,9 +67,23 @@ export function Toast() {
           onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
         >
           {ICONS[toast.type]}
-          <p className="text-sm flex-1 text-slate-800 dark:text-slate-200 leading-snug">
-            {toast.message}
-          </p>
+          <div className="flex-1 flex flex-col gap-2">
+            <p className="text-sm text-slate-800 dark:text-slate-200 leading-snug">
+              {toast.message}
+            </p>
+            {toast.action && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.action!.onClick();
+                  setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+                }}
+                className="self-start text-xs font-bold px-3 py-1.5 rounded-lg bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 transition-colors border border-black/5 dark:border-white/5"
+              >
+                {toast.action.label}
+              </button>
+            )}
+          </div>
           <button aria-label="Dismiss" className="text-slate-400 hover:text-slate-600 shrink-0">
             <X size={14} />
           </button>

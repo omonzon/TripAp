@@ -19,6 +19,7 @@ interface AuthState {
   language: 'en' | 'he' | 'fr' | 'de' | 'es' | 'nl' | 'is';
   autoBackupInterval: number;
   lastBackupTime: number;
+  emailjsConfig?: { serviceId: string; templateId: string; publicKey: string };
 
   setFirebaseUser: (user: User | null) => void;
   setAppUser: (user: AppUser | null) => void;
@@ -28,6 +29,7 @@ interface AuthState {
   setLanguage: (lang: AuthState['language']) => void;
   setAutoBackupInterval: (hours: number) => void;
   setLastBackupTime: (time: number) => void;
+  setEmailjsConfig: (config: AuthState['emailjsConfig']) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
       language: 'he',
       autoBackupInterval: 0,
       lastBackupTime: 0,
+      emailjsConfig: undefined,
 
       setFirebaseUser: (user) => set({ firebaseUser: user }),
       setAppUser: (user) => set({ appUser: user }),
@@ -57,6 +60,7 @@ export const useAuthStore = create<AuthState>()(
       setLanguage: (lang) => set({ language: lang }),
       setAutoBackupInterval: (hours) => set({ autoBackupInterval: hours }),
       setLastBackupTime: (time) => set({ lastBackupTime: time }),
+      setEmailjsConfig: (config) => set({ emailjsConfig: config }),
     }),
     {
       name: 'auth-store',

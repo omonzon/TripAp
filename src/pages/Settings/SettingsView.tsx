@@ -4,17 +4,18 @@ import { doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion } fro
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
-  Trash2, Plus, Loader2, Camera,
+  Trash2, Plus, Loader2, Camera, Info, Mail
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
+import { exportTripToFile } from '@/services/backupService';
 import { TAB_DEFS } from '@/App';
 
 const PROVIDERS = [
-  { id: 'gemini', label: 'Google Gemini', models: ['gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-2.5-flash'] },
+  { id: 'gemini', label: 'Google Gemini', models: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'] },
   { id: 'openai', label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
   { id: 'anthropic', label: 'Anthropic Claude', models: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'] },
   { id: 'ollama', label: '🖥️ Ollama (Local)', models: ['gemma2', 'llama3', 'mistral', 'phi3', 'qwen2'] },
@@ -39,8 +40,8 @@ const TASK_LABELS: Record<TaskType, string> = {
 
 export default function SettingsView() {
   const { t } = useTranslation();
-  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, autoBackupInterval, setAutoBackupInterval } = useAuthStore();
-  const { currentTripId, tripProfile } = useTripStore();
+  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, autoBackupInterval, setAutoBackupInterval, emailjsConfig, setEmailjsConfig } = useAuthStore();
+  const { currentTripId, tripProfile, availableTrips, setTripProfile } = useTripStore();
   const {
     providerType, apiKey, models, localUrl, localModelName,
     setProvider, setApiKey, setModel, setLocalConfig,
@@ -55,6 +56,8 @@ export default function SettingsView() {
   const [addingUser, setAddingUser] = useState(false);
   const [newUserRole, setNewUserRole] = useState<'viewer' | 'editor' | 'admin'>('viewer');
   const [newAlbumUrl, setNewAlbumUrl] = useState('');
+  const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const isAdmin = appUser?.role === 'admin';
@@ -108,15 +111,44 @@ export default function SettingsView() {
     showToast({ type: 'success', message: t('settings.backupExported') });
   };
 
-  const deleteCurrentTrip = async () => {
-    if (!currentTripId || !tripProfile) return;
-    if (!window.confirm(t('settings.confirmDeleteTrip', 'Are you sure you want to delete this trip? This action cannot be undone.'))) return;
+  const handleExportTrip = async () => {
+    if (!currentTripId) return;
     try {
+      await exportTripToFile(currentTripId);
+      showToast({ type: 'success', message: t('settings.tripExported', 'Trip exported successfully') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error', 'An error occurred') });
+    }
+  };
+
+  const deleteCurrentTrip = async () => {
+    if (!currentTripId) {
+      showToast({ type: 'error', message: 'No active trip to delete' });
+      return;
+    }
+    if (!appUser) {
+      showToast({ type: 'error', message: 'User not found' });
+      return;
+    }
+
+    try {
+      showToast({ type: 'info', message: 'Deleting trip...' });
       await deleteDoc(doc(db, 'trips', currentTripId, 'profile', 'main'));
+      
+      const updatedTrips = availableTrips.filter(t => t.id !== currentTripId);
+      await updateDoc(doc(db, 'users', appUser.email), {
+        trips: updatedTrips
+      }).catch(e => console.warn('Failed to update users doc', e));
+      
+      await updateDoc(doc(db, 'users', appUser.email, 'settings', 'app'), {
+        activeTripId: null
+      }).catch(e => console.warn('Failed to update settings doc', e));
+
       useTripStore.getState().setCurrentTrip(null);
       showToast({ type: 'success', message: t('settings.tripDeleted', 'Trip deleted successfully') });
-    } catch {
-      showToast({ type: 'error', message: t('app.error') });
+    } catch (err: any) {
+      console.error('Delete trip error:', err);
+      showToast({ type: 'error', message: err.message || t('app.error') });
     }
   };
 
@@ -124,9 +156,13 @@ export default function SettingsView() {
     if (!newAlbumUrl.trim() || !currentTripId) return;
     try {
       const albums = tripProfile?.photoAlbums || [];
+      const newAlbums = [...albums, newAlbumUrl.trim()];
       await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
-        photoAlbums: [...albums, newAlbumUrl.trim()]
+        photoAlbums: newAlbums
       });
+      if (tripProfile) {
+        setTripProfile({ ...tripProfile, photoAlbums: newAlbums });
+      }
       setNewAlbumUrl('');
       showToast({ type: 'success', message: t('settings.albumAdded', 'Album added!') });
     } catch {
@@ -141,6 +177,9 @@ export default function SettingsView() {
       await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
         photoAlbums: albums
       });
+      if (tripProfile) {
+        setTripProfile({ ...tripProfile, photoAlbums: albums });
+      }
     } catch {
       showToast({ type: 'error', message: t('app.error') });
     }
@@ -396,6 +435,68 @@ export default function SettingsView() {
         </div>
       </section>
 
+      {/* ── Email Notification Settings ────────────────────────────────────────── */}
+      <section className="card p-5 space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Mail size={18} className="text-brand-500" />
+            {t('settings.emailService', 'Email Notifications Service (EmailJS)')}
+          </h3>
+          <button 
+            onClick={() => setShowEmailjsInfo(!showEmailjsInfo)}
+            className="text-slate-400 hover:text-brand-500 transition-colors p-1"
+          >
+            <Info size={18} />
+          </button>
+        </div>
+        
+        {showEmailjsInfo && (
+          <div className="bg-brand-50 dark:bg-brand-900/30 p-3 rounded-xl border border-brand-100 dark:border-brand-800/50 text-sm text-slate-700 dark:text-slate-300">
+            <p className="mb-2 font-medium">To enable automatic email reminders:</p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Sign up for free at <a href="https://www.emailjs.com/" target="_blank" rel="noreferrer" className="text-brand-600 underline">EmailJS.com</a></li>
+              <li>Add a new Email Service (e.g. Gmail) and note the <b>Service ID</b></li>
+              <li>Create an Email Template with variables <code className="bg-white dark:bg-black px-1 rounded">{"{{message}}"}</code> and note the <b>Template ID</b></li>
+              <li>Go to Account -> API Keys and note the <b>Public Key</b></li>
+            </ol>
+            <p className="mt-2 text-xs italic text-slate-500">If you don't configure this, reminders will only show as push notifications.</p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Service ID</label>
+            <input 
+              type="text" 
+              value={emailjsConfig?.serviceId || ''}
+              onChange={e => setEmailjsConfig({ ...emailjsConfig, serviceId: e.target.value } as any)}
+              className="input-base text-sm w-full"
+              placeholder="e.g., service_gmail123"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Template ID</label>
+            <input 
+              type="text" 
+              value={emailjsConfig?.templateId || ''}
+              onChange={e => setEmailjsConfig({ ...emailjsConfig, templateId: e.target.value } as any)}
+              className="input-base text-sm w-full"
+              placeholder="e.g., template_x7a2b"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Public Key</label>
+            <input 
+              type="text" 
+              value={emailjsConfig?.publicKey || ''}
+              onChange={e => setEmailjsConfig({ ...emailjsConfig, publicKey: e.target.value } as any)}
+              className="input-base text-sm w-full"
+              placeholder="e.g., xxxxxxxxxx_xxxxx"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* ── Trip Albums ─────────────────────────────────────────────────── */}
       {currentTripId && tripProfile && (
         <section className="card p-5 space-y-4">
@@ -440,16 +541,50 @@ export default function SettingsView() {
 
       {/* ── Danger Zone ─────────────────────────────────────────────────── */}
       {isAdmin && currentTripId && (
-        <section className="card p-5 space-y-4 border border-red-100 dark:border-red-900/30">
-          <h3 className="font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
-            <Trash2 size={18} />
-            {t('settings.dangerZone', 'Danger Zone')}
-          </h3>
-          <button onClick={deleteCurrentTrip} className="w-full py-2.5 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2">
-            <Trash2 size={16} />
-            {t('settings.deleteTrip', 'Delete Current Trip')}
-          </button>
-        </section>
+        <div className="card p-6 border-red-200 dark:border-red-900/30 mb-8">
+          <h2 className="text-lg font-bold text-red-500 mb-4 flex items-center justify-between">
+            {t('settings.dangerZone', 'Danger Zone')} <Trash2 size={20} />
+          </h2>
+          <div className="space-y-3">
+            <button 
+              onClick={() => exportTripToFile(currentTripId)} 
+              className="w-full btn-secondary flex items-center justify-center gap-2 mb-2"
+            >
+              {t('settings.exportTrip', 'Export Trip to Backup File')}
+            </button>
+            {!showDeleteConfirm ? (
+              <button 
+                onClick={() => setShowDeleteConfirm(true)} 
+                className="w-full btn-secondary text-red-500 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 flex items-center justify-center gap-2"
+              >
+                {t('settings.deleteTrip', 'Delete Current Trip')} <Trash2 size={16} />
+              </button>
+            ) : (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center animate-fade-in">
+                <p className="text-sm text-red-600 dark:text-red-400 font-bold mb-3">
+                  {t('settings.confirmDeleteTrip', 'Are you sure you want to delete this trip? This action cannot be undone.')}
+                </p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  >
+                    {t('app.cancel', 'Cancel')}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      deleteCurrentTrip();
+                    }}
+                    className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium"
+                  >
+                    {t('app.confirm', 'Yes, Delete')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* App version */}

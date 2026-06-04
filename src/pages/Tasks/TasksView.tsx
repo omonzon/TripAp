@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   onSnapshot, collection, addDoc, updateDoc, deleteDoc,
   doc, query, orderBy,
 } from 'firebase/firestore';
 import {
-  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles
+  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -24,13 +25,75 @@ interface Task {
   authorEmail: string;
   createdAt: number;
   reminderDate?: string;
+  reminderLocation?: { lat: number; lng: number; name: string };
+  reminderSent?: boolean;
 }
 
 const PRIORITIES = { low: { color: 'text-slate-400 bg-slate-100 dark:bg-slate-700' }, medium: { color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30' }, high: { color: 'text-red-600 bg-red-50 dark:bg-red-900/30' } };
 
+function AddressAutocomplete({ onSelect }: { onSelect: (lat: string, lng: string) => void }) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  useEffect(() => {
+    if (query.length < 3) {
+      setResults([]);
+      return;
+    }
+    const delay = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`);
+        const data = await res.json();
+        setResults(data);
+        setShowDropdown(true);
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    }, 600);
+    return () => clearTimeout(delay);
+  }, [query]);
+
+  return (
+    <div className="relative mt-3">
+      <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.searchLocation', 'Search Address / Location')}</label>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); }}
+        placeholder={t('tasks.searchPlaceholder', 'e.g. Eiffel Tower')}
+        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
+      />
+      {loading && <div className="absolute right-3 top-8 text-slate-400 text-xs">...</div>}
+      {showDropdown && results.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+          {results.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                setQuery(r.display_name);
+                onSelect(r.lat, r.lon);
+                setShowDropdown(false);
+              }}
+              className="w-full text-start px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-0 truncate"
+              title={r.display_name}
+            >
+              {r.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TasksView() {
   const { t } = useTranslation();
-  const { appUser, language } = useAuthStore();
+  const { appUser, emailjsConfig, language } = useAuthStore();
   const { currentTripId, tripProfile } = useTripStore();
   const { getProviderForTask } = useAIStore();
 
@@ -41,18 +104,86 @@ export default function TasksView() {
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [category, setCategory] = useState('כללי');
   const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
+  const [reminderTask, setReminderTask] = useState<Task | null>(null);
+  const [reminderDateStr, setReminderDateStr] = useState('');
+  const [reminderLat, setReminderLat] = useState('');
+  const [reminderLng, setReminderLng] = useState('');
 
   const canWrite = appUser?.role === 'admin' || appUser?.role === 'editor';
 
   useEffect(() => {
     if (!currentTripId) return;
-    const q = query(collection(db, 'trips', currentTripId, 'tasks'), orderBy('createdAt', 'asc'));
+    const q = query(collection(db, 'trips', currentTripId, 'tasks'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, snap => {
       setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() } as Task)));
       setLoading(false);
     });
     return () => unsub();
   }, [currentTripId]);
+
+  const triggerReminder = async (task: Task) => {
+    showToast({ type: 'success', message: `⏰ Reminder: ${task.text}` });
+    
+    // Desktop/Mobile Push Notification
+    if (Notification.permission === 'granted') {
+      new Notification('TravelPlatform Reminder', { body: task.text });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') new Notification('TravelPlatform Reminder', { body: task.text });
+      });
+    }
+
+    // EmailJS (if configured)
+    if (emailjsConfig?.serviceId && emailjsConfig?.templateId && emailjsConfig?.publicKey) {
+      try {
+        await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: emailjsConfig.serviceId,
+            template_id: emailjsConfig.templateId,
+            user_id: emailjsConfig.publicKey,
+            template_params: {
+              message: task.text,
+              to_email: appUser?.email
+            }
+          })
+        });
+      } catch (err) {
+        console.error('Failed to send email reminder', err);
+      }
+    }
+
+    if (currentTripId) {
+      await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { reminderSent: true });
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      tasks.forEach(task => {
+        if (!task.completed && task.reminderDate && !task.reminderSent) {
+          const reminderTime = new Date(task.reminderDate).getTime();
+          if (now >= reminderTime) {
+            if (task.reminderLocation) {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                  const latDiff = pos.coords.latitude - task.reminderLocation!.lat;
+                  const lngDiff = pos.coords.longitude - task.reminderLocation!.lng;
+                  const dist = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+                  if (dist < 0.05) triggerReminder(task); // roughly 5km
+                });
+              }
+            } else {
+              triggerReminder(task);
+            }
+          }
+        }
+      });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [tasks, currentTripId]);
 
   const addTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,12 +209,40 @@ export default function TasksView() {
     }
   };
 
+  const saveReminder = async () => {
+    if (!reminderTask || !currentTripId) return;
+    try {
+      const loc = reminderLat && reminderLng ? { lat: parseFloat(reminderLat), lng: parseFloat(reminderLng), name: 'Location' } : null;
+      await updateDoc(doc(db, 'trips', currentTripId, 'tasks', reminderTask.id), {
+        reminderDate: reminderDateStr || null,
+        reminderLocation: loc,
+        reminderSent: false
+      });
+      setReminderTask(null);
+      showToast({ type: 'success', message: t('tasks.reminderSaved', 'Reminder saved') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    }
+  };
+
   const toggle = async (task: Task) => {
     if (!currentTripId) return;
     await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { completed: !task.completed });
   };
 
-  const filtered = tasks.filter(t => filter === 'all' || (filter === 'pending' && !t.completed) || (filter === 'done' && t.completed));
+  const priorityWeight = { high: 3, medium: 2, low: 1 };
+  const filtered = tasks
+    .filter(t => filter === 'all' || (filter === 'pending' && !t.completed) || (filter === 'done' && t.completed))
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      if (a.priority !== b.priority) return priorityWeight[b.priority] - priorityWeight[a.priority];
+      if (a.reminderDate && !b.reminderDate) return -1;
+      if (!a.reminderDate && b.reminderDate) return 1;
+      if (a.reminderDate && b.reminderDate) {
+        return new Date(a.reminderDate).getTime() - new Date(b.reminderDate).getTime();
+      }
+      return 0;
+    });
   const pending = tasks.filter(t => !t.completed).length;
   const done = tasks.filter(t => t.completed).length;
 
@@ -160,14 +319,67 @@ export default function TasksView() {
               <p className={`flex-1 text-sm text-slate-800 dark:text-white ${task.completed ? 'line-through text-slate-400' : ''}`} dir="auto">{task.text}</p>
               <span className={`badge text-[10px] ${PRIORITIES[task.priority]?.color}`}>{t(`tasks.${task.priority}`)}</span>
               {canWrite && (
-                <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all">
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => {
+                    setReminderDateStr(task.reminderDate || '');
+                    setReminderLat(task.reminderLocation?.lat.toString() || '');
+                    setReminderLng(task.reminderLocation?.lng.toString() || '');
+                    setReminderTask(task);
+                  }} className={`p-1.5 rounded-lg transition-all ${task.reminderDate || task.reminderLocation ? 'text-amber-500 hover:text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100'}`}>
+                    <Bell size={14} />
+                  </button>
+                  <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all hover:bg-slate-100">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               )}
             </div>
           ))
         )}
       </div>
+
+      {reminderTask && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 dark:border-slate-800">
+            <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
+              {t('tasks.setReminder', 'Set Reminder')}
+            </h3>
+            <p className="text-sm text-slate-500 mb-4 truncate" dir="auto">{reminderTask.text}</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.reminderTime', 'Date & Time')}</label>
+                <input 
+                  type="datetime-local" 
+                  value={reminderDateStr}
+                  onChange={(e) => setReminderDateStr(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <AddressAutocomplete onSelect={(lat, lng) => {
+                setReminderLat(lat);
+                setReminderLng(lng);
+              }} />
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.lat', 'Latitude')}</label>
+                  <input type="number" placeholder="64.14" value={reminderLat} onChange={e => setReminderLat(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.lng', 'Longitude')}</label>
+                  <input type="number" placeholder="-21.94" value={reminderLng} onChange={e => setReminderLng(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none" />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setReminderTask(null)} className="flex-1 btn-secondary py-2">{t('app.cancel', 'Cancel')}</button>
+              <button onClick={saveReminder} className="flex-1 btn-primary py-2">{t('app.save', 'Save')}</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

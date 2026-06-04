@@ -23,29 +23,37 @@ export interface ModelConfig {
 }
 
 const DEFAULT_GEMINI_MODELS: ModelConfig = {
-  chat: 'gemini-2.0-flash',
-  itinerary: 'gemini-2.5-pro',
-  extraction: 'gemini-2.5-pro',
-  vision: 'gemini-2.0-flash',
-  translation: 'gemini-2.0-flash',
+  chat: 'gemini-1.5-flash',
+  itinerary: 'gemini-1.5-pro',
+  extraction: 'gemini-1.5-pro',
+  vision: 'gemini-1.5-flash',
+  translation: 'gemini-1.5-flash',
 };
 
+export interface ChatSession {
+  id: string;
+  tripId: string;
+  title: string;
+  messages: AIMessage[];
+  updatedAt: number;
+  isPrivate?: boolean;
+}
+
+
 interface AIState {
-  // Provider config (stored locally, never in Firestore)
   providerType: AIProvider['type'];
   apiKey: string;
   models: ModelConfig;
   localUrl: string;
   localModelName: string;
 
-  // Shared semantic knowledge graph (trip context)
   tripGraph: SemanticGraph | null;
-
-  // Loading states
+  
+  privateChatSessions: Record<string, ChatSession>;
+  
   isExtracting: boolean;
   lastError: string | null;
 
-  // Actions
   setProvider: (type: AIProvider['type']) => void;
   setApiKey: (key: string) => void;
   setModel: (task: TaskType, model: string) => void;
@@ -54,8 +62,15 @@ interface AIState {
   getUnifiedContext: () => string;
   updateTripGraph: (patch: SemanticGraph) => void;
   clearTripGraph: () => void;
+  
+  createPrivateSession: (tripId: string, title?: string) => string;
+  deletePrivateSession: (id: string) => void;
+  updatePrivateSessionTitle: (id: string, title: string) => void;
+  addMessageToPrivateSession: (id: string, message: AIMessage) => void;
+
   setExtracting: (val: boolean) => void;
   setError: (err: string | null) => void;
+  fallbackAllModelsToFast: () => void;
 }
 
 const EMPTY_GRAPH: SemanticGraph = {
@@ -74,6 +89,7 @@ export const useAIStore = create<AIState>()(
       localUrl: 'http://127.0.0.1:11434/api/generate',
       localModelName: 'gemma2',
       tripGraph: null,
+      privateChatSessions: {},
       isExtracting: false,
       lastError: null,
 
@@ -109,8 +125,57 @@ export const useAIStore = create<AIState>()(
         })),
 
       clearTripGraph: () => set({ tripGraph: { ...EMPTY_GRAPH, extractedAt: new Date().toISOString() } }),
+      
+      createPrivateSession: (tripId, title = 'New Private Chat') => {
+        const id = `priv-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        set((s) => ({
+          privateChatSessions: {
+            ...s.privateChatSessions,
+            [id]: { id, tripId, title, messages: [], updatedAt: Date.now(), isPrivate: true },
+          }
+        }));
+        return id;
+      },
+      deletePrivateSession: (id) =>
+        set((s) => {
+          const newSessions = { ...s.privateChatSessions };
+          delete newSessions[id];
+          return { privateChatSessions: newSessions };
+        }),
+      updatePrivateSessionTitle: (id, title) =>
+        set((s) => ({
+          privateChatSessions: {
+            ...s.privateChatSessions,
+            [id]: { ...s.privateChatSessions[id], title, updatedAt: Date.now() },
+          },
+        })),
+      addMessageToPrivateSession: (id, message) =>
+        set((s) => {
+          const session = s.privateChatSessions[id];
+          if (!session) return s;
+          return {
+            privateChatSessions: {
+              ...s.privateChatSessions,
+              [id]: {
+                ...session,
+                messages: [...session.messages, message],
+                updatedAt: Date.now(),
+              },
+            },
+          };
+        }),
+
       setExtracting: (val) => set({ isExtracting: val }),
       setError: (err) => set({ lastError: err }),
+      fallbackAllModelsToFast: () => set({
+        models: {
+          chat: 'gemini-1.5-flash',
+          itinerary: 'gemini-1.5-flash',
+          extraction: 'gemini-1.5-flash',
+          vision: 'gemini-1.5-flash',
+          translation: 'gemini-1.5-flash',
+        }
+      }),
     }),
     {
       name: 'ai-store',

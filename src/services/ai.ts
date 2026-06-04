@@ -3,6 +3,9 @@
  * All modules use this single entry point so the selected model/key applies everywhere.
  */
 
+import { showToast } from '@/components/ui/Toast';
+import { useAIStore } from '@/store/useAIStore';
+
 export interface AIProvider {
   type: 'gemini' | 'openai' | 'anthropic' | 'ollama';
   apiKey?: string;
@@ -70,7 +73,8 @@ async function callGemini(
   if (opts.systemInstruction)
     payload.systemInstruction = { parts: [{ text: opts.systemInstruction }] };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
+  const modelName = provider.model.trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${provider.apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -78,10 +82,16 @@ async function callGemini(
   });
 
   if (!res.ok) {
-    const status = res.status;
-    if (status === 429) throw new Error('429 Rate limit exceeded');
-    if (status === 503) throw new Error('503 Service unavailable');
-    throw new Error(`Gemini API error: ${status}`);
+    if (res.status === 404) {
+      showToast({
+        type: 'error',
+        message: `The model ${modelName} is currently unavailable (404). Please go to Settings and try a different version (e.g. gemini-1.5-flash-latest or gemini-pro).`,
+        duration: 10000,
+      });
+      throw new Error(`Gemini model ${modelName} not found (404)`);
+    }
+    const errText = await res.text();
+    throw new Error(`Gemini API error: ${res.status} ${errText}`);
   }
 
   const data = await res.json();

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { createPortal } from 'react-dom';
 import {
-  onSnapshot, collection, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy,
+  onSnapshot, collection, addDoc, deleteDoc, updateDoc, doc, serverTimestamp, query, orderBy,
 } from 'firebase/firestore';
-import { Send, Loader2, MessageCircle } from 'lucide-react';
+import { Send, Loader2, MessageCircle, Edit2, Trash2, X, Check } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
@@ -25,6 +26,9 @@ export default function GroupChatView() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +62,18 @@ export default function GroupChatView() {
 
   const isMe = (email: string) => email === appUser?.email;
 
+  const confirmDelete = async () => {
+    if (!currentTripId || !messageToDelete) return;
+    await deleteDoc(doc(db, 'trips', currentTripId, 'group_chat', messageToDelete));
+    setMessageToDelete(null);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    if (!currentTripId || !editText.trim()) return;
+    await updateDoc(doc(db, 'trips', currentTripId, 'group_chat', id), { text: editText });
+    setEditingId(null);
+  };
+
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
 
   return (
@@ -72,23 +88,55 @@ export default function GroupChatView() {
             <p>{t('chat.noMessages')}</p>
           </div>
         ) : (
-          messages.map(msg => (
-            <div key={msg.id} className={`flex ${isMe(msg.authorEmail) ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm ${
-                isMe(msg.authorEmail)
-                  ? 'bg-brand-600 text-white rounded-br-sm'
-                  : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'
-              }`}>
-                {!isMe(msg.authorEmail) && (
-                  <p className="text-xs font-bold mb-1 text-brand-600 dark:text-brand-400">{msg.authorName}</p>
+          messages.map(msg => {
+            const me = isMe(msg.authorEmail);
+            return (
+              <div key={msg.id} className={`flex ${me ? 'justify-end' : 'justify-start'} group items-center gap-2`}>
+                
+                {/* Actions (Edit/Delete) - Placed before the bubble so they appear on the inside (center) of the chat area */}
+                {me && editingId !== msg.id && (
+                  <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
+                    <button onClick={() => { setEditingId(msg.id); setEditText(msg.text); }} className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-brand-500 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                      <Edit2 size={14} />
+                    </button>
+                    <button onClick={() => setMessageToDelete(msg.id)} className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-red-500 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 )}
-                <p className="text-sm leading-relaxed" dir="auto">{msg.text}</p>
-                <p className={`text-[10px] mt-1 ${isMe(msg.authorEmail) ? 'text-brand-200' : 'text-slate-400'}`}>
-                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
+
+                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm relative ${
+                  me
+                    ? 'bg-brand-600 text-white rounded-br-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'
+                }`}>
+                  <p className={`text-xs font-bold mb-1 ${me ? 'text-brand-100' : 'text-brand-600 dark:text-brand-400'}`}>
+                    {msg.authorName}
+                  </p>
+                  
+                  {editingId === msg.id ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input 
+                        value={editText} 
+                        onChange={(e) => setEditText(e.target.value)} 
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(msg.id); }}
+                        className="text-sm bg-white/20 text-white placeholder-white/50 border-none outline-none rounded px-2 py-1 flex-1"
+                        autoFocus
+                      />
+                      <button onClick={() => handleSaveEdit(msg.id)} className="p-1 hover:bg-white/20 rounded"><Check size={14}/></button>
+                      <button onClick={() => setEditingId(null)} className="p-1 hover:bg-white/20 rounded"><X size={14}/></button>
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap" dir="auto">{msg.text}</p>
+                  )}
+                  
+                  <p className={`text-[10px] mt-1 ${me ? 'text-brand-200' : 'text-slate-400'}`}>
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={bottomRef} />
       </div>
@@ -115,6 +163,40 @@ export default function GroupChatView() {
           {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
         </button>
       </form>
+
+      {/* Delete Confirmation Modal */}
+      {messageToDelete && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fade-in" dir="rtl">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-800" onClick={e => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                {t('app.confirmDelete', 'Are you sure?')}
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                פעולה זו תמחק את ההודעה לתמיד ולא יהיה ניתן לשחזר אותה.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMessageToDelete(null)}
+                  className="flex-1 btn-ghost"
+                >
+                  {t('app.cancel', 'Cancel')}
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-xl transition-colors"
+                >
+                  {t('app.delete', 'Delete')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
