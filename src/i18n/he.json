@@ -2,6 +2,9 @@
   "app": {
     "name": "TravelPlatform",
     "tagline": "עוזר הטיולים החכם שלך",
+    "lightMode": "מצב בהיר",
+    "darkMode": "מצב כהה",
+    "notifications": "התראות",
     "login": "התחבר עם Google",
     "logout": "התנתק",
     "loading": "טוען...",

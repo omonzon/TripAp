@@ -34,6 +34,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
               id={`tab-${tab.id}`}
               onClick={() => onTabChange(tab.id)}
               aria-current={isActive ? 'page' : undefined}
+              title={t(tab.labelKey)}
               className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
                 transition-all duration-150 text-start w-full
@@ -71,6 +72,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
                 id={`mob-tab-${tab.id}`}
                 onClick={() => onTabChange(tab.id)}
                 aria-current={isActive ? 'page' : undefined}
+                title={t(tab.labelKey)}
                 className={`
                   flex flex-col items-center gap-0.5 px-3 py-2 min-w-[52px]
                   transition-all duration-150 rounded-xl

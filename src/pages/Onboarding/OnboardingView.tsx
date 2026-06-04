@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
+import { generateTripTasks } from '@/engine/taskGenerator';
 import { showToast } from '@/components/ui/Toast';
 
 const STEPS = 5;
@@ -92,6 +93,11 @@ export default function OnboardingView() {
       setTripProfile(profile);
       setCurrentTrip(tripId);
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
+      
+      // Fire-and-forget task generation
+      showToast({ type: 'info', message: 'AI is generating personalized tasks in the background...' });
+      generateTripTasks(profile, getProviderForTask('itinerary'), 'he', appUser.email);
+      
     } catch (err) {
       showToast({ type: 'error', message: t('app.error') });
     } finally {

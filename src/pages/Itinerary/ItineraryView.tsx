@@ -16,6 +16,7 @@ import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
+import ItineraryWizard from './ItineraryWizard';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, { color: string; emoji: string }> = {
@@ -150,6 +151,7 @@ export default function ItineraryView() {
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const canWrite = appUser?.role === 'admin' || appUser?.role === 'editor';
@@ -298,8 +300,24 @@ export default function ItineraryView() {
       {days.length === 0 ? (
         <div className="card p-12 text-center text-slate-400 dark:text-slate-500">
           <p className="text-4xl mb-3">🗓️</p>
-          <p className="font-medium">{t('itinerary.noItems')}</p>
-          {canWrite && <p className="text-sm mt-1">Use the AI bar above or add a new day.</p>}
+          <p className="font-medium text-lg mb-4">{t('itinerary.noItems')}</p>
+          {canWrite && (
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+              <button 
+                onClick={() => setShowWizard(true)}
+                className="btn-primary flex items-center gap-2 py-3 px-6 text-base font-bold bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 shadow-lg"
+              >
+                <Sparkles size={20} className="text-yellow-300" /> 
+                Build Trip with AI Wizard
+              </button>
+              <button 
+                onClick={handleAddDay} 
+                className="btn-secondary py-3 px-6 text-sm"
+              >
+                Add Manual Day
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         days.map(day => (
@@ -433,6 +451,8 @@ export default function ItineraryView() {
           </div>
         ))
       )}
+      
+      {showWizard && <ItineraryWizard onClose={() => setShowWizard(false)} />}
     </div>
   );
 }

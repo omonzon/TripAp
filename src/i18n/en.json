@@ -2,6 +2,9 @@
   "app": {
     "name": "TravelPlatform",
     "tagline": "Your AI-Powered Travel Companion",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "notifications": "Notifications",
     "login": "Sign in with Google",
     "logout": "Sign out",
     "loading": "Loading...",

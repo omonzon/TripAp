@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+.dark\:bg-red-500 {
+  background-color: red;
+}

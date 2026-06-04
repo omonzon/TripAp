@@ -21,7 +21,10 @@ export function AppHeader({ showTabs = true }: AppHeaderProps) {
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         {/* Logo + Trip Name */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center shrink-0">
+          <div 
+            className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center shrink-0"
+            title={t('app.name')}
+          >
             <Globe className="w-4 h-4 text-white" />
           </div>
           <div className="min-w-0">
@@ -40,7 +43,10 @@ export function AppHeader({ showTabs = true }: AppHeaderProps) {
         <div className="flex items-center gap-1 shrink-0">
           {/* Offline indicator */}
           {!isOnline && (
-            <div className="flex items-center gap-1 text-amber-500 text-xs font-medium px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+            <div 
+              className="flex items-center gap-1 text-amber-500 text-xs font-medium px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/20"
+              title={t('app.offline')}
+            >
               <WifiOff size={12} /> {t('app.offline')}
             </div>
           )}
@@ -60,12 +66,17 @@ export function AppHeader({ showTabs = true }: AppHeaderProps) {
             onClick={toggleDarkMode}
             className="btn-ghost p-2"
             aria-label="Toggle dark mode"
+            title={isDarkMode ? t('app.lightMode', 'Light Mode') : t('app.darkMode', 'Dark Mode')}
           >
             {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
           {/* Notifications placeholder */}
-          <button className="btn-ghost p-2" aria-label="Notifications">
+          <button 
+            className="btn-ghost p-2" 
+            aria-label="Notifications"
+            title={t('app.notifications', 'Notifications')}
+          >
             <Bell size={16} />
           </button>
 
