@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .agents/
+skills-lock.json
 .pnp
 .pnp.js
 
