@@ -41,6 +41,12 @@ export default defineConfig({
     }),
   ],
   resolve: { alias: { '@': '/src' } },
+  server: {
+    watch: {
+      // Exclude directories that Vite shouldn't watch (prevents EBUSY errors on OneDrive-locked files)
+      ignored: ['**/.agents/**', '**/dist/**', '**/node_modules/**', '**/.git/**'],
+    },
+  },
   build: {
     chunkSizeWarningLimit: 800,
     rollupOptions: {
