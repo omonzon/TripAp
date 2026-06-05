@@ -62,6 +62,7 @@ export default function SettingsView() {
   const [newAlbumUrl, setNewAlbumUrl] = useState('');
   const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [exportingType, setExportingType] = useState<string | null>(null);
 
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const isAdmin = appUser?.role === 'admin';
@@ -139,11 +140,39 @@ export default function SettingsView() {
 
   const handleExportTrip = async () => {
     if (!currentTripId) return;
+    setExportingType('backup');
     try {
       await exportTripToFile(currentTripId);
       showToast({ type: 'success', message: t('settings.tripExported', 'Trip exported successfully') });
     } catch {
       showToast({ type: 'error', message: t('app.error', 'An error occurred') });
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  const handleDataExport = async (type: 'html' | 'pdf' | 'csv') => {
+    if (!currentTripId) return;
+    setExportingType(type);
+    try {
+      if (type === 'html') await exportTripToHTML(currentTripId);
+      if (type === 'pdf') await exportTripToPDF(currentTripId);
+      if (type === 'csv') await exportTripToCSV(currentTripId);
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'error', message: t('app.error', 'An error occurred') });
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  const getFunnyMessage = () => {
+    switch(exportingType) {
+      case 'html': return 'אורזים לך את המזוודות לתוך דף אינטרנט... עוד רגע! 🧳';
+      case 'pdf': return 'מכינים לך את הטיול להדפסה (מבטיחים לשמור על העצים)... 🌳';
+      case 'csv': return 'דוחסים את כל ההוצאות לשורות של אקסל... תחזיקו חזק! 📊';
+      case 'backup': return 'מגבים את כל הטיול למקום בטוח... מותחים שרירים! 💪';
+      default: return '';
     }
   };
 
@@ -581,24 +610,34 @@ export default function SettingsView() {
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {t('settings.exportDataHelp', 'Export your trip itinerary, expenses, and tasks in your preferred format.')}
           </p>
-          <div className="grid grid-cols-3 gap-2 mt-4">
+
+          {exportingType && ['html', 'pdf', 'csv'].includes(exportingType) && (
+            <div className="text-sm font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 p-3 rounded-lg text-center animate-pulse" dir="rtl">
+              {getFunnyMessage()}
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2 mt-2">
             <button 
-              onClick={() => exportTripToHTML(currentTripId)} 
-              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3"
+              onClick={() => handleDataExport('html')} 
+              disabled={!!exportingType}
+              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3 disabled:opacity-50"
             >
               <Globe size={20} className="text-blue-500" />
               <span className="text-xs font-medium">HTML Webpage</span>
             </button>
             <button 
-              onClick={() => exportTripToPDF(currentTripId)} 
-              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3"
+              onClick={() => handleDataExport('pdf')} 
+              disabled={!!exportingType}
+              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3 disabled:opacity-50"
             >
               <FileText size={20} className="text-red-500" />
               <span className="text-xs font-medium">Print / PDF</span>
             </button>
             <button 
-              onClick={() => exportTripToCSV(currentTripId)} 
-              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3"
+              onClick={() => handleDataExport('csv')} 
+              disabled={!!exportingType}
+              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3 disabled:opacity-50"
             >
               <Table size={20} className="text-green-500" />
               <span className="text-xs font-medium">Excel (CSV)</span>
@@ -614,9 +653,15 @@ export default function SettingsView() {
             {t('settings.dangerZone', 'Danger Zone')} <Trash2 size={20} />
           </h2>
           <div className="space-y-3">
+            {exportingType === 'backup' && (
+              <div className="text-sm font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 p-3 rounded-lg text-center animate-pulse" dir="rtl">
+                {getFunnyMessage()}
+              </div>
+            )}
             <button 
-              onClick={() => exportTripToFile(currentTripId)} 
-              className="w-full btn-secondary flex items-center justify-center gap-2 mb-2"
+              onClick={handleExportTrip} 
+              disabled={!!exportingType}
+              className="w-full btn-secondary flex items-center justify-center gap-2 mb-2 disabled:opacity-50"
             >
               {t('settings.exportTrip', 'Export Trip to Backup File')}
             </button>
