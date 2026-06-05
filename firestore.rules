@@ -32,16 +32,20 @@ service cloud.firestore {
           get(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)).data.role in ['admin', 'editor'];
       }
 
-      // Trip profile — only members can read, only admins can write
+      // Trip profile — only members can read, only admins can update/delete
+      // Anyone authenticated can create a new trip
       match /profile/{doc} {
         allow read: if isMember();
-        allow write: if isAdmin();
+        allow create: if request.auth != null;
+        allow update, delete: if isAdmin();
       }
 
       // Users subcollection — only admins manage membership
+      // Anyone can add themselves as the first admin when creating a trip
       match /users/{userEmail} {
         allow read: if isMember();
-        allow write: if isAdmin();
+        allow create: if request.auth != null && request.auth.token.email == userEmail;
+        allow update, delete: if isAdmin();
       }
 
       // Settings — admin only
