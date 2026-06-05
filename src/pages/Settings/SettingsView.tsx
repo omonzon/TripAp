@@ -12,6 +12,7 @@ import { useTripStore } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
 import { exportTripToFile } from '@/services/backupService';
+import { fetchGeminiModels } from '@/services/ai';
 import { TAB_DEFS } from '@/App';
 
 const PROVIDERS = [
@@ -51,6 +52,8 @@ export default function SettingsView() {
   const [localKey, setLocalKey] = useState(apiKey);
   const [localUrlInput, setLocalUrlInput] = useState(localUrl);
   const [localModelInput, setLocalModelInput] = useState(localModelName);
+  const [isValidating, setIsValidating] = useState(false);
+  const [availableGeminiModels, setAvailableGeminiModels] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [addingUser, setAddingUser] = useState(false);
@@ -62,8 +65,30 @@ export default function SettingsView() {
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const isAdmin = appUser?.role === 'admin';
 
-  const saveAISettings = () => {
-    setApiKey(localKey);
+  const saveAISettings = async () => {
+    if (providerType === 'gemini' && localKey.trim()) {
+      setIsValidating(true);
+      try {
+        const fetchedModels = await fetchGeminiModels(localKey.trim());
+        if (fetchedModels.length > 0) {
+          setAvailableGeminiModels(fetchedModels);
+          // If current models are not in the fetched list, fallback
+          const tasks: TaskType[] = ['chat', 'itinerary', 'extraction', 'vision', 'translation'];
+          tasks.forEach(task => {
+            if (!fetchedModels.includes(models[task])) {
+               setModel(task, fetchedModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : fetchedModels[0]);
+            }
+          });
+        }
+        showToast({ type: 'success', message: t('onboarding.keyValidated', 'API Key Validated!') });
+      } catch (err) {
+        showToast({ type: 'error', message: t('onboarding.keyInvalid', 'Invalid API Key.') });
+        setIsValidating(false);
+        return; // Don't save if invalid
+      }
+      setIsValidating(false);
+    }
+    setApiKey(localKey.trim());
     if (providerType === 'ollama') {
       setLocalConfig(localUrlInput, localModelInput);
     }
@@ -261,30 +286,36 @@ export default function SettingsView() {
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('settings.modelPerTask')}</label>
           <div className="space-y-2">
-            {(Object.keys(TASK_LABELS) as TaskType[]).map(task => (
-              <div key={task} className="flex items-center gap-3">
-                <span className="text-xs text-slate-500 w-32 shrink-0">{TASK_LABELS[task]}</span>
-                <select
-                  id={`model-${task}`}
-                  value={models[task]}
-                  onChange={e => setModel(task, e.target.value)}
-                  className="input-base text-sm py-1.5 flex-1"
-                  disabled={providerType === 'ollama'}
-                >
-                  {selectedProvider.models.map(m => <option key={m}>{m}</option>)}
-                </select>
-              </div>
-            ))}
+            {(Object.keys(TASK_LABELS) as TaskType[]).map(task => {
+              const dropdownOptions = providerType === 'gemini' && availableGeminiModels.length > 0 
+                ? availableGeminiModels 
+                : selectedProvider.models;
+              return (
+                <div key={task} className="flex items-center gap-3">
+                  <span className="text-xs text-slate-500 w-32 shrink-0">{TASK_LABELS[task]}</span>
+                  <select
+                    id={`model-${task}`}
+                    value={models[task]}
+                    onChange={e => setModel(task, e.target.value)}
+                    className="input-base text-sm py-1.5 flex-1"
+                    disabled={providerType === 'ollama'}
+                  >
+                    {dropdownOptions.map((m: string) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <button
           id="btn-save-ai"
           onClick={saveAISettings}
+          disabled={isValidating}
           className="btn-primary w-full flex items-center justify-center gap-2"
         >
-          {saved ? <CheckCircle2 size={16} className="text-white" /> : <Key size={16} />}
-          {saved ? t('settings.saved') : t('app.save')}
+          {isValidating ? <Loader2 size={16} className="animate-spin text-white" /> : saved ? <CheckCircle2 size={16} className="text-white" /> : <Key size={16} />}
+          {isValidating ? t('onboarding.validateKey', 'Validate') : saved ? t('settings.saved') : t('app.save')}
         </button>
       </section>
 
