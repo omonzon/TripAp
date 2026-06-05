@@ -6,7 +6,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { AIProvider } from '@/services/ai';
+import type { AIProvider, AIMessage } from '@/services/ai';
 import type { SemanticGraph } from '@/engine/semanticEngine';
 import { mergeGraphs, graphToContext } from '@/engine/semanticEngine';
 import { useTripStore } from '@/store/useTripStore';

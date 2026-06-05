@@ -457,7 +457,7 @@ export default function SettingsView() {
               <li>Sign up for free at <a href="https://www.emailjs.com/" target="_blank" rel="noreferrer" className="text-brand-600 underline">EmailJS.com</a></li>
               <li>Add a new Email Service (e.g. Gmail) and note the <b>Service ID</b></li>
               <li>Create an Email Template with variables <code className="bg-white dark:bg-black px-1 rounded">{"{{message}}"}</code> and note the <b>Template ID</b></li>
-              <li>Go to Account -> API Keys and note the <b>Public Key</b></li>
+              <li>Go to Account -&gt; API Keys and note the <b>Public Key</b></li>
             </ol>
             <p className="mt-2 text-xs italic text-slate-500">If you don't configure this, reminders will only show as push notifications.</p>
           </div>
