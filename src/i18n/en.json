@@ -7,6 +7,11 @@
     "notifications": "Notifications",
     "login": "Sign in with Google",
     "logout": "Sign out",
+    "weatherLoading": "Loading weather...",
+    "missingApiKey": "Please set your Gemini API key in Settings first.",
+    "scanningDoc": "Scanning document and updating trip...",
+    "scanSuccess": "Document scanned! Extracted {{events}} events and {{expenses}} expenses.",
+    "scanDoc": "Scan Doc",
     "loading": "Loading...",
     "offline": "Offline Mode",
     "refresh": "Refresh",
@@ -97,9 +102,9 @@
     "noExpenses": "No expenses yet",
     "expenseSaved": "Expense saved!",
     "categories": {
-      "food": "Food / Restaurant",
+      "restaurant": "Restaurant",
       "supermarket": "Supermarket",
-      "transportation": "Transportation",
+      "transport": "Transport",
       "gifts": "Gifts",
       "clothing": "Clothing",
       "other": "Other"
@@ -110,15 +115,7 @@
     "convertedAmount": "Converted",
     "notes": "Notes",
     "totalLocal": "Total (local)",
-    "totalConverted": "Total (converted)",
-    "categories": {
-      "restaurant": "Restaurant",
-      "supermarket": "Supermarket",
-      "transport": "Transport",
-      "gifts": "Gifts",
-      "clothing": "Clothing",
-      "other": "Other"
-    }
+    "totalConverted": "Total (converted)"
   },
   "locations": {
     "title": "Family Locations",
@@ -219,6 +216,16 @@
     "constraintsFound": "Found {{count}} fixed constraints",
     "generateItinerary": "Generate AI Itinerary",
     "analyzeWarning": "Could not analyze bookings with AI. They will be saved as-is.",
+    "aiSetupTitle": "AI Integration",
+    "aiSuperpowers": "Unlock AI Superpowers",
+    "aiSetupDesc": "Provide your Gemini API key to let the AI automatically build your full itinerary, generate smart tasks, and scan your documents and expenses.",
+    "geminiApiKey": "Gemini API Key",
+    "apiKeyHelp": "Your key is saved locally in your browser and never sent to our servers.",
+    "getApiKeyHelp": "Get your free API key here",
+    "aiDisabledWarning": "AI features like document scanning are disabled.",
+    "manualModeNotice": "You are creating a manual trip without AI. To unlock automatic itinerary and task generation, add your API key in Settings.",
+    "generatingTitle": "AI is building your trip...",
+    "generatingSubtitle": "We are generating your itinerary, tasks, extracting expenses, and organizing documents. This takes about 15-30 seconds.",
     "bgTaskGeneration": "AI is generating personalized tasks in the background...",
     "restoringToast": "Restoring trip...",
     "restoreSuccess": "Trip restored successfully! 🎉",

@@ -1,26 +1,28 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info } from 'lucide-react';
 import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
-import { generateTripTasks } from '@/engine/taskGenerator';
+import { generateComprehensiveTrip } from '@/engine/comprehensiveGenerator';
 import { showToast } from '@/components/ui/Toast';
 import { restoreTripFromFile } from '@/services/backupService';
 import { UploadCloud } from 'lucide-react';
 
-const STEPS = 5;
+const STEPS = 6;
 
 export default function OnboardingView() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { appUser } = useAuthStore();
   const { setCurrentTrip, setTripProfile } = useTripStore();
-  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting } = useAIStore();
+  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey } = useAIStore();
 
   const [step, setStep] = useState(1);
+  const [skipAI, setSkipAI] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState(apiKey || '');
   const [form, setForm] = useState({
     name: '',
     destinations: '',
@@ -36,11 +38,44 @@ export default function OnboardingView() {
   const [generating, setGenerating] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
-  const next = () => setStep((s) => Math.min(s + 1, STEPS));
-  const back = () => setStep((s) => Math.max(s - 1, 1));
+  const next = () => {
+    let nextStep = step + 1;
+    // If skipAI is true, jump from Step 3 (Trip Details) to Step 6 (Review)
+    if (skipAI && nextStep === 4) {
+      nextStep = 6;
+    }
+    setStep(Math.min(nextStep, STEPS));
+  };
+  
+  const back = () => {
+    let prevStep = step - 1;
+    // If skipAI is true, jump back from Step 6 (Review) to Step 3 (Trip Details)
+    if (skipAI && prevStep === 5) {
+      prevStep = 3;
+    }
+    setStep(Math.max(prevStep, 1));
+  };
+
+  const handleAISetupNext = () => {
+    if (tempApiKey.trim()) {
+      setApiKey(tempApiKey.trim());
+      setSkipAI(false);
+      next();
+    } else {
+      setSkipAI(true);
+      showToast({ type: 'warning', message: t('onboarding.aiDisabledWarning', 'AI features like document scanning are disabled.') });
+      next();
+    }
+  };
+
+  const handleSkipAI = () => {
+    setSkipAI(true);
+    showToast({ type: 'warning', message: t('onboarding.aiDisabledWarning', 'AI features like document scanning are disabled.') });
+    next();
+  };
 
   const analyzeBookings = async () => {
-    if (!form.bookings.trim()) { next(); return; }
+    if (!form.bookings.trim() || skipAI) { next(); return; }
     setExtracting(true);
     try {
       const graph = await extractSemanticGraph(
@@ -98,13 +133,21 @@ export default function OnboardingView() {
         trips: arrayUnion({ id: tripId, name: profile.name, destinations: profile.destinations })
       }, { merge: true });
 
+      // Comprehensive AI Generation
+      if (!skipAI && tempApiKey.trim()) {
+        showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is building your comprehensive trip data...') });
+        await generateComprehensiveTrip(
+          profile, 
+          form.bookings, 
+          getProviderForTask('itinerary'), 
+          i18n.language, 
+          appUser.email
+        );
+      }
+
       setTripProfile(profile);
       setCurrentTrip(tripId);
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
-      
-      // Fire-and-forget task generation
-      showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is generating personalized tasks in the background...') });
-      generateTripTasks(profile, getProviderForTask('itinerary'), 'he', appUser.email);
       
     } catch (err) {
       showToast({ type: 'error', message: t('app.error') });
@@ -122,12 +165,11 @@ export default function OnboardingView() {
       showToast({ type: 'info', message: t('onboarding.restoringToast', 'Restoring trip...') });
       const newTripId = await restoreTripFromFile(file, appUser.email, appUser.name);
       showToast({ type: 'success', message: t('onboarding.restoreSuccess', 'Trip restored successfully! 🎉') });
-      // The store is updated, and the user will be redirected.
     } catch (err) {
       showToast({ type: 'error', message: t('onboarding.restoreError', 'Failed to restore trip from file.') });
     } finally {
       setRestoring(false);
-      if (e.target) e.target.value = ''; // clear input
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -139,6 +181,27 @@ export default function OnboardingView() {
         <Loader2 className="w-12 h-12 text-brand-500 animate-spin mb-4" />
         <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t('onboarding.restoringTitle', 'Restoring your trip...')}</h2>
         <p className="text-slate-500 mt-2">{t('onboarding.restoringSubtitle', 'Please wait while we set everything up.')}</p>
+      </div>
+    );
+  }
+
+  // Full-screen loader for comprehensive AI Generation
+  if (generating) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 flex flex-col items-center justify-center">
+        <div className="w-24 h-24 relative mb-8">
+          <div className="absolute inset-0 border-4 border-brand-200 dark:border-brand-900 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-brand-500 rounded-full border-t-transparent animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Sparkles className="text-brand-500 w-8 h-8 animate-pulse" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+          {t('onboarding.generatingTitle', 'AI is building your trip...')}
+        </h2>
+        <p className="text-slate-500 text-center max-w-sm px-4">
+          {t('onboarding.generatingSubtitle', 'We are generating your itinerary, tasks, extracting expenses, and organizing documents. This takes about 15-30 seconds.')}
+        </p>
       </div>
     );
   }
@@ -164,8 +227,78 @@ export default function OnboardingView() {
 
       {/* Steps */}
       <div className="card p-6 md:p-8">
-        {/* Step 1: Trip Details */}
+        {/* Step 1: AI Setup */}
         {step === 1 && (
+          <div className="space-y-5 animate-fade-in">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.aiSetupTitle', 'AI Integration')}</h2>
+            
+            <div className="card p-5 bg-gradient-to-r from-brand-50 to-indigo-50 dark:from-brand-950/20 dark:to-indigo-950/20 border-brand-100 dark:border-brand-800/50">
+              <div className="flex gap-4">
+                <div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center shrink-0">
+                  <Sparkles className="text-brand-600 dark:text-brand-400 w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    {t('onboarding.aiSuperpowers', 'Unlock AI Superpowers')}
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {t('onboarding.aiSetupDesc', 'Provide your Gemini API key to let the AI automatically build your full itinerary, generate smart tasks, and scan your documents and expenses.')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('onboarding.geminiApiKey', 'Gemini API Key')}
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:text-brand-600 transition-colors" title={t('onboarding.getApiKeyHelp', 'Get your free API key here')}>
+                  <Info size={16} />
+                </a>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Key size={16} className="text-slate-400" />
+                </div>
+                <input 
+                  type="password" 
+                  className="input-base pl-10" 
+                  value={tempApiKey} 
+                  onChange={(e) => setTempApiKey(e.target.value)} 
+                  placeholder="AIzaSy..." 
+                  dir="ltr"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                {t('onboarding.apiKeyHelp', 'Your key is saved locally in your browser and never sent to our servers.')}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Participants */}
+        {step === 2 && (
+          <div className="space-y-5 animate-fade-in">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step2')}</h2>
+            <div className="card p-4 bg-brand-50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white font-bold">
+                  {appUser?.name[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">{appUser?.name}</p>
+                  <p className="text-xs text-slate-500">{appUser?.email} · Admin</p>
+                </div>
+                <CheckCircle2 className="ms-auto text-green-500" size={18} />
+              </div>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t('onboarding.step2Help')}
+            </p>
+          </div>
+        )}
+
+        {/* Step 3: Trip Details */}
+        {step === 3 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step1')}</h2>
             <div>
@@ -190,30 +323,8 @@ export default function OnboardingView() {
           </div>
         )}
 
-        {/* Step 2: Participants - simplified for now */}
-        {step === 2 && (
-          <div className="space-y-5 animate-fade-in">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step2')}</h2>
-            <div className="card p-4 bg-brand-50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white font-bold">
-                  {appUser?.name[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">{appUser?.name}</p>
-                  <p className="text-xs text-slate-500">{appUser?.email} · Admin</p>
-                </div>
-                <CheckCircle2 className="ms-auto text-green-500" size={18} />
-              </div>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {t('onboarding.step2Help')}
-            </p>
-          </div>
-        )}
-
-        {/* Step 3: Budget & Preferences */}
-        {step === 3 && (
+        {/* Step 4: Budget & Preferences */}
+        {step === 4 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step3')}</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -261,8 +372,8 @@ export default function OnboardingView() {
           </div>
         )}
 
-        {/* Step 4: Import Bookings */}
-        {step === 4 && (
+        {/* Step 5: Import Bookings */}
+        {step === 5 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step4')}</h2>
             <div className="card p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 flex gap-3">
@@ -288,10 +399,20 @@ export default function OnboardingView() {
           </div>
         )}
 
-        {/* Step 5: Review */}
-        {step === 5 && (
+        {/* Step 6: Review */}
+        {step === 6 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step5')}</h2>
+            
+            {skipAI && (
+              <div className="card p-4 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex gap-3 mb-4">
+                <FileText size={18} className="text-slate-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  {t('onboarding.manualModeNotice', 'You are creating a manual trip without AI. To unlock automatic itinerary and task generation, add your API key in Settings.')}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3">
               {[
                 { label: t('onboarding.tripName'), value: form.name || '—' },
@@ -314,18 +435,29 @@ export default function OnboardingView() {
       {/* Navigation */}
       <div className="flex gap-3 mt-6">
         {step > 1 && (
-          <button id="btn-back" onClick={back} className="btn-secondary flex items-center gap-2">
+          <button id="btn-back" onClick={back} className="btn-secondary flex items-center gap-2" disabled={generating}>
             <ArrowLeft size={16} /> {t('app.back')}
           </button>
         )}
 
-        {step < 4 && (
+        {step === 1 && (
+          <>
+            <button onClick={handleSkipAI} className="btn-secondary ms-auto px-6">
+              {t('app.skip', 'Skip')}
+            </button>
+            <button onClick={handleAISetupNext} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim()}>
+              {t('app.next')} <ArrowRight size={16} />
+            </button>
+          </>
+        )}
+
+        {step > 1 && step < 5 && (
           <button id="btn-next" onClick={next} className="btn-primary flex items-center gap-2 ms-auto">
             {t('app.next')} <ArrowRight size={16} />
           </button>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <button
             id="btn-analyze"
             onClick={analyzeBookings}
@@ -340,7 +472,7 @@ export default function OnboardingView() {
           </button>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <button
             id="btn-create-trip"
             onClick={createTrip}

@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import {
   Sparkles, Loader2, Map, Edit2, Trash2, GripVertical,
-  Plane, RefreshCcw, Sun, Cloud, Plus, Lock,
+  Plane, RefreshCcw, Sun, Cloud, Plus, Lock, Camera, FileText
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -17,6 +17,7 @@ import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
+import { extractAndIntegrateDocument } from '@/engine/documentAnalyzer';
 import ItineraryWizard from './ItineraryWizard';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
@@ -154,6 +155,8 @@ export default function ItineraryView() {
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [dayToDelete, setDayToDelete] = useState<string | null>(null);
+  const [isScanningDoc, setIsScanningDoc] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null!);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const canWrite = appUser?.role === 'admin' || appUser?.role === 'editor';
@@ -271,6 +274,57 @@ export default function ItineraryView() {
     await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: newItems });
   };
 
+  const handleScanDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !tripProfile || !appUser) return;
+    
+    // If the user has no API key, prompt them to add it.
+    const apiKey = useAIStore.getState().apiKey;
+    if (!apiKey) {
+      showToast({ type: 'warning', message: t('itinerary.missingApiKey', 'Please set your Gemini API key in Settings first.') });
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
+
+    setIsScanningDoc(true);
+    showToast({ type: 'info', message: t('itinerary.scanningDoc', 'Scanning document and updating trip...') });
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(',')[1];
+          const res = await extractAndIntegrateDocument(
+            tripProfile,
+            days,
+            base64,
+            file.type,
+            getProviderForTask('extraction'),
+            appUser.email
+          );
+          
+          const eventsCount = res.itineraryEvents?.length || 0;
+          const expensesCount = res.expenses?.length || 0;
+          
+          showToast({ 
+            type: 'success', 
+            message: t('itinerary.scanSuccess', 'Document scanned! Extracted {{events}} events and {{expenses}} expenses.', { events: eventsCount, expenses: expensesCount }) 
+          });
+        } catch (err) {
+          showToast({ type: 'error', message: t('errors.scanFailed', 'Failed to scan document.') });
+        } finally {
+          setIsScanningDoc(false);
+          if (fileRef.current) fileRef.current.value = '';
+        }
+      };
+    } catch (err) {
+      setIsScanningDoc(false);
+      showToast({ type: 'error', message: t('errors.scanFailed') });
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
 
   return (
@@ -278,9 +332,16 @@ export default function ItineraryView() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
         {canWrite && (
-          <button onClick={handleAddDay} className="btn-secondary flex items-center gap-2 text-sm py-2">
-            <Plus size={15} /> {t('itinerary.newDay')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc} className="btn-secondary flex items-center gap-2 text-sm py-2">
+              {isScanningDoc ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />} 
+              <span className="hidden sm:inline">{t('itinerary.scanDoc', 'Scan Doc')}</span>
+            </button>
+            <input ref={fileRef} type="file" accept="application/pdf, image/*" capture="environment" className="hidden" onChange={handleScanDocument} />
+            <button onClick={handleAddDay} className="btn-secondary flex items-center gap-2 text-sm py-2">
+              <Plus size={15} /> <span className="hidden sm:inline">{t('itinerary.newDay')}</span>
+            </button>
+          </div>
         )}
       </div>
 
