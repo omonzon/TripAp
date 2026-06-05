@@ -217,7 +217,17 @@
     "preferences": "Describe your preferences, interests, and any must-dos...",
     "pasteBookings": "Paste any confirmed bookings (flights, hotels, tours)...",
     "constraintsFound": "Found {{count}} fixed constraints",
-    "generateItinerary": "Generate AI Itinerary"
+    "generateItinerary": "Generate AI Itinerary",
+    "analyzeWarning": "Could not analyze bookings with AI. They will be saved as-is.",
+    "bgTaskGeneration": "AI is generating personalized tasks in the background...",
+    "restoringToast": "Restoring trip...",
+    "restoreSuccess": "Trip restored successfully! 🎉",
+    "restoreError": "Failed to restore trip from file.",
+    "restoringTitle": "Restoring your trip...",
+    "restoringSubtitle": "Please wait while we set everything up.",
+    "stepProgress": "Step {{step}} of {{total}}",
+    "orRestore": "Already have a trip backup file?",
+    "restoreBtn": "Restore Trip from File"
   },
   "lifecycle": {
     "pre": "Pre-Trip",

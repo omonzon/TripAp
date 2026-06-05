@@ -56,7 +56,7 @@ export default function OnboardingView() {
       setConstraintCount(constraints.length);
       showToast({ type: 'success', message: t('onboarding.constraintsFound', { count: constraints.length }) });
     } catch {
-      showToast({ type: 'warning', message: 'Could not analyze bookings with AI. They will be saved as-is.' });
+      showToast({ type: 'warning', message: t('onboarding.analyzeWarning', 'Could not analyze bookings with AI. They will be saved as-is.') });
     } finally {
       setExtracting(false);
       next();
@@ -103,7 +103,7 @@ export default function OnboardingView() {
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
       
       // Fire-and-forget task generation
-      showToast({ type: 'info', message: 'AI is generating personalized tasks in the background...' });
+      showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is generating personalized tasks in the background...') });
       generateTripTasks(profile, getProviderForTask('itinerary'), 'he', appUser.email);
       
     } catch (err) {
@@ -119,12 +119,12 @@ export default function OnboardingView() {
     
     setRestoring(true);
     try {
-      showToast({ type: 'info', message: 'Restoring trip...' });
+      showToast({ type: 'info', message: t('onboarding.restoringToast', 'Restoring trip...') });
       const newTripId = await restoreTripFromFile(file, appUser.email, appUser.name);
-      showToast({ type: 'success', message: 'Trip restored successfully! 🎉' });
+      showToast({ type: 'success', message: t('onboarding.restoreSuccess', 'Trip restored successfully! 🎉') });
       // The store is updated, and the user will be redirected.
     } catch (err) {
-      showToast({ type: 'error', message: 'Failed to restore trip from file.' });
+      showToast({ type: 'error', message: t('onboarding.restoreError', 'Failed to restore trip from file.') });
     } finally {
       setRestoring(false);
       if (e.target) e.target.value = ''; // clear input
@@ -137,8 +137,8 @@ export default function OnboardingView() {
     return (
       <div className="max-w-2xl mx-auto flex flex-col items-center justify-center py-20 animate-fade-in">
         <Loader2 className="w-12 h-12 text-brand-500 animate-spin mb-4" />
-        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Restoring your trip...</h2>
-        <p className="text-slate-500 mt-2">Please wait while we set everything up.</p>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t('onboarding.restoringTitle', 'Restoring your trip...')}</h2>
+        <p className="text-slate-500 mt-2">{t('onboarding.restoringSubtitle', 'Please wait while we set everything up.')}</p>
       </div>
     );
   }
@@ -151,7 +151,7 @@ export default function OnboardingView() {
           <Globe className="w-7 h-7 text-white" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('onboarding.title')}</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Step {step} of {STEPS}</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">{t('onboarding.stepProgress', { step, total: STEPS, defaultValue: `Step ${step} of ${STEPS}` })}</p>
       </div>
 
       {/* Progress bar */}
