@@ -8,6 +8,7 @@ import { useTripStore, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
 import { generateComprehensiveTrip } from '@/engine/comprehensiveGenerator';
+import { fetchGeminiModels } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { restoreTripFromFile } from '@/services/backupService';
 import { UploadCloud } from 'lucide-react';
@@ -18,10 +19,13 @@ export default function OnboardingView() {
   const { t, i18n } = useTranslation();
   const { appUser } = useAuthStore();
   const { setCurrentTrip, setTripProfile } = useTripStore();
-  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey } = useAIStore();
+  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey, setAllGeminiModels } = useAIStore();
 
   const [step, setStep] = useState(1);
   const [skipAI, setSkipAI] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
   const [tempApiKey, setTempApiKey] = useState(apiKey || '');
   const [form, setForm] = useState({
     name: '',
@@ -56,9 +60,26 @@ export default function OnboardingView() {
     setStep(Math.max(prevStep, 1));
   };
 
+  const handleValidateKey = async () => {
+    if (!tempApiKey.trim()) return;
+    setIsValidating(true);
+    try {
+      const models = await fetchGeminiModels(tempApiKey.trim());
+      setAvailableModels(models);
+      if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
+      else if (models.length > 0) setSelectedModel(models[0]);
+      showToast({ type: 'success', message: t('onboarding.keyValidated', 'API Key Validated!') });
+    } catch (err) {
+      showToast({ type: 'error', message: t('onboarding.keyInvalid', 'Invalid API Key.') });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
   const handleAISetupNext = () => {
     if (tempApiKey.trim()) {
       setApiKey(tempApiKey.trim());
+      setAllGeminiModels(selectedModel);
       setSkipAI(false);
       next();
     } else {
@@ -272,6 +293,17 @@ export default function OnboardingView() {
                 {t('onboarding.apiKeyHelp', 'Your key is saved locally in your browser and never sent to our servers.')}
               </p>
             </div>
+            
+            {availableModels.length > 0 && (
+              <div className="mb-2 animate-fade-in">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('onboarding.selectModel', 'Select AI Model')}
+                </label>
+                <select className="input-base" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
+                  {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            )}
           </div>
         )}
 
@@ -445,9 +477,15 @@ export default function OnboardingView() {
             <button onClick={handleSkipAI} className="btn-secondary ms-auto px-6">
               {t('app.skip', 'Skip')}
             </button>
-            <button onClick={handleAISetupNext} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim()}>
-              {t('app.next')} <ArrowRight size={16} />
-            </button>
+            {availableModels.length === 0 ? (
+              <button onClick={handleValidateKey} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim() || isValidating}>
+                {isValidating ? <Loader2 size={16} className="animate-spin" /> : t('onboarding.validateKey', 'Validate')} <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button onClick={handleAISetupNext} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim()}>
+                {t('app.next')} <ArrowRight size={16} />
+              </button>
+            )}
           </>
         )}
 

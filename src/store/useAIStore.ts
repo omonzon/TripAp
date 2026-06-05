@@ -24,8 +24,8 @@ export interface ModelConfig {
 
 const DEFAULT_GEMINI_MODELS: ModelConfig = {
   chat: 'gemini-1.5-flash',
-  itinerary: 'gemini-1.5-pro',
-  extraction: 'gemini-1.5-pro',
+  itinerary: 'gemini-1.5-flash',
+  extraction: 'gemini-1.5-flash',
   vision: 'gemini-1.5-flash',
   translation: 'gemini-1.5-flash',
 };
@@ -70,6 +70,7 @@ interface AIState {
 
   setExtracting: (val: boolean) => void;
   setError: (err: string | null) => void;
+  setAllGeminiModels: (modelName: string) => void;
   fallbackAllModelsToFast: () => void;
 }
 
@@ -167,6 +168,15 @@ export const useAIStore = create<AIState>()(
 
       setExtracting: (val) => set({ isExtracting: val }),
       setError: (err) => set({ lastError: err }),
+      setAllGeminiModels: (modelName) => set({
+        models: {
+          chat: modelName,
+          itinerary: modelName,
+          extraction: modelName,
+          vision: modelName,
+          translation: modelName,
+        }
+      }),
       fallbackAllModelsToFast: () => set({
         models: {
           chat: 'gemini-1.5-flash',

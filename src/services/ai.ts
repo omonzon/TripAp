@@ -85,9 +85,10 @@ async function callGemini(
     if (res.status === 404) {
       showToast({
         type: 'error',
-        message: `The model ${modelName} is currently unavailable (404). Please go to Settings and try a different version (e.g. gemini-1.5-flash-latest or gemini-pro).`,
+        message: `The model ${modelName} is currently unavailable (404). Falling back to gemini-1.5-flash. Please try again.`,
         duration: 10000,
       });
+      useAIStore.getState().fallbackAllModelsToFast();
       throw new Error(`Gemini model ${modelName} not found (404)`);
     }
     const errText = await res.text();
@@ -96,6 +97,16 @@ async function callGemini(
 
   const data = await res.json();
   return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+}
+
+export async function fetchGeminiModels(apiKey: string): Promise<string[]> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Invalid API Key or network error');
+  const data = await res.json();
+  return (data.models || [])
+    .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+    .map((m: any) => m.name.replace('models/', ''));
 }
 
 // --- OpenAI ---
