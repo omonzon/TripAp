@@ -7,7 +7,7 @@ export async function createFullBackup(tripId: string, userEmail: string) {
     const tripProfile = useTripStore.getState().tripProfile;
     
     // Fetch all collections
-    const collectionsToBackup = ['tasks', 'expenses', 'locations', 'itinerary', 'group_chat', 'documents', 'aiChats'];
+    const collectionsToBackup = ['tasks', 'expenses', 'locations', 'itinerary', 'group_chat', 'documents', 'aiChats', 'journal'];
     const backupData: any = {
       tripProfile,
       collections: {},
@@ -41,7 +41,7 @@ export async function exportTripToFile(tripId: string) {
       throw new Error("Trip profile not loaded or mismatch");
     }
 
-    const collectionsToBackup = ['tasks', 'expenses', 'locations', 'itinerary', 'group_chat', 'documents', 'aiChats'];
+    const collectionsToBackup = ['tasks', 'expenses', 'locations', 'itinerary', 'group_chat', 'documents', 'aiChats', 'journal'];
     const backupData: any = {
       tripProfile,
       collections: {},

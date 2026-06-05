@@ -1,0 +1,603 @@
+{
+  "tripProfile": {
+    "id": "trip_1780677039337_ea4405",
+    "name": "קרוז באיסלנד 2026",
+    "destinations": [
+      "הולנד",
+      "איסלנד"
+    ],
+    "startDate": "2026-07-15",
+    "endDate": "2026-07-26",
+    "budget": 50000,
+    "currency": "ILS",
+    "pace": "moderate",
+    "preferences": "קרוז סביב איסלנד, התחלה בהולנד כרונינגן ליומיים, באיסלנד שילוב עם שייט בקייקים ואומגה מהירה, משפחה אבא, אמא, עידו (בן 25), אמיר (בן 19) , אוכל ללא פירות ים, עדיפות לבשר (ללא חזיר), איטלקי, אסייתי, מקומי, ללא עירבוב של חלב ובשר אבל אין צורך בכשרות, מלונות מומלצים בלבד (8+) 2 חדרים נפרדים",
+    "participants": [
+      {
+        "email": "omonzon@gmail.com",
+        "name": "Oded Monzon",
+        "role": "admin"
+      }
+    ],
+    "phase": "pre"
+  },
+  "collections": {
+    "tasks": [
+      {
+        "id": "1MS8ydwOQJAAEg0s295J",
+        "category": "Bookings",
+        "priority": "high",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com",
+        "text": "הזמנת מלונות בחרונינגן ולילה אחרון ברייקיאוויק (2 חדרים בכל מלון).",
+        "createdAt": 1780677112833
+      },
+      {
+        "id": "6kzmOYNKg1lcdIRBf4K5",
+        "priority": "medium",
+        "category": "Post-trip",
+        "authorEmail": "omonzon@gmail.com",
+        "completed": false,
+        "text": "פריקת מזוודות, כביסות וסידור הבית.",
+        "createdAt": 1780677113401
+      },
+      {
+        "id": "7ATUzNElVMeMr6Kk8AGp",
+        "priority": "low",
+        "category": "Post-trip",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com",
+        "text": "גיבוי ושיתוף תמונות מהטיול עם חברים ומשפחה.",
+        "createdAt": 1780677113340
+      },
+      {
+        "id": "DjXjKrMRoYTReOgqtj7e",
+        "text": "הודעה לחברות האשראי על נסיעה לחו״ל למניעת חסימות.",
+        "createdAt": 1780677113437,
+        "priority": "high",
+        "category": "Pre-trip",
+        "authorEmail": "omonzon@gmail.com",
+        "completed": false
+      },
+      {
+        "id": "JjPERKTQjVdR4ea0b8A7",
+        "text": "אריזת בגדי ים עבור הבריכות בספינה והמעיינות החמים באיסלנד.",
+        "createdAt": 1780677113460,
+        "category": "Packaging",
+        "priority": "medium",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com"
+      },
+      {
+        "id": "Ktn2V1NFB62dWQCh7BSb",
+        "createdAt": 1780677113144,
+        "text": "הדפסת כל אישורי ההזמנות ושמירת עותק דיגיטלי בטלפון/ענן.",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com",
+        "category": "Documents",
+        "priority": "high"
+      },
+      {
+        "id": "NzS6soP2bZj0lVeD2f4N",
+        "category": "Pre-trip",
+        "priority": "medium",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com",
+        "text": "הסדרת חבילת גלישה לחו״ל או רכישת SIM מקומי.",
+        "createdAt": 1780677113081
+      },
+      {
+        "id": "SzFCoUAjEYd8Chz5wzWl",
+        "authorEmail": "omonzon@gmail.com",
+        "completed": false,
+        "priority": "low",
+        "category": "Packaging",
+        "createdAt": 1780677112686,
+        "text": "אריזת לבוש ערב אלגנטי עבור ארוחות הערב הרשמיות בקרוז."
+      },
+      {
+        "id": "TIE5wJmoIp0IDmWdEN59",
+        "createdAt": 1780677112743,
+        "text": "הזמנת סיורי חוף מראש לקרוז (במיוחד קיאקים ואומגה).",
+        "authorEmail": "omonzon@gmail.com",
+        "completed": false,
+        "priority": "medium",
+        "category": "Bookings"
+      },
+      {
+        "id": "Tbnd2eOLLxQ6U49N1yHo",
+        "category": "Pre-trip",
+        "priority": "high",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com",
+        "text": "בדיקת תוקף דרכונים לכל בני המשפחה (לפחות 6 חודשים מתאריך החזרה).",
+        "createdAt": 1780677113211
+      },
+      {
+        "id": "WdD1t40Z2iLMEBFzCttg",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com",
+        "priority": "high",
+        "category": "Packaging",
+        "createdAt": 1780677112965,
+        "text": "אריזת בגדים בשיטת השכבות, כולל ביגוד תרמי, פליז ומעיל גשם/רוח."
+      },
+      {
+        "id": "bbK42PfywfqpDOrVwdt8",
+        "createdAt": 1780677113199,
+        "text": "הורדת מפות אופליין של חרונינגן ורייקיאוויק באפליקציית המפות.",
+        "authorEmail": "omonzon@gmail.com",
+        "completed": false,
+        "category": "During Trip",
+        "priority": "medium"
+      },
+      {
+        "id": "kndr7kPXt0XeTf31hmWl",
+        "text": "בדיקת צורך ברישיון נהיגה בינלאומי עבור הולנד.",
+        "createdAt": 1780677113521,
+        "priority": "medium",
+        "category": "Documents",
+        "authorEmail": "omonzon@gmail.com",
+        "completed": false
+      },
+      {
+        "id": "z0QPShnanvuSKLhu86gu",
+        "category": "During Trip",
+        "priority": "high",
+        "completed": false,
+        "authorEmail": "omonzon@gmail.com",
+        "text": "ביצוע צ'ק-אין אונליין לטיסות 24 שעות לפני ההמראה.",
+        "createdAt": 1780677112666
+      }
+    ],
+    "expenses": [
+      {
+        "id": "56rZ9pCgAZdArdPxVaeg",
+        "category": "ship",
+        "authorEmail": "omonzon@gmail.com",
+        "currency": "USD",
+        "store": "Celebrity Cruises",
+        "targetCurrency": "ILS",
+        "amountConverted": 5567.16,
+        "notes": "שני חדרים בקרוז (2845.08$ + 2722.08$)",
+        "amount": 5567.16,
+        "createdAt": 1780677112805
+      },
+      {
+        "id": "E7adpmTiwry1YodcIGQD",
+        "amount": 586.3,
+        "notes": "לילה אחד ברייקיאוויק לפני הקרוז",
+        "amountConverted": 586.3,
+        "targetCurrency": "ILS",
+        "createdAt": 1780677113014,
+        "authorEmail": "omonzon@gmail.com",
+        "category": "hotel",
+        "store": "Alva Hotel Brautarholt",
+        "currency": "USD"
+      },
+      {
+        "id": "S61AALLYgyoyl3FL3tpg",
+        "store": "Arkia / Various Airlines",
+        "currency": "ILS",
+        "authorEmail": "omonzon@gmail.com",
+        "category": "transportation",
+        "createdAt": 1780677112675,
+        "amount": 27119,
+        "amountConverted": 27119,
+        "targetCurrency": "ILS",
+        "notes": "עלות משוערכת של הטיסות לפי פוליסת הביטוח"
+      },
+      {
+        "id": "YBq47kbVqD42lJy96pxR",
+        "createdAt": 1780677112826,
+        "amount": 3821,
+        "notes": "ביטוח ביטול נסיעה",
+        "targetCurrency": "ILS",
+        "amountConverted": 3821,
+        "store": "Trip Guaranty",
+        "currency": "ILS",
+        "authorEmail": "omonzon@gmail.com",
+        "category": "other"
+      },
+      {
+        "id": "tIMCyaNwP0sv4tLMc50W",
+        "currency": "USD",
+        "store": "RentalCover.com",
+        "category": "transportation",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677113244,
+        "targetCurrency": "ILS",
+        "amountConverted": 23.19,
+        "notes": "ביטוח עבור הרכב השכור בהולנד",
+        "amount": 23.19
+      }
+    ],
+    "locations": [],
+    "itinerary": [
+      {
+        "id": "day_2026-07-27",
+        "isoDate": "2026-07-27",
+        "items": [
+          {
+            "text": "נחיתה בנמל התעופה בן גוריון (TLV) בשעה 03:10 לפנות בוקר. סוף הטיול!",
+            "fixed": false,
+            "id": "1780677112583_1k93g",
+            "type": "home"
+          }
+        ],
+        "date": "7/27/2026",
+        "title": "יום 13: נחיתה בתל אביב"
+      },
+      {
+        "id": "day_2026-07-16",
+        "title": "יום 2: סיור בחרונינגן",
+        "date": "7/16/2026",
+        "items": [
+          {
+            "fixed": false,
+            "id": "1780677112582_1qq6j",
+            "text": "יום לסיור בעיר האוניברסיטאית התוססת חרונינגן. מומלץ לבקר במגדל מרטיניטורן לתצפית פנורמית, לשוטט בתעלות הציוריות ולחקור את מוזיאון חרונינגן לאמנות.",
+            "type": "note"
+          },
+          {
+            "fixed": false,
+            "id": "1780677112582_btr03",
+            "text": "ארוחת צהריים. המלצה למסעדת בשרים טובה: Blocks & Barrels.",
+            "type": "food"
+          },
+          {
+            "type": "food",
+            "text": "ארוחת ערב. המלצה למטבח אסייתי: מסעדת Imono סושי.",
+            "id": "1780677112582_72sal",
+            "fixed": false
+          }
+        ],
+        "isoDate": "2026-07-16"
+      },
+      {
+        "id": "day_2026-07-23",
+        "title": "יום 9: הר קירקיופל",
+        "date": "7/23/2026",
+        "items": [
+          {
+            "id": "1780677112583_xmi28",
+            "text": "עגינה בגרונדרפיורדור (Grundarfjörður), ליד הר קירקיופל (Kirkjufell) המפורסם.",
+            "fixed": false,
+            "type": "ship"
+          },
+          {
+            "text": "יום לטיולים רגליים באזור, צילום נופים וחקר חצי האי סנייפלסנס.",
+            "id": "1780677112583_ipf77",
+            "fixed": false,
+            "type": "note"
+          }
+        ],
+        "isoDate": "2026-07-23"
+      },
+      {
+        "id": "day_2026-07-15",
+        "items": [
+          {
+            "type": "flight",
+            "text": "טיסה מתל אביב (TLV) לאמסטרדם (AMS), חברת ארקיע, טיסה IZ511. המראה: 13:25, נחיתה: 17:30.",
+            "fixed": true,
+            "id": "1780677112582_unjwj"
+          },
+          {
+            "type": "car",
+            "id": "1780677112582_7wk1d",
+            "fixed": true,
+            "text": "איסוף רכב שכור בנמל התעופה סכיפהול (AMS) בשעה 17:30."
+          },
+          {
+            "id": "1780677112582_9lkqi",
+            "fixed": false,
+            "text": "נסיעה מנמל התעופה סכיפהול לחרונינגן (כ-2 שעות נסיעה).",
+            "type": "map"
+          },
+          {
+            "id": "1780677112582_0i3fk",
+            "text": "צ'ק-אין למלון בחרונינגן. המלצה: The Social Hub Groningen (דירוג 9+), יש להזמין 2 חדרים נפרדים.",
+            "fixed": false,
+            "type": "hotel"
+          },
+          {
+            "fixed": false,
+            "id": "1780677112582_udg1i",
+            "text": "ארוחת ערב. המלצה למסעדה איטלקית מצוינת: Gustatio.",
+            "type": "food"
+          }
+        ],
+        "isoDate": "2026-07-15",
+        "title": "יום 1: הגעה להולנד ונסיעה לחרונינגן",
+        "date": "7/15/2026"
+      },
+      {
+        "id": "day_2026-07-26",
+        "isoDate": "2026-07-26",
+        "items": [
+          {
+            "type": "map",
+            "id": "1780677112583_vfo6p",
+            "text": "נסיעה מוקדמת בבוקר לנמל התעופה קפלאוויק (KEF).",
+            "fixed": false
+          },
+          {
+            "type": "flight",
+            "text": "טיסה מרייקיאוויק (KEF) לתל אביב (TLV) עם עצירה ברומא (FCO). המראה: 07:40, נחיתה ברומא: 14:25.",
+            "id": "1780677112583_vs961",
+            "fixed": true
+          },
+          {
+            "fixed": false,
+            "text": "עצירת ביניים ארוכה (כ-8.5 שעות) ברומא. אפשר לצאת לסיור קצר בעיר (למשל, אזור הקולוסיאום או הותיקן) או להישאר בנמל התעופה.",
+            "id": "1780677112583_9768f",
+            "type": "note"
+          },
+          {
+            "text": "טיסת המשך מרומא (FCO) לתל אביב (TLV). המראה: 22:50. הנחיתה ביום למחרת.",
+            "id": "1780677112583_hztle",
+            "fixed": true,
+            "type": "flight"
+          }
+        ],
+        "date": "7/26/2026",
+        "title": "יום 12: טיסה חזרה הביתה"
+      },
+      {
+        "id": "day_2026-07-25",
+        "title": "יום 11: סיום הקרוז ומעגל הזהב",
+        "date": "7/25/2026",
+        "items": [
+          {
+            "type": "ship",
+            "text": "ירידה מהקרוז ברייקיאוויק בבוקר.",
+            "fixed": false,
+            "id": "1780677112583_sg2pz"
+          },
+          {
+            "type": "map",
+            "id": "1780677112583_wiudr",
+            "fixed": false,
+            "text": "הצעה ליום זה: שכרו רכב או הצטרפו לסיור מאורגן ל'מעגל הזהב' - הפארק הלאומי ת'ינגווליר, אזור הגייזרים, ומפל גולפוס המרשים."
+          },
+          {
+            "fixed": false,
+            "id": "1780677112583_am0lv",
+            "text": "צ'ק-אין למלון ברייקיאוויק ללילה. המלצה: Reykjavik Konsulat Hotel, Curio Collection by Hilton (דירוג 9+), הזמינו 2 חדרים.",
+            "type": "hotel"
+          },
+          {
+            "fixed": false,
+            "id": "1780677112583_pgd1q",
+            "text": "ארוחת ערב אחרונה באיסלנד. המלצה לאוהבי בשר: The Steakhouse - Grillhúsið.",
+            "type": "food"
+          }
+        ],
+        "isoDate": "2026-07-25"
+      },
+      {
+        "id": "day_2026-07-18",
+        "isoDate": "2026-07-18",
+        "items": [
+          {
+            "type": "note",
+            "fixed": false,
+            "text": "בוקר חופשי לחקור את מרכז העיר רייקיאוויק. בקרו בכנסיית הדלגרים (Hallgrímskirkja) ועלו למגדל לתצפית, וטיילו ברחוב הקניות הראשי Laugavegur.",
+            "id": "1780677112583_xzx02"
+          },
+          {
+            "type": "map",
+            "id": "1780677112583_h22po",
+            "fixed": false,
+            "text": "נסיעה לנמל השייט של רייקיאוויק בשעות הצהריים."
+          },
+          {
+            "text": "עלייה לקרוז 'Celebrity Silhouette' למשך 7 לילות. ההפלגה מתחילה בערב.",
+            "id": "1780677112583_nd7lb",
+            "fixed": true,
+            "type": "ship"
+          }
+        ],
+        "date": "7/18/2026",
+        "title": "יום 4: עלייה לקרוז"
+      },
+      {
+        "id": "day_2026-07-20",
+        "date": "7/20/2026",
+        "title": "יום 6: עגינה באקוריירי ופעילויות",
+        "isoDate": "2026-07-20",
+        "items": [
+          {
+            "text": "עגינה בנמל אקוריירי (Akureyri), 'בירת הצפון'. תוכלו לחקור את העיר, הגנים הבוטניים או לצאת לסיור לאזור אגם מיוואטן ומפל גודאפוס.",
+            "fixed": false,
+            "id": "1780677112583_6sx26",
+            "type": "ship"
+          },
+          {
+            "type": "ticket",
+            "text": "הזדמנות לאומגה מהירה! יש לבדוק ולהזמין מראש סיור אומגה דרך חברת Zipline Akureyri לחווית אדרנלין משפחתית.",
+            "id": "1780677112583_u18ni",
+            "fixed": false
+          }
+        ]
+      },
+      {
+        "id": "day_2026-07-24",
+        "date": "7/24/2026",
+        "title": "יום 10: שייט חזרה לרייקיאוויק",
+        "isoDate": "2026-07-24",
+        "items": [
+          {
+            "fixed": false,
+            "id": "1780677112583_gyvry",
+            "text": "הפלגה חזרה לכיוון רייקיאוויק. ערב אחרון של בילויים והופעות על האונייה.",
+            "type": "ship"
+          }
+        ]
+      },
+      {
+        "id": "day_2026-07-22",
+        "items": [
+          {
+            "type": "ship",
+            "text": "יום נוסף של שייט, הזדמנות להירגע וליהנות מהנופים המרהיבים של חופי איסלנד מהאונייה.",
+            "id": "1780677112583_3l0un",
+            "fixed": false
+          }
+        ],
+        "isoDate": "2026-07-22",
+        "title": "יום 8: יום בים",
+        "date": "7/22/2026"
+      },
+      {
+        "id": "day_2026-07-21",
+        "title": "יום 7: עגינה באיסאפיורדור",
+        "date": "7/21/2026",
+        "items": [
+          {
+            "fixed": false,
+            "id": "1780677112583_npimt",
+            "text": "עגינה באיסאפיורדור (Ísafjörður), עיירת דייגים ציורית בפיורדים המערביים.",
+            "type": "ship"
+          },
+          {
+            "text": "הזדמנות לשייט קיאקים! ניתן להזמין סיור קיאקים מודרך בפיורד השקט וליהנות מהנופים הדרמטיים מהמים.",
+            "fixed": false,
+            "id": "1780677112583_csuaq",
+            "type": "ticket"
+          }
+        ],
+        "isoDate": "2026-07-21"
+      },
+      {
+        "id": "day_2026-07-19",
+        "isoDate": "2026-07-19",
+        "items": [
+          {
+            "fixed": false,
+            "text": "יום שייט בים הצפוני. זו הזדמנות להנות מכל מתקני האונייה: בריכות, ספא, הופעות חיות ומגוון רחב של מסעדות שיענו על ההעדפות שלכם.",
+            "id": "1780677112583_9su6s",
+            "type": "ship"
+          }
+        ],
+        "date": "7/19/2026",
+        "title": "יום 5: יום כיף בים"
+      },
+      {
+        "id": "day_2026-07-17",
+        "isoDate": "2026-07-17",
+        "items": [
+          {
+            "type": "map",
+            "id": "1780677112582_mmszr",
+            "text": "נסיעה מחרונינגן חזרה לנמל התעופה סכיפהול באמסטרדם (כשעתיים).",
+            "fixed": false
+          },
+          {
+            "type": "car",
+            "fixed": true,
+            "text": "החזרת הרכב השכור בנמל התעופה סכיפהול (AMS) עד השעה 17:30.",
+            "id": "1780677112583_jqnyf"
+          },
+          {
+            "type": "flight",
+            "text": "טיסה מאמסטרדם (AMS) לרייקיאוויק (KEF), חברת טראנסאוויה, טיסה HV6885. המראה: 16:20, נחיתה: 17:35 (שעון מקומי).",
+            "id": "1780677112583_pc0ws",
+            "fixed": true
+          },
+          {
+            "fixed": false,
+            "id": "1780677112583_rzx6x",
+            "text": "נסיעה מנמל התעופה קפלאוויק (KEF) למלון ברייקיאוויק (כ-45 דקות).",
+            "type": "map"
+          },
+          {
+            "type": "hotel",
+            "fixed": true,
+            "text": "צ'ק-אין במלון שהוזמן מראש: Alva Hotel Brautarholt.",
+            "id": "1780677112583_awcn5"
+          },
+          {
+            "type": "food",
+            "text": "ארוחת ערב ברייקיאוויק. המלצה לאוכל מקומי (עם אפשרויות בשר מצוינות): Icelandic Street Food.",
+            "id": "1780677112583_4ilx7",
+            "fixed": false
+          }
+        ],
+        "date": "7/17/2026",
+        "title": "יום 3: טיסה לאיסלנד"
+      }
+    ],
+    "group_chat": [],
+    "documents": [
+      {
+        "id": "6hWWKWJnCcD36zbupR1K",
+        "title": "קרוז סלבריטי - חדר 8197 (Deluxe Veranda)",
+        "referenceNumber": "7571632",
+        "notes": "נוסעים: עודד ועינת מונזון",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677112656
+      },
+      {
+        "id": "AQS4mKaIm3TTtEdx7YfA",
+        "title": "מלון Alva ברייקיאוויק",
+        "referenceNumber": "16543022390585102229",
+        "notes": "צ'ק-אין: 17 ביולי, צ'ק-אאוט: 18 ביולי",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677112836
+      },
+      {
+        "id": "IN3C03GxBtHRd6F5w8lW",
+        "title": "קרוז סלבריטי - חדר 9312 (Prime Inside)",
+        "referenceNumber": "7571659",
+        "notes": "נוסעים: עידו ואמיר מונזון",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677113477
+      },
+      {
+        "id": "Jp6bpKveA8hsSi7TUOH5",
+        "title": "טיסה אמסטרדם - רייקיאוויק (טראנסאוויה)",
+        "referenceNumber": "U8REML",
+        "notes": "נוסעים: עודד, עינת, אמיר ועידו מונזון",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677112982
+      },
+      {
+        "id": "cvHDRWSxMpDrsT2rtLoD",
+        "title": "ביטוח ביטול נסיעה (Trip Guaranty)",
+        "referenceNumber": "260136771010276",
+        "notes": "פוליסה ל-4 נוסעים",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677112925
+      },
+      {
+        "id": "jXxcEgDkWcx0mkGfuXih",
+        "title": "ביטוח רכב שכור (הולנד)",
+        "referenceNumber": "VTF-66NP-INS",
+        "notes": "נהג ראשי: עודד ליחאי מונזון",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677113070
+      },
+      {
+        "id": "yi9emxGUOaFykYRrF0cU",
+        "title": "טיסה רייקיאוויק - ת״א (דרך רומא)",
+        "referenceNumber": "1378836458695862 / AWD5S6",
+        "notes": "eTicket עודד: ...509, עינת: ...508, אמיר: ...507. יש לוודא הזמנה עבור עידו.",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677113112
+      },
+      {
+        "id": "zas8bTz9hoQgLks2MNGY",
+        "title": "טיסה ת״א - אמסטרדם (ארקיע)",
+        "referenceNumber": "WMGYON / OXH7MS",
+        "notes": "eTicket עודד: ...815, עינת: ...816, אמיר: ...817",
+        "authorEmail": "omonzon@gmail.com",
+        "createdAt": 1780677113278
+      }
+    ],
+    "aiChats": []
+  },
+  "exportedAt": "2026-06-05T18:08:42.911Z",
+  "version": "1.2"
+}
