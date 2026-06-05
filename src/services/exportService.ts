@@ -16,14 +16,19 @@ export async function getTripDataForExport(tripId: string) {
     data[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }
 
-  return { tripProfile, ...data };
+  return { 
+    tripProfile,
+    itinerary: data['itinerary'] || [],
+    tasks: data['tasks'] || [],
+    expenses: data['expenses'] || []
+  };
 }
 
 async function generateHTML(tripId: string) {
   const { tripProfile, itinerary, tasks, expenses } = await getTripDataForExport(tripId);
   
   // Sort itinerary by date/time
-  itinerary.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  itinerary.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
   
   const html = `
     <!DOCTYPE html>
