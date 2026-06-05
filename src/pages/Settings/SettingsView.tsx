@@ -4,7 +4,7 @@ import { doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion } fro
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
-  Trash2, Plus, Loader2, Camera, Info, Mail
+  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -12,6 +12,7 @@ import { useTripStore } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
 import { exportTripToFile } from '@/services/backupService';
+import { exportTripToHTML, exportTripToPDF, exportTripToCSV } from '@/services/exportService';
 import { fetchGeminiModels } from '@/services/ai';
 import { TAB_DEFS } from '@/App';
 
@@ -566,6 +567,42 @@ export default function SettingsView() {
             {!(tripProfile.photoAlbums?.length) && (
               <p className="text-xs text-slate-400">{t('settings.noAlbums', 'No photo albums added yet.')}</p>
             )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Export Trip Data ───────────────────────────────────────────── */}
+      {currentTripId && tripProfile && (
+        <section className="card p-5 space-y-4">
+          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Download size={18} className="text-brand-500" />
+            {t('settings.exportData', 'Export Data (HTML, PDF, Excel)')}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t('settings.exportDataHelp', 'Export your trip itinerary, expenses, and tasks in your preferred format.')}
+          </p>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <button 
+              onClick={() => exportTripToHTML(currentTripId)} 
+              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3"
+            >
+              <Globe size={20} className="text-blue-500" />
+              <span className="text-xs font-medium">HTML Webpage</span>
+            </button>
+            <button 
+              onClick={() => exportTripToPDF(currentTripId)} 
+              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3"
+            >
+              <FileText size={20} className="text-red-500" />
+              <span className="text-xs font-medium">Print / PDF</span>
+            </button>
+            <button 
+              onClick={() => exportTripToCSV(currentTripId)} 
+              className="btn-secondary flex flex-col items-center justify-center gap-1 py-3"
+            >
+              <Table size={20} className="text-green-500" />
+              <span className="text-xs font-medium">Excel (CSV)</span>
+            </button>
           </div>
         </section>
       )}
