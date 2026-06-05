@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info, Camera } from 'lucide-react';
 import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
-import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
+import { extractSemanticGraph, extractSemanticGraphFromFile, getConstraints } from '@/engine/semanticEngine';
 import { generateComprehensiveTrip } from '@/engine/comprehensiveGenerator';
 import { fetchGeminiModels } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
@@ -41,6 +41,8 @@ export default function OnboardingView() {
   const [constraintCount, setConstraintCount] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [addedSegments, setAddedSegments] = useState<{ id: string, type: 'text' | 'file', title: string, constraintsFound: number }[]>([]);
+  const [currentSegmentText, setCurrentSegmentText] = useState('');
 
   const next = () => {
     let nextStep = step + 1;
@@ -95,12 +97,12 @@ export default function OnboardingView() {
     next();
   };
 
-  const analyzeBookings = async () => {
-    if (!form.bookings.trim() || skipAI) { next(); return; }
+  const handleAddTextSegment = async () => {
+    if (!currentSegmentText.trim() || skipAI) return;
     setExtracting(true);
     try {
       const graph = await extractSemanticGraph(
-        form.bookings,
+        currentSegmentText,
         getProviderForTask('extraction'),
         {
           tripDestinations: form.destinations.split(',').map((d) => d.trim()),
@@ -109,13 +111,81 @@ export default function OnboardingView() {
       );
       updateTripGraph(graph);
       const constraints = getConstraints(graph);
-      setConstraintCount(constraints.length);
-      showToast({ type: 'success', message: t('onboarding.constraintsFound', { count: constraints.length }) });
+      setConstraintCount(prev => prev + constraints.length);
+      
+      setAddedSegments([...addedSegments, {
+        id: Date.now().toString(),
+        type: 'text',
+        title: `Text Snippet (${currentSegmentText.substring(0, 20)}...)`,
+        constraintsFound: constraints.length
+      }]);
+      
+      setForm(prev => ({ ...prev, bookings: prev.bookings + '\n\n---\n\n' + currentSegmentText }));
+      setCurrentSegmentText('');
+      showToast({ type: 'success', message: t('onboarding.addedSuccess', `Added. Found ${constraints.length} constraints.`) });
     } catch {
-      showToast({ type: 'warning', message: t('onboarding.analyzeWarning', 'Could not analyze bookings with AI. They will be saved as-is.') });
+      showToast({ type: 'error', message: t('app.error', 'Failed to analyze text.') });
     } finally {
       setExtracting(false);
-      next();
+    }
+  };
+
+  const processFile = async (file: File) => {
+    if (skipAI) return;
+    setExtracting(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(',')[1];
+          const graph = await extractSemanticGraphFromFile(
+            base64,
+            file.type,
+            getProviderForTask('extraction'),
+            {
+              tripDestinations: form.destinations.split(',').map((d) => d.trim()),
+              tripDates: `${form.startDate} to ${form.endDate}`,
+            }
+          );
+          updateTripGraph(graph);
+          const constraints = getConstraints(graph);
+          setConstraintCount(prev => prev + constraints.length);
+          
+          setAddedSegments(prev => [...prev, {
+            id: Date.now().toString(),
+            type: 'file',
+            title: file.name || 'Screenshot/Pasted Image',
+            constraintsFound: constraints.length
+          }]);
+          
+          const fileContext = `\n\n--- Document: ${file.name || 'Image'} ---\nFound Constraints:\n${JSON.stringify(constraints, null, 2)}`;
+          setForm(prev => ({ ...prev, bookings: prev.bookings + fileContext }));
+          showToast({ type: 'success', message: t('onboarding.addedSuccess', `Analyzed document. Found ${constraints.length} constraints.`) });
+        } catch (err) {
+          showToast({ type: 'error', message: t('app.error', 'Failed to analyze document.') });
+        } finally {
+          setExtracting(false);
+        }
+      };
+    } catch (err) {
+      setExtracting(false);
+      showToast({ type: 'error', message: t('app.error', 'Failed to read file.') });
+    }
+  };
+
+  const handleAddFileSegment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+    if (e.target) e.target.value = '';
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      e.preventDefault();
+      const file = e.clipboardData.files[0];
+      await processFile(file);
     }
   };
 
@@ -414,16 +484,56 @@ export default function OnboardingView() {
                 <strong>{t('onboarding.semanticHelp1')}</strong> {t('onboarding.semanticHelp2')}
               </p>
             </div>
-            <textarea
-              id="trip-bookings"
-              className="input-base h-48 resize-none font-mono text-sm"
-              value={form.bookings}
-              onChange={(e) => setForm({ ...form, bookings: e.target.value })}
-              placeholder={t('onboarding.pasteBookings')}
-              dir="auto"
-            />
+
+            {/* List of added bookings */}
+            {addedSegments.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white">{t('onboarding.addedDocuments', 'Added Documents')}</h3>
+                {addedSegments.map(seg => (
+                  <div key={seg.id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700 animate-fade-in">
+                    <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 overflow-hidden">
+                       {seg.type === 'file' ? <FileText size={16} className="shrink-0" /> : <FileText size={16} className="shrink-0" />}
+                       <span className="truncate">{seg.title}</span>
+                    </div>
+                    <span className="text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 px-2 py-1 rounded-full shrink-0">
+                      {seg.constraintsFound} constraints
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-3 relative">
+              <textarea
+                className="input-base h-32 resize-none font-mono text-sm w-full"
+                value={currentSegmentText}
+                onChange={(e) => setCurrentSegmentText(e.target.value)}
+                onPaste={handlePaste}
+                placeholder={t('onboarding.pasteBookings', 'Paste text or images here...')}
+                dir="auto"
+                disabled={isExtracting}
+              />
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                 <div className="flex gap-2 w-full sm:w-auto">
+                    <label className="btn-secondary cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 text-sm py-2">
+                      <Camera size={16} />
+                      {t('itinerary.scanDoc', 'Scan Doc')}
+                      <input type="file" accept="application/pdf, image/*" className="hidden" onChange={handleAddFileSegment} disabled={isExtracting} />
+                    </label>
+                 </div>
+                 <button 
+                   onClick={handleAddTextSegment} 
+                   disabled={!currentSegmentText.trim() || isExtracting}
+                   className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 text-sm py-2"
+                 >
+                   {isExtracting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                   {t('app.add', 'Add')}
+                 </button>
+              </div>
+            </div>
+
             {constraintCount > 0 && (
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium pt-4">
                 <CheckCircle2 size={16} />
                 {t('onboarding.constraintsFound', { count: constraintCount })} {t('onboarding.lockedToItinerary')}
               </div>
@@ -498,14 +608,14 @@ export default function OnboardingView() {
         {step === 5 && (
           <button
             id="btn-analyze"
-            onClick={analyzeBookings}
+            onClick={next}
             disabled={isExtracting}
             className="btn-primary flex items-center gap-2 ms-auto"
           >
             {isExtracting ? (
-              <><Loader2 size={16} className="animate-spin" /> {t('onboarding.analyzing')}</>
+              <><Loader2 size={16} className="animate-spin" /> {t('app.loading', 'Loading...')}</>
             ) : (
-              <><Sparkles size={16} /> {t('onboarding.analyzeContinue')}</>
+              <><ArrowRight size={16} /> {t('onboarding.analyzeContinue', 'Continue to Review')}</>
             )}
           </button>
         )}

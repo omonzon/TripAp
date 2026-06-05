@@ -133,6 +133,46 @@ export async function extractSemanticGraph(
 }
 
 /**
+ * Extract semantic graph from a file (PDF or Image).
+ */
+export async function extractSemanticGraphFromFile(
+  base64Data: string,
+  mimeType: string,
+  provider: AIProvider,
+  context?: { tripDestinations?: string[]; tripDates?: string },
+): Promise<SemanticGraph> {
+  const contextHint = context
+    ? `\n\nTrip context: Destinations=${context.tripDestinations?.join(', ')}. Dates=${context.tripDates}.`
+    : '';
+
+  const result = await callAI(
+    [{ role: 'user', text: `Extract knowledge graph from this document:${contextHint}` }],
+    provider,
+    { 
+      isJson: true, 
+      systemInstruction: EXTRACTION_SYSTEM_PROMPT, 
+      maxRetries: 2,
+      base64Image: base64Data,
+      mimeType: mimeType
+    },
+  );
+
+  const parsed = parseAIJson<Partial<SemanticGraph>>(result, {
+    nodes: [],
+    edges: [],
+    hyperedges: [],
+  });
+
+  return {
+    nodes: parsed.nodes ?? [],
+    edges: parsed.edges ?? [],
+    hyperedges: parsed.hyperedges ?? [],
+    extractedAt: new Date().toISOString(),
+    sourceText: '[Document Uploaded]',
+  };
+}
+
+/**
  * Merge two graphs, deduplicating by node ID.
  */
 export function mergeGraphs(base: SemanticGraph, patch: SemanticGraph): SemanticGraph {
