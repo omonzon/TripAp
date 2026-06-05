@@ -60,6 +60,13 @@ export default function App() {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
+  // Listen for cross-component tab changes
+  useEffect(() => {
+    const handleTabChange = (e: CustomEvent<TabId>) => setActiveTab(e.detail);
+    window.addEventListener('change-tab', handleTabChange as EventListener);
+    return () => window.removeEventListener('change-tab', handleTabChange as EventListener);
+  }, []);
+
   // Apply language + RTL
   useEffect(() => {
     i18n.changeLanguage(language);

@@ -192,6 +192,15 @@ export default function ItineraryView() {
   const handleAiAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiInput.trim() || isAiLoading || !currentTripId) return;
+
+    if (aiInput.trim().startsWith('AIzaSy')) {
+      useAIStore.getState().setApiKey(aiInput.trim());
+      setAiInput('');
+      showToast({ type: 'info', message: t('settings.apiKeyDetected', 'API Key detected! Redirecting to settings to validate...') });
+      window.dispatchEvent(new CustomEvent('change-tab', { detail: 'settings' }));
+      return;
+    }
+
     setIsAiLoading(true);
     try {
       const dayList = days.map(d => `${d.id} (${d.isoDate}: ${d.title})`).join(', ');
