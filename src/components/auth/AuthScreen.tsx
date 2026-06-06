@@ -1,12 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Sparkles, Shield } from 'lucide-react';
+import { Globe, Sparkles, Shield, Moon, Sun, Languages, Type } from 'lucide-react';
 import { signInWithGoogle } from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export function AuthScreen() {
   const { t } = useTranslation();
-  const { authLoading, loginError } = useAuthStore();
+  const { authLoading, loginError, isDarkMode, toggleDarkMode, language, setLanguage, fontSize, setFontSize } = useAuthStore();
 
   const features = [
     { icon: '🗺️', title: 'AI Itinerary Builder', desc: 'Semantic trip planning from your bookings' },
@@ -16,7 +16,32 @@ export function AuthScreen() {
   ];
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen gradient-hero flex flex-col items-center justify-center px-6 py-12 relative">
+      {/* Top right controls */}
+      <div className="absolute top-4 right-4 flex gap-2">
+        <button
+          onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
+          className="btn-ghost text-white hover:bg-white/20 p-2"
+          title={language === 'he' ? 'English' : 'עברית'}
+        >
+          <Languages size={18} />
+        </button>
+        <button
+          onClick={() => setFontSize(fontSize === 'small' ? 'medium' : fontSize === 'medium' ? 'large' : 'small')}
+          className="btn-ghost text-white hover:bg-white/20 p-2"
+          title={t('app.fontSize', 'Font Size')}
+        >
+          <Type size={18} />
+        </button>
+        <button
+          onClick={toggleDarkMode}
+          className="btn-ghost text-white hover:bg-white/20 p-2"
+          title={isDarkMode ? t('app.lightMode') : t('app.darkMode')}
+        >
+          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+      </div>
+
       {/* Hero */}
       <div className="text-center mb-10 animate-fade-in">
         <div className="w-20 h-20 rounded-3xl gradient-brand mx-auto mb-6 flex items-center justify-center shadow-xl animate-pulse-glow">

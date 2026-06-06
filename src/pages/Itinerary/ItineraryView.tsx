@@ -7,12 +7,11 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import {
-  Sparkles, Loader2, Map, Edit2, Trash2, GripVertical,
-  Plane, RefreshCcw, Sun, Cloud, Plus, Lock, Camera, FileText
+  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTripStore, type ItineraryDay, type ItineraryItem } from '@/store/useTripStore';
+import { useTripStore, useUserRole, type ItineraryDay, type ItineraryItem } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
@@ -88,6 +87,8 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
   const { getProviderForTask } = useAIStore();
   const [refreshing, setRefreshing] = useState(false);
   const { currentTripId } = useTripStore();
+  const userRole = useUserRole();
+  const canWrite = userRole === 'admin' || userRole === 'editor';
 
   const refresh = async () => {
     if (!currentTripId) return;
@@ -96,12 +97,15 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
       const prompt = `You are a flight tracker. Predict live tracking info for this flight context. Return ONLY valid JSON: {"status":"On Time","terminal":"3","gate":"A12","checkin":"Desk 4","time":"14:00"}. Context: "${item.text}"`;
       const text = await callAI(prompt, getProviderForTask('chat'), { isJson: true });
       const parsed = parseAIJson<Record<string, string>>(text, {});
+      const cleanParsed = JSON.parse(JSON.stringify(parsed));
       const day = days.find(d => d.docId === dayDocId);
       if (!day) return;
-      const updatedItems = day.items.map(i => i.id === item.id ? { ...i, flightData: parsed } : i);
+      const updatedItems = day.items.map(i => i.id === item.id ? { ...i, flightData: cleanParsed } : i);
       await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: updatedItems });
-    } catch {
-      showToast({ type: 'error', message: 'Flight sync failed.' });
+      showToast({ type: 'success', message: t('itinerary.flightSynced', 'Flight synced successfully.') });
+    } catch (e: any) {
+      console.error('Flight sync error:', e);
+      showToast({ type: 'error', message: t('itinerary.flightSyncFailed', 'Flight sync failed.') + ' ' + (e.message || '') });
     } finally {
       setRefreshing(false);
     }
@@ -113,10 +117,12 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
         <h4 className="font-bold text-xs text-blue-800 dark:text-blue-400 flex items-center gap-1">
           <Plane size={12} /> {t('itinerary.flightTracker')}
         </h4>
-        <button onClick={refresh} disabled={refreshing} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded flex items-center gap-1 transition-colors">
-          {refreshing ? <Loader2 size={11} className="animate-spin" /> : <RefreshCcw size={11} />}
-          {t('itinerary.sync')}
-        </button>
+        {canWrite && (
+          <button onClick={refresh} disabled={refreshing} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded flex items-center gap-1 transition-colors">
+            {refreshing ? <Loader2 size={11} className="animate-spin" /> : <RefreshCcw size={11} />}
+            {t('itinerary.sync')}
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
         {[
@@ -153,13 +159,16 @@ export default function ItineraryView() {
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const [showWizard, setShowWizard] = useState(false);
+  const [showFlightModal, setShowFlightModal] = useState(false);
+  const [editingMapForDay, setEditingMapForDay] = useState<string | null>(null);
+  const [tempMapUrl, setTempMapUrl] = useState('');
   const [dayToDelete, setDayToDelete] = useState<string | null>(null);
   const [isScanningDoc, setIsScanningDoc] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null!);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const canWrite = appUser?.role === 'admin' || appUser?.role === 'editor';
+  const userRole = useUserRole();
+  const canWrite = userRole === 'admin' || userRole === 'editor';
 
   // ── Firestore listener ────────────────────────────────────────────────────
   useEffect(() => {
@@ -259,14 +268,15 @@ export default function ItineraryView() {
     }
   };
 
-  const handleUpdateDayDate = async (dayDocId: string, newIsoDate: string) => {
-    if (!currentTripId || !canWrite) return;
-    const dateObj = new Date(newIsoDate);
-    if (isNaN(dateObj.getTime())) return;
-    await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), {
-      isoDate: newIsoDate,
-      date: dateObj.toLocaleDateString()
-    });
+  const handleUpdateDayDate = async (dayId: string, isoDate: string) => {
+    if (!currentTripId) return;
+    await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayId), { isoDate });
+  };
+
+  const handleUpdateDayMap = async (dayId: string) => {
+    if (!currentTripId) return;
+    await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayId), { mapUrl: tempMapUrl });
+    setEditingMapForDay(null);
   };
 
   // ── Drag & drop ───────────────────────────────────────────────────────────
@@ -452,6 +462,46 @@ export default function ItineraryView() {
                 )}
               </div>
             </div>
+
+            {/* Map Section */}
+            {(day.mapUrl || editingMapForDay === day.docId || canWrite) && (
+              <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
+                {editingMapForDay === day.docId ? (
+                  <div className="flex w-full items-center gap-2">
+                    <input
+                      type="url"
+                      placeholder="Google Maps URL"
+                      value={tempMapUrl}
+                      onChange={e => setTempMapUrl(e.target.value)}
+                      className="input-base text-xs py-1.5 flex-1"
+                      dir="ltr"
+                    />
+                    <button onClick={() => handleUpdateDayMap(day.docId)} className="btn-primary p-1.5" title={t('app.save')}>
+                      <Check size={14} />
+                    </button>
+                    <button onClick={() => setEditingMapForDay(null)} className="btn-secondary p-1.5" title={t('app.cancel')}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {day.mapUrl && (
+                      <a href={day.mapUrl} target="_blank" rel="noopener noreferrer" className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer">
+                        <MapPin size={12} className="me-1" /> View Map
+                      </a>
+                    )}
+                    {canWrite && (
+                      <button 
+                        onClick={() => { setEditingMapForDay(day.docId); setTempMapUrl(day.mapUrl || ''); }}
+                        className="text-xs text-slate-500 hover:text-brand-500 font-medium"
+                      >
+                        {day.mapUrl ? t('app.edit') : '+ Add Map'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Items */}
             <div className="p-4 space-y-2">

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTripStore } from '@/store/useTripStore';
+import { useTripStore, useUserRole } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
 import { exportTripToFile } from '@/services/backupService';
@@ -65,7 +65,8 @@ export default function SettingsView() {
   const [exportingType, setExportingType] = useState<string | null>(null);
 
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
-  const isAdmin = appUser?.role === 'admin';
+  const userRole = useUserRole();
+  const isAdmin = userRole === 'admin';
 
   const saveAISettings = async () => {
     if (providerType === 'gemini' && localKey.trim()) {

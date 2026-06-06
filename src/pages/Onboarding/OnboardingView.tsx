@@ -37,6 +37,7 @@ export default function OnboardingView() {
     pace: 'moderate' as TripProfile['pace'],
     preferences: '',
     bookings: '',
+    tripStyle: [] as string[],
   });
   const [constraintCount, setConstraintCount] = useState(0);
   const [generating, setGenerating] = useState(false);
@@ -204,6 +205,7 @@ export default function OnboardingView() {
         currency: form.currency,
         pace: form.pace,
         preferences: form.preferences,
+        tripStyle: form.tripStyle,
         participants: [{ email: appUser.email, name: appUser.name, role: 'admin' }],
         phase: 'pre',
       };
@@ -456,6 +458,29 @@ export default function OnboardingView() {
                       }`}
                   >
                     {t(`onboarding.${p}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.tripStyle', 'Trip Style')}</label>
+              <div className="flex flex-wrap gap-2">
+                {(['nature', 'city', 'food', 'diving', 'trekking', 'culture', 'shopping', 'relax'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => {
+                      setForm(prev => ({
+                        ...prev,
+                        tripStyle: prev.tripStyle.includes(s) ? prev.tripStyle.filter(x => x !== s) : [...prev.tripStyle, s]
+                      }))
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      form.tripStyle.includes(s) 
+                        ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300'
+                        : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    {t(`styles.${s}`, s)}
                   </button>
                 ))}
               </div>

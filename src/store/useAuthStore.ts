@@ -16,6 +16,7 @@ interface AuthState {
   authLoading: boolean;
   loginError: string | null;
   isDarkMode: boolean;
+  fontSize: 'small' | 'medium' | 'large';
   language: 'en' | 'he' | 'fr' | 'de' | 'es' | 'nl' | 'is';
   autoBackupInterval: number;
   lastBackupTime: number;
@@ -26,6 +27,7 @@ interface AuthState {
   setAuthLoading: (val: boolean) => void;
   setLoginError: (err: string | null) => void;
   toggleDarkMode: () => void;
+  setFontSize: (size: AuthState['fontSize']) => void;
   setLanguage: (lang: AuthState['language']) => void;
   setAutoBackupInterval: (hours: number) => void;
   setLastBackupTime: (time: number) => void;
@@ -40,6 +42,7 @@ export const useAuthStore = create<AuthState>()(
       authLoading: true,
       loginError: null,
       isDarkMode: true,
+      fontSize: 'medium',
       language: 'he',
       autoBackupInterval: 0,
       lastBackupTime: 0,
@@ -57,6 +60,7 @@ export const useAuthStore = create<AuthState>()(
         else document.documentElement.classList.remove('dark');
       },
 
+      setFontSize: (size) => set({ fontSize: size }),
       setLanguage: (lang) => set({ language: lang }),
       setAutoBackupInterval: (hours) => set({ autoBackupInterval: hours }),
       setLastBackupTime: (time) => set({ lastBackupTime: time }),

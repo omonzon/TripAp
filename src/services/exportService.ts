@@ -150,7 +150,17 @@ async function generateHTML(tripId: string) {
       <div class="section">
         <h2>זיכרונות ויומן (Journal)</h2>
         <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; white-space: pre-wrap;">
-          ${journal.length > 0 && journal[0]?.text ? journal[0].text : 'אין רישומים ביומן.'}
+          ${journal.length === 0 ? 'אין רישומים ביומן.' : journal.map((doc: any) => {
+            const title = doc.id === 'global' ? 'יומן קבוצתי' : 'יומן פרטי';
+            let content = '';
+            if (doc.entries && Array.isArray(doc.entries)) {
+              content = doc.entries.map((e: any) => `[${new Date(e.createdAt).toLocaleString()}] ${e.authorName}:\n${e.text}`).join('\n\n');
+            } else if (doc.text) {
+              content = doc.text;
+            }
+            if (!content) return '';
+            return `<h3>${title}</h3><p>${content}</p>`;
+          }).join('<hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;" />')}
         </div>
       </div>
 

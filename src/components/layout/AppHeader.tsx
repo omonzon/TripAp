@@ -1,8 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown } from 'lucide-react';
+import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
+import { translateTripContent } from '@/services/translationService';
+import { showToast } from '@/components/ui/Toast';
 import { signOut } from '@/services/authService';
 import type { TabId } from '@/App';
 
@@ -11,11 +13,24 @@ interface AppHeaderProps {
   activeTab?: TabId;
 }
 
-export function AppHeader({ showTabs = true }: AppHeaderProps) {
+export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
   const { t } = useTranslation();
-  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage } = useAuthStore();
-  const { tripProfile, isOnline, availableTrips, setCurrentTrip } = useTripStore();
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, fontSize, setFontSize } = useAuthStore();
+  const { tripProfile, currentTripId, isOnline, availableTrips, setCurrentTrip } = useTripStore();
   const [showTripsDropdown, setShowTripsDropdown] = React.useState(false);
+
+  const handleLanguageToggle = async () => {
+    const newLang = language === 'he' ? 'en' : 'he';
+    setLanguage(newLang);
+    
+    if (currentTripId && appUser && (appUser.role === 'admin' || appUser.role === 'editor')) {
+      if (window.confirm(t('app.translatePrompt', 'Do you want to translate your trip content to the new language?'))) {
+        showToast({ type: 'success', message: t('app.translating', 'Translating...') });
+        await translateTripContent(currentTripId, newLang);
+      }
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-slate-200 dark:border-slate-800">
@@ -100,12 +115,23 @@ export function AppHeader({ showTabs = true }: AppHeaderProps) {
 
           {/* Language toggle */}
           <button
-            onClick={() => setLanguage(language === 'en' ? 'he' : 'en')}
-            className="btn-ghost p-2 text-xs font-bold"
+            onClick={handleLanguageToggle}
+            className="btn-ghost p-2 font-medium text-sm"
             aria-label="Toggle language"
-            title={language === 'en' ? 'עברית' : 'English'}
+            title={t('app.language', 'Language')}
           >
+            <Languages size={16} className="inline me-1" />
             {language === 'en' ? 'עב' : 'EN'}
+          </button>
+
+          {/* Font Size Toggle */}
+          <button
+            onClick={() => setFontSize(fontSize === 'small' ? 'medium' : fontSize === 'medium' ? 'large' : 'small')}
+            className="btn-ghost p-2"
+            aria-label="Toggle font size"
+            title={t('app.fontSize', 'Font Size')}
+          >
+            <Type size={16} />
           </button>
 
           {/* Dark mode toggle */}
@@ -118,14 +144,35 @@ export function AppHeader({ showTabs = true }: AppHeaderProps) {
             {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          {/* Notifications placeholder */}
-          <button 
-            className="btn-ghost p-2" 
-            aria-label="Notifications"
-            title={t('app.notifications', 'Notifications')}
-          >
-            <Bell size={16} />
-          </button>
+          {/* Notifications */}
+          <div className="relative">
+            <button 
+              className="btn-ghost p-2 relative" 
+              aria-label="Notifications"
+              title={t('app.notifications', 'Notifications')}
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <Bell size={16} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-900" />
+            </button>
+            
+            {showNotifications && (
+              <div className="absolute top-full mt-1 end-0 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+                <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                  <h3 className="font-bold text-sm text-slate-700 dark:text-slate-200">{t('app.notifications', 'התראות')}</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto p-2">
+                  <div className="p-2 flex gap-3 items-start hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer mb-1">
+                    <div className="mt-0.5 text-brand-500"><CheckCircle2 size={16} /></div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">ברוכים הבאים ל-TravelPlatform!</p>
+                      <p className="text-xs text-slate-500 mt-0.5">המערכת מוכנה להתחיל לתכנן את הטיול הבא שלכם.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Avatar + sign out */}
           {appUser && (

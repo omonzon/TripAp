@@ -6,11 +6,11 @@ import {
   doc, query, orderBy,
 } from 'firebase/firestore';
 import {
-  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X
+  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X, Lock, Users
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTripStore } from '@/store/useTripStore';
+import { useTripStore, useUserRole } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { generateTripTasks } from '@/engine/taskGenerator';
 import { DictationButton } from '@/components/features/DictationButton';
@@ -21,8 +21,8 @@ interface Task {
   text: string;
   completed: boolean;
   category: string;
-  priority: 'low' | 'medium' | 'high';
   authorEmail: string;
+  visibility?: 'private' | 'shared';
   createdAt: number;
   reminderDate?: string;
   reminderLocation?: { lat: number; lng: number; name: string };
@@ -103,13 +103,15 @@ export default function TasksView() {
   const [newTask, setNewTask] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [category, setCategory] = useState('כללי');
+  const [visibility, setVisibility] = useState<'private' | 'shared'>('shared');
   const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
   const [reminderTask, setReminderTask] = useState<Task | null>(null);
   const [reminderDateStr, setReminderDateStr] = useState('');
   const [reminderLat, setReminderLat] = useState('');
   const [reminderLng, setReminderLng] = useState('');
 
-  const canWrite = appUser?.role === 'admin' || appUser?.role === 'editor';
+  const userRole = useUserRole();
+  const canWrite = userRole === 'admin' || userRole === 'editor';
 
   useEffect(() => {
     if (!currentTripId) return;
@@ -190,7 +192,7 @@ export default function TasksView() {
     if (!newTask.trim() || !currentTripId || !appUser) return;
     await addDoc(collection(db, 'trips', currentTripId, 'tasks'), {
       text: newTask, completed: false, category, priority,
-      authorEmail: appUser.email, createdAt: Date.now(),
+      authorEmail: appUser.email, visibility, createdAt: Date.now(),
     });
     setNewTask('');
     showToast({ type: 'success', message: t('tasks.taskAdded') });
@@ -232,6 +234,7 @@ export default function TasksView() {
 
   const priorityWeight = { high: 3, medium: 2, low: 1 };
   const filtered = tasks
+    .filter(t => !t.visibility || t.visibility === 'shared' || t.authorEmail === appUser?.email)
     .filter(t => filter === 'all' || (filter === 'pending' && !t.completed) || (filter === 'done' && t.completed))
     .sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
@@ -278,11 +281,25 @@ export default function TasksView() {
                 className="flex-1 py-2.5 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none"
                 dir="auto"
               />
-              <DictationButton onResult={t2 => setNewTask(p => p + (p ? ' ' : '') + t2)} />
-            </div>
-            <button type="submit" id="btn-add-task" disabled={!newTask.trim()} className="btn-primary flex items-center gap-1 text-sm py-2.5">
-              <Plus size={16} />
-            </button>
+                <DictationButton onResult={setNewTask} />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVisibility(v => v === 'shared' ? 'private' : 'shared')}
+                  className={`p-2 rounded-xl border flex items-center justify-center transition-colors ${
+                    visibility === 'private'
+                      ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400'
+                      : 'bg-green-50 border-green-200 text-green-600 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400'
+                  }`}
+                  title={visibility === 'private' ? 'Private' : 'Shared'}
+                >
+                  {visibility === 'private' ? <Lock size={16} /> : <Users size={16} />}
+                </button>
+                <button type="submit" id="btn-add-task" disabled={!newTask.trim()} className="btn-primary flex items-center gap-1 text-sm py-2.5">
+                  <Plus size={16} />
+                </button>
+              </div>
           </form>
           <div className="flex gap-2 flex-wrap">
             {(['low', 'medium', 'high'] as Task['priority'][]).map(p => (
@@ -316,7 +333,13 @@ export default function TasksView() {
               <button onClick={() => toggle(task)} className="shrink-0 text-brand-600 dark:text-brand-400 hover:scale-110 transition-transform">
                 {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
               </button>
-              <p className={`flex-1 text-sm text-slate-800 dark:text-white ${task.completed ? 'line-through text-slate-400' : ''}`} dir="auto">{task.text}</p>
+              <p className={`flex-1 text-sm text-slate-800 dark:text-white ${task.completed ? 'line-through text-slate-400' : ''}`} dir="auto">
+                {task.text}
+                <span className="ms-2 opacity-50">
+                  {task.priority === 'high' ? '🔥' : task.priority === 'medium' ? '⭐' : '📝'}
+                  {task.visibility === 'private' && <Lock size={10} className="inline ms-1 text-red-500" />}
+                </span>
+              </p>
               <span className={`badge text-[10px] ${PRIORITIES[task.priority]?.color}`}>{t(`tasks.${task.priority}`)}</span>
               {canWrite && (
                 <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">

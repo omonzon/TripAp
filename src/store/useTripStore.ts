@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useAuthStore } from './useAuthStore';
 
 export type TripPhase = 'pre' | 'mid' | 'post';
 
@@ -19,6 +20,7 @@ export interface TripProfile {
   pace: 'relaxed' | 'moderate' | 'intense';
   preferences: string; // free text → semantic extraction
   photoAlbums?: string[];
+  tripStyle?: string[]; // e.g. diving, trekking, food, etc.
   phase: TripPhase;
 }
 
@@ -37,6 +39,7 @@ export interface ItineraryDay {
   order: number;
   mapUrl?: string;
   mapImgUrl?: string;
+  mapImage?: string;
   items: ItineraryItem[];
 }
 
@@ -140,3 +143,11 @@ export const useTripStore = create<TripState>()(
     },
   ),
 );
+
+export const useUserRole = () => {
+  const tripProfile = useTripStore(s => s.tripProfile);
+  const appUser = useAuthStore(s => s.appUser);
+  if (!tripProfile || !appUser) return 'viewer';
+  const p = tripProfile.participants?.find(x => x.email === appUser.email);
+  return p?.role || 'viewer';
+};

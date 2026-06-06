@@ -7,7 +7,7 @@ import {
 import { Camera, Plus, Trash2, Edit2, Loader2, Receipt } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTripStore } from '@/store/useTripStore';
+import { useTripStore, useUserRole } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
@@ -58,7 +58,8 @@ export default function ExpensesView() {
   });
   const fileRef = useRef<HTMLInputElement>(null!);
 
-  const canWrite = appUser?.role === 'admin' || appUser?.role === 'editor';
+  const userRole = useUserRole();
+  const canWrite = userRole === 'admin' || userRole === 'editor';
 
   useEffect(() => {
     if (!currentTripId) return;

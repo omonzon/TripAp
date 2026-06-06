@@ -114,6 +114,9 @@ export const useAIStore = create<AIState>()(
         const profile = useTripStore.getState().tripProfile;
         if (!profile) return '';
         let ctx = `[Global Trip Context]\n- Name: ${profile.name}\n- Destinations: ${profile.destinations.join(', ')}\n- Dates: ${profile.startDate} to ${profile.endDate}\n- Pace: ${profile.pace}\n- Budget: ${profile.budget} ${profile.currency}\n- Preferences: ${profile.preferences}\n`;
+        if (profile.tripStyle && profile.tripStyle.length > 0) {
+          ctx += `- Trip Styles: ${profile.tripStyle.join(', ')}\n`;
+        }
         if (tripGraph && tripGraph.nodes.length > 0) {
            ctx += `\n[Semantic Memory / Constraints]\n${graphToContext(tripGraph)}\n`;
         }

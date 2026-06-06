@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Map, CheckSquare, MessageCircle, Receipt, Navigation,
-  Languages, Sparkles, Settings, Loader2, WifiOff, Globe, Camera
+  Languages, Sparkles, Settings, Loader2, WifiOff, Globe, Camera, Briefcase
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/useAuthStore';
@@ -23,6 +23,7 @@ const LocationView    = lazy(() => import('@/pages/Locations/LocationView'));
 const TranslationView = lazy(() => import('@/pages/Translate/TranslationView'));
 const AIAssistantView = lazy(() => import('@/pages/AIAssistant/AIAssistantView'));
 const MemoriesView    = lazy(() => import('@/pages/Memories/MemoriesView'));
+const ServicesView    = lazy(() => import('@/pages/Services/ServicesView'));
 const SettingsView    = lazy(() => import('@/pages/Settings/SettingsView'));
 const OnboardingView  = lazy(() => import('@/pages/Onboarding/OnboardingView'));
 
@@ -35,6 +36,7 @@ export const TAB_DEFS = [
   { id: 'translate',  icon: Languages,      labelKey: 'tabs.translate',  component: TranslationView },
   { id: 'ai',         icon: Sparkles,       labelKey: 'tabs.ai',         component: AIAssistantView },
   { id: 'memories',   icon: Camera,         labelKey: 'tabs.memories',   component: MemoriesView },
+  { id: 'services',   icon: Briefcase,      labelKey: 'tabs.services',   component: ServicesView },
   { id: 'settings',   icon: Settings,       labelKey: 'tabs.settings',   component: SettingsView },
 ] as const;
 
@@ -50,7 +52,7 @@ function PageLoader() {
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const { firebaseUser, appUser, authLoading, isDarkMode, language, autoBackupInterval, lastBackupTime, setLastBackupTime } = useAuthStore();
+  const { firebaseUser, appUser, authLoading, isDarkMode, language, fontSize, autoBackupInterval, lastBackupTime, setLastBackupTime } = useAuthStore();
   const { currentTripId, isOnline, setOnline } = useTripStore();
   const [activeTab, setActiveTab] = React.useState<TabId>('itinerary');
 
@@ -59,6 +61,14 @@ export default function App() {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
+
+  // Apply font size
+  useEffect(() => {
+    document.documentElement.classList.remove('text-sm', 'text-base', 'text-lg');
+    if (fontSize === 'small') document.documentElement.classList.add('text-sm');
+    else if (fontSize === 'large') document.documentElement.classList.add('text-lg');
+    else document.documentElement.classList.add('text-base');
+  }, [fontSize]);
 
   // Listen for cross-component tab changes
   useEffect(() => {
