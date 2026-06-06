@@ -23,6 +23,7 @@ interface Task {
   category: string;
   authorEmail: string;
   visibility?: 'private' | 'shared';
+  priority?: 'low' | 'medium' | 'high';
   createdAt: number;
   reminderDate?: string;
   reminderLocation?: { lat: number; lng: number; name: string };
@@ -238,7 +239,7 @@ export default function TasksView() {
     .filter(t => filter === 'all' || (filter === 'pending' && !t.completed) || (filter === 'done' && t.completed))
     .sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      if (a.priority !== b.priority) return priorityWeight[b.priority] - priorityWeight[a.priority];
+      if (a.priority !== b.priority) return priorityWeight[b.priority || 'medium'] - priorityWeight[a.priority || 'medium'];
       if (a.reminderDate && !b.reminderDate) return -1;
       if (!a.reminderDate && b.reminderDate) return 1;
       if (a.reminderDate && b.reminderDate) {
@@ -303,7 +304,7 @@ export default function TasksView() {
           </form>
           <div className="flex gap-2 flex-wrap">
             {(['low', 'medium', 'high'] as Task['priority'][]).map(p => (
-              <button key={p} onClick={() => setPriority(p)} className={`badge border-2 cursor-pointer transition-all ${priority === p ? 'border-brand-500' : 'border-transparent'} ${PRIORITIES[p].color}`}>
+              <button key={p} onClick={() => setPriority(p)} className={`badge border-2 cursor-pointer transition-all ${priority === p ? 'border-brand-500' : 'border-transparent'} ${PRIORITIES[p || 'medium'].color}`}>
                 {t(`tasks.${p}`)}
               </button>
             ))}
@@ -340,7 +341,7 @@ export default function TasksView() {
                   {task.visibility === 'private' && <Lock size={10} className="inline ms-1 text-red-500" />}
                 </span>
               </p>
-              <span className={`badge text-[10px] ${PRIORITIES[task.priority]?.color}`}>{t(`tasks.${task.priority}`)}</span>
+              <span className={`badge text-[10px] ${PRIORITIES[task.priority || 'medium']?.color}`}>{t(`tasks.${task.priority || 'medium'}`)}</span>
               {canWrite && (
                 <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <button onClick={() => {

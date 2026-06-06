@@ -76,7 +76,7 @@ export default function MemoriesView() {
   // Load journal from Firestore
   useEffect(() => {
     if (!currentTripId || !appUser) return;
-    const docId = journalMode === 'group' ? 'global' : `private_${appUser.uid}`;
+    const docId = journalMode === 'group' ? 'global' : `private_${appUser.email}`;
     setEntries([]); // clear while loading
     const unsub = onSnapshot(doc(db, 'trips', currentTripId, 'journal', docId), (docSnap) => {
       if (docSnap.exists()) {
@@ -98,7 +98,7 @@ export default function MemoriesView() {
   const saveJournalEntry = async () => {
     if (!newEntry.trim() || !currentTripId || !appUser) return;
     setIsSaving(true);
-    const docId = journalMode === 'group' ? 'global' : `private_${appUser.uid}`;
+    const docId = journalMode === 'group' ? 'global' : `private_${appUser.email}`;
     
     const newEntryObj: JournalEntry = {
       id: Date.now().toString(),

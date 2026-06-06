@@ -7,7 +7,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import {
-  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin
+  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -160,6 +160,7 @@ export default function ItineraryView() {
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [showFlightModal, setShowFlightModal] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [editingMapForDay, setEditingMapForDay] = useState<string | null>(null);
   const [tempMapUrl, setTempMapUrl] = useState('');
   const [dayToDelete, setDayToDelete] = useState<string | null>(null);
