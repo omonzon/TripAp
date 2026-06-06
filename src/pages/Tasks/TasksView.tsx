@@ -6,7 +6,7 @@ import {
   doc, query, orderBy,
 } from 'firebase/firestore';
 import {
-  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X, Lock, Users
+  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X, Lock, Users, Edit2, Check
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -102,9 +102,12 @@ export default function TasksView() {
   const [loading, setLoading] = useState(true);
   const [generatingTasks, setGeneratingTasks] = useState(false);
   const [newTask, setNewTask] = useState('');
-  const [priority, setPriority] = useState<Task['priority']>('medium');
-  const [category, setCategory] = useState('כללי');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [category, setCategory] = useState('general');
   const [visibility, setVisibility] = useState<'private' | 'shared'>('shared');
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskText, setEditTaskText] = useState('');
+  const [enableLocation, setEnableLocation] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
   const [reminderTask, setReminderTask] = useState<Task | null>(null);
   const [reminderDateStr, setReminderDateStr] = useState('');
@@ -215,7 +218,7 @@ export default function TasksView() {
   const saveReminder = async () => {
     if (!reminderTask || !currentTripId) return;
     try {
-      const loc = reminderLat && reminderLng ? { lat: parseFloat(reminderLat), lng: parseFloat(reminderLng), name: 'Location' } : null;
+      const loc = enableLocation && reminderLat && reminderLng ? { lat: parseFloat(reminderLat), lng: parseFloat(reminderLng), name: 'Location' } : null;
       await updateDoc(doc(db, 'trips', currentTripId, 'tasks', reminderTask.id), {
         reminderDate: reminderDateStr || null,
         reminderLocation: loc,
@@ -303,7 +306,7 @@ export default function TasksView() {
               </div>
           </form>
           <div className="flex gap-2 flex-wrap">
-            {(['low', 'medium', 'high'] as Task['priority'][]).map(p => (
+            {(['low', 'medium', 'high'] as const).map(p => (
               <button key={p} onClick={() => setPriority(p)} className={`badge border-2 cursor-pointer transition-all ${priority === p ? 'border-brand-500' : 'border-transparent'} ${PRIORITIES[p || 'medium'].color}`}>
                 {t(`tasks.${p}`)}
               </button>
@@ -334,25 +337,51 @@ export default function TasksView() {
               <button onClick={() => toggle(task)} className="shrink-0 text-brand-600 dark:text-brand-400 hover:scale-110 transition-transform">
                 {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
               </button>
-              <p className={`flex-1 text-sm text-slate-800 dark:text-white ${task.completed ? 'line-through text-slate-400' : ''}`} dir="auto">
-                {task.text}
-                <span className="ms-2 opacity-50">
-                  {task.priority === 'high' ? '🔥' : task.priority === 'medium' ? '⭐' : '📝'}
-                  {task.visibility === 'private' && <Lock size={10} className="inline ms-1 text-red-500" />}
-                </span>
-              </p>
+              
+              {editingTaskId === task.id ? (
+                <div className="flex-1 flex gap-2">
+                  <input
+                    value={editTaskText}
+                    onChange={e => setEditTaskText(e.target.value)}
+                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none"
+                    dir="auto"
+                    autoFocus
+                  />
+                  <button onClick={async () => {
+                    if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText });
+                    setEditingTaskId(null);
+                  }} className="text-brand-500 hover:text-brand-600 p-1"><Check size={16} /></button>
+                  <button onClick={() => setEditingTaskId(null)} className="text-slate-400 hover:text-slate-500 p-1"><X size={16} /></button>
+                </div>
+              ) : (
+                <p className={`flex-1 text-sm text-slate-800 dark:text-white ${task.completed ? 'line-through text-slate-400' : ''}`} dir="auto">
+                  {task.text}
+                  <span className="ms-2 opacity-50">
+                    {task.priority === 'high' ? '🔥' : task.priority === 'medium' ? '⭐' : '📝'}
+                    {task.visibility === 'private' && <Lock size={10} className="inline ms-1 text-red-500" />}
+                  </span>
+                </p>
+              )}
+              
               <span className={`badge text-[10px] ${PRIORITIES[task.priority || 'medium']?.color}`}>{t(`tasks.${task.priority || 'medium'}`)}</span>
               {canWrite && (
                 <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <button onClick={() => {
+                    setEditingTaskId(task.id);
+                    setEditTaskText(task.text);
+                  }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => {
                     setReminderDateStr(task.reminderDate || '');
                     setReminderLat(task.reminderLocation?.lat.toString() || '');
                     setReminderLng(task.reminderLocation?.lng.toString() || '');
+                    setEnableLocation(!!task.reminderLocation);
                     setReminderTask(task);
-                  }} className={`p-1.5 rounded-lg transition-all ${task.reminderDate || task.reminderLocation ? 'text-amber-500 hover:text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100'}`}>
+                  }} className={`p-1.5 rounded-lg transition-all ${task.reminderDate || task.reminderLocation ? 'text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                     <Bell size={14} />
                   </button>
-                  <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all hover:bg-slate-100">
+                  <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -380,21 +409,32 @@ export default function TasksView() {
                 />
               </div>
 
-              <AddressAutocomplete onSelect={(lat, lng) => {
-                setReminderLat(lat);
-                setReminderLng(lng);
-              }} />
-
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.lat', 'Latitude')}</label>
-                  <input type="number" placeholder="64.14" value={reminderLat} onChange={e => setReminderLat(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none" />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.lng', 'Longitude')}</label>
-                  <input type="number" placeholder="-21.94" value={reminderLng} onChange={e => setReminderLng(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none" />
-                </div>
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" checked={enableLocation} onChange={e => setEnableLocation(e.target.checked)} className="rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+                  {t('tasks.enableLocation', 'הפעל התראת מיקום (Location Alert)')}
+                </label>
               </div>
+
+              {enableLocation && (
+                <div className="space-y-4 pt-2">
+                  <AddressAutocomplete onSelect={(lat, lng) => {
+                    setReminderLat(lat);
+                    setReminderLng(lng);
+                  }} />
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.lat', 'Latitude')}</label>
+                      <input type="number" placeholder="64.14" value={reminderLat} onChange={e => setReminderLat(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{t('tasks.lng', 'Longitude')}</label>
+                      <input type="number" placeholder="-21.94" value={reminderLng} onChange={e => setReminderLng(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setReminderTask(null)} className="flex-1 btn-secondary py-2">{t('app.cancel', 'Cancel')}</button>
