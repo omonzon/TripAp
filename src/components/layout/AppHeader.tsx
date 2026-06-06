@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X } from 'lucide-react';
+import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { translateTripContent } from '@/services/translationService';
@@ -19,6 +19,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
   const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, fontSize, setFontSize } = useAuthStore();
   const { tripProfile, currentTripId, isOnline, availableTrips, setCurrentTrip } = useTripStore();
   const [showTripsDropdown, setShowTripsDropdown] = React.useState(false);
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
 
   const handleLanguageToggle = async () => {
     const newLang = language === 'he' ? 'en' : 'he';
@@ -175,14 +176,44 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
           {/* Avatar + sign out */}
           {appUser && (
             <div className="flex items-center gap-2 ms-1">
-              <div
-                className={`${fontSize === 'xlarge' ? 'w-8 h-8 text-sm' : 'w-7 h-7 text-xs'} rounded-full gradient-brand flex items-center justify-center text-white font-bold cursor-pointer`}
-                title={appUser.name}
-              >
-                {appUser.name[0]?.toUpperCase()}
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className={`${fontSize === 'xlarge' ? 'w-8 h-8 text-sm' : 'w-7 h-7 text-xs'} rounded-full gradient-brand flex items-center justify-center text-white font-bold cursor-pointer hover:ring-2 ring-brand-300 transition-all`}
+                  title={appUser.name}
+                >
+                  {appUser.name[0]?.toUpperCase()}
+                </button>
+                {showProfileMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
+                    <div className="absolute top-full end-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-2 z-50 animate-fade-in">
+                      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                        <div className="font-bold text-slate-900 dark:text-white truncate">{appUser.name}</div>
+                        <div className="text-xs text-slate-500 truncate" dir="ltr">{appUser.email}</div>
+                      </div>
+                      <button 
+                        className="w-full text-start px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-300 transition-colors"
+                        onClick={async () => {
+                          setShowProfileMenu(false);
+                          if (window.confirm(t('app.confirmSwitch', 'האם אתה בטוח שברצונך להתנתק כדי להחליף חשבון?'))) {
+                            await signOut();
+                          }
+                        }}
+                      >
+                        <Users size={16} className="text-brand-500" />
+                        {t('app.switchAccount', 'החלף חשבון')}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
               <button
-                onClick={signOut}
+                onClick={() => {
+                  if (window.confirm(t('app.confirmLogout', 'האם אתה בטוח שברצונך להתנתק מהמערכת?'))) {
+                    signOut();
+                  }
+                }}
                 className="btn-ghost p-2 text-red-500 dark:text-red-400"
                 aria-label={t('app.logout')}
                 title={t('app.logout')}

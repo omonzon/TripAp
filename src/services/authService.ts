@@ -76,6 +76,7 @@ export async function signInWithGoogle() {
   setAuthLoading(true);
   setLoginError(null);
   try {
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
     await signInWithPopup(auth, googleProvider);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Sign in failed';
