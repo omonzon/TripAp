@@ -60,7 +60,6 @@ export default function SettingsView() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [addingUser, setAddingUser] = useState(false);
   const [newUserRole, setNewUserRole] = useState<'viewer' | 'editor' | 'admin'>('viewer');
-  const [newAlbumUrl, setNewAlbumUrl] = useState('');
   const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exportingType, setExportingType] = useState<string | null>(null);
@@ -244,38 +243,7 @@ export default function SettingsView() {
     }
   };
 
-  const addAlbumUrl = async () => {
-    if (!newAlbumUrl.trim() || !currentTripId) return;
-    try {
-      const albums = tripProfile?.photoAlbums || [];
-      const newAlbums = [...albums, newAlbumUrl.trim()];
-      await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
-        photoAlbums: newAlbums
-      });
-      if (tripProfile) {
-        setTripProfile({ ...tripProfile, photoAlbums: newAlbums });
-      }
-      setNewAlbumUrl('');
-      showToast({ type: 'success', message: t('settings.albumAdded', 'Album added!') });
-    } catch {
-      showToast({ type: 'error', message: t('app.error') });
-    }
-  };
 
-  const removeAlbumUrl = async (url: string) => {
-    if (!currentTripId) return;
-    try {
-      const albums = (tripProfile?.photoAlbums || []).filter(u => u !== url);
-      await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
-        photoAlbums: albums
-      });
-      if (tripProfile) {
-        setTripProfile({ ...tripProfile, photoAlbums: albums });
-      }
-    } catch {
-      showToast({ type: 'error', message: t('app.error') });
-    }
-  };
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl mx-auto pb-8">
@@ -640,47 +608,6 @@ export default function SettingsView() {
         </button>
       </section>
 
-      {/* ── Trip Albums ─────────────────────────────────────────────────── */}
-      {currentTripId && tripProfile && (
-        <section className="card p-5 space-y-4">
-          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Camera size={18} className="text-brand-500" />
-            {t('settings.photoAlbums', 'Photo Albums (Links)')}
-          </h3>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={newAlbumUrl}
-              onChange={e => setNewAlbumUrl(e.target.value)}
-              placeholder="https://photos.app.goo.gl/..."
-              className="input-base flex-1 text-sm"
-              dir="ltr"
-            />
-            <button
-              onClick={addAlbumUrl}
-              disabled={!newAlbumUrl.trim()}
-              className="btn-primary flex items-center gap-2 shrink-0"
-            >
-              <Plus size={16} />
-              {t('app.add', 'Add')}
-            </button>
-          </div>
-          
-          <div className="space-y-2 mt-2">
-            {(tripProfile.photoAlbums || []).map((url, i) => (
-              <div key={i} className="flex justify-between items-center bg-slate-50 dark:bg-slate-900 p-2 rounded border border-slate-100 dark:border-slate-800">
-                <a href={url} target="_blank" rel="noreferrer" className="text-sm text-brand-600 dark:text-brand-400 hover:underline truncate mr-2" dir="ltr">{url}</a>
-                <button onClick={() => removeAlbumUrl(url)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-            {!(tripProfile.photoAlbums?.length) && (
-              <p className="text-xs text-slate-400">{t('settings.noAlbums', 'No photo albums added yet.')}</p>
-            )}
-          </div>
-        </section>
-      )}
 
       {/* ── Export Trip Data ───────────────────────────────────────────── */}
       {currentTripId && tripProfile && (

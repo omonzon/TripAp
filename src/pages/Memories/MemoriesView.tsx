@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText, Trash2 } from 'lucide-react';
+import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText, Trash2, Plus } from 'lucide-react';
 import { useTripStore } from '@/store/useTripStore';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAIStore } from '@/store/useAIStore';
 import { callAI } from '@/services/ai';
@@ -43,8 +43,8 @@ function AlbumPreview({ url }: { url: string }) {
           <Link2 className="text-slate-400" size={24} />
         </div>
       )}
-      <div className="p-2 border-t border-slate-200 dark:border-slate-700">
-        <p className="text-[10px] font-medium text-slate-500 truncate" dir="ltr">{url}</p>
+      <div className="p-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
+        <p className="text-[10px] font-medium text-slate-500 truncate mr-2" dir="ltr">{url}</p>
       </div>
     </a>
   );
@@ -60,7 +60,7 @@ interface JournalEntry {
 
 export default function MemoriesView() {
   const { t, i18n } = useTranslation();
-  const { currentTripId, tripProfile, days } = useTripStore();
+  const { currentTripId, tripProfile, days, setTripProfile } = useTripStore();
   const { appUser } = useAuthStore();
   const { getProviderForTask, getUnifiedContext } = useAIStore();
 
@@ -78,6 +78,7 @@ export default function MemoriesView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [editImageLink, setEditImageLink] = useState('');
+  const [newAlbumUrl, setNewAlbumUrl] = useState('');
 
   // Load journal from Firestore
   useEffect(() => {
@@ -167,6 +168,39 @@ export default function MemoriesView() {
       showToast({ type: 'error', message: t('errors.aiUnavailable') || 'Failed to summarize journal' });
     } finally {
       setIsSummarizing(false);
+    }
+  };
+
+  const addAlbumUrl = async () => {
+    if (!newAlbumUrl.trim() || !currentTripId) return;
+    try {
+      const albums = tripProfile?.photoAlbums || [];
+      const newAlbums = [...albums, newAlbumUrl.trim()];
+      await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
+        photoAlbums: newAlbums
+      });
+      if (tripProfile) {
+        setTripProfile({ ...tripProfile, photoAlbums: newAlbums });
+      }
+      setNewAlbumUrl('');
+      showToast({ type: 'success', message: t('settings.albumAdded', 'Album added!') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    }
+  };
+
+  const removeAlbumUrl = async (url: string) => {
+    if (!currentTripId) return;
+    try {
+      const albums = (tripProfile?.photoAlbums || []).filter(u => u !== url);
+      await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
+        photoAlbums: albums
+      });
+      if (tripProfile) {
+        setTripProfile({ ...tripProfile, photoAlbums: albums });
+      }
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
     }
   };
 
@@ -338,16 +372,43 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
               Photo Albums
             </h2>
             {tripProfile?.photoAlbums && tripProfile.photoAlbums.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 {tripProfile.photoAlbums.map((url, idx) => (
-                  <AlbumPreview key={idx} url={url} />
+                  <div key={idx} className="relative group">
+                    <AlbumPreview url={url} />
+                    <button 
+                      onClick={() => removeAlbumUrl(url)}
+                      className="absolute top-1 right-1 p-1.5 bg-white/80 dark:bg-black/60 hover:bg-red-500 hover:text-white rounded-md text-slate-600 dark:text-slate-300 transition-colors opacity-0 group-hover:opacity-100 z-10 backdrop-blur-sm"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-500 text-center py-6 bg-slate-50 dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-                No albums added. Add Google Photos links in the Trip Settings.
+              <p className="text-sm text-slate-500 text-center py-6 bg-slate-50 dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 mb-4">
+                No albums added yet. Add Google Photos or other image links below.
               </p>
             )}
+
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={newAlbumUrl}
+                onChange={e => setNewAlbumUrl(e.target.value)}
+                placeholder="https://photos.app.goo.gl/..."
+                className="input-base flex-1 text-sm"
+                dir="ltr"
+              />
+              <button
+                onClick={addAlbumUrl}
+                disabled={!newAlbumUrl.trim()}
+                className="btn-primary flex items-center gap-2 shrink-0 px-4"
+              >
+                <Plus size={16} />
+                {t('app.add', 'Add')}
+              </button>
+            </div>
           </div>
         </div>
 
