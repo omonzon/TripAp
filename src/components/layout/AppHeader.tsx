@@ -145,7 +145,9 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
             </button>
             
             {showNotifications && (
-              <div className="absolute top-full mt-1 end-0 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+              <>
+                <div className="fixed inset-0 z-40 md:hidden" onClick={() => setShowNotifications(false)} />
+                <div className="fixed top-16 left-4 right-4 sm:absolute sm:top-full sm:mt-1 sm:end-0 sm:left-auto sm:right-auto sm:w-80 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
                 <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                   <h3 className="font-bold text-sm text-slate-700 dark:text-slate-200">{t('app.notifications', 'התראות')}</h3>
                 </div>
@@ -159,6 +161,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                   </div>
                 </div>
               </div>
+              </>
             )}
           </div>
 
