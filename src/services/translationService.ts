@@ -6,6 +6,7 @@ import { showToast } from '@/components/ui/Toast';
 
 export async function translateTripContent(tripId: string, targetLanguage: string) {
   try {
+    showToast({ type: 'info', message: 'Starting background translation... This may take a minute.' });
     const aiStore = useAIStore.getState();
     const provider = aiStore.getProviderForTask('translation');
 

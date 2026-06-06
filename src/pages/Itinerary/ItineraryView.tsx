@@ -7,7 +7,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import {
-  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera
+  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -160,6 +160,7 @@ export default function ItineraryView() {
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [showFlightModal, setShowFlightModal] = useState(false);
+  const [detailedItem, setDetailedItem] = useState<{dayDocId: string, item: ItineraryItem} | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [editingMapForDay, setEditingMapForDay] = useState<string | null>(null);
   const [tempMapUrl, setTempMapUrl] = useState('');
@@ -290,6 +291,21 @@ export default function ItineraryView() {
     const [removed] = newItems.splice(draggedIdx, 1);
     newItems.splice(dragOverIdx, 0, removed);
     setDraggedDayId(null); setDraggedIdx(null); setDragOverIdx(null);
+    if (!currentTripId) return;
+    await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: newItems });
+  };
+
+  const handleMove = async (dayDocId: string, itemIdx: number, direction: number) => {
+    const day = days.find(d => d.docId === dayDocId);
+    if (!day || !day.items) return;
+    const newItems = [...day.items];
+    const targetIdx = itemIdx + direction;
+    if (targetIdx < 0 || targetIdx >= newItems.length) return;
+    
+    const temp = newItems[itemIdx];
+    newItems[itemIdx] = newItems[targetIdx];
+    newItems[targetIdx] = temp;
+    
     if (!currentTripId) return;
     await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: newItems });
   };
@@ -523,7 +539,12 @@ export default function ItineraryView() {
                       onDragOver={e => e.preventDefault()}
                       onDragEnd={() => { setDraggedDayId(null); setDraggedIdx(null); setDragOverIdx(null); }}
                       onDrop={() => handleDrop(day.docId, day.items)}
-                      className={`flex items-start gap-2 group p-2 rounded-xl transition-all ${
+                      onClick={() => {
+                        if (editingItemId !== item.id) {
+                          setDetailedItem({ dayDocId: day.docId, item });
+                        }
+                      }}
+                      className={`flex items-start gap-2 group p-2 rounded-xl transition-all cursor-pointer ${
                         isDragging ? 'opacity-30 scale-95' : 'hover:bg-slate-50 dark:hover:bg-slate-900/40'
                       } ${isOver ? 'border-t-2 border-brand-500' : ''}`}
                     >
@@ -575,23 +596,41 @@ export default function ItineraryView() {
                         )}
                       </div>
                       {canWrite && editingItemId !== item.id && !item.fixed && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1">
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1 w-16 sm:w-auto justify-end">
                           <button
-                            onClick={() => { setEditingItemId(item.id); setEditItemText(item.text); setEditItemType(item.type || 'map'); }}
-                            className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditItemText(item.text); setEditItemType(item.type || 'map'); }}
+                            className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
                           >
                             <Edit2 size={14} />
                           </button>
                           <button
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation();
                               if (!currentTripId) return;
+                              if (!confirm(t('app.confirmDelete', 'Are you sure?'))) return;
                               const updated = day.items.filter(i => i.id !== item.id);
                               await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
                             }}
-                            className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
+                          {idx > 0 && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleMove(day.docId, idx, -1); }}
+                              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors md:hidden"
+                            >
+                              <ChevronUp size={14} />
+                            </button>
+                          )}
+                          {idx < day.items.length - 1 && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleMove(day.docId, idx, 1); }}
+                              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors md:hidden"
+                            >
+                              <ChevronDown size={14} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -642,6 +681,42 @@ export default function ItineraryView() {
         </div>,
         document.body
       )}
+
+      {/* Detailed Item Modal */}
+      {detailedItem && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-xl border border-slate-200 dark:border-slate-800 relative max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setDetailedItem(null)} className="absolute top-4 end-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
+              <X size={20} />
+            </button>
+            <div className="flex items-center gap-3 mb-4 mt-2">
+              <div className="w-12 h-12 rounded-xl gradient-brand flex items-center justify-center text-2xl">
+                {(ICON_MAP[detailedItem.item.type] ?? ICON_MAP.map).emoji}
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white capitalize">
+                {detailedItem.item.type}
+              </h3>
+            </div>
+            
+            <div
+              className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content mb-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700"
+              dangerouslySetInnerHTML={{ __html: detailedItem.item.text }}
+            />
+
+            {detailedItem.item.type === 'flight' && (
+              <FlightWidget item={detailedItem.item} dayDocId={detailedItem.dayDocId} days={days} />
+            )}
+            
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setDetailedItem(null)} className="btn-primary py-2 px-6">
+                {t('app.close', 'Close')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }

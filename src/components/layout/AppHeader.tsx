@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages } from 'lucide-react';
+import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { translateTripContent } from '@/services/translationService';
@@ -27,7 +27,8 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
     if (currentTripId && appUser && (appUser.role === 'admin' || appUser.role === 'editor')) {
       if (window.confirm(t('app.translatePrompt', 'Do you want to translate your trip content to the new language?'))) {
         showToast({ type: 'success', message: t('app.translating', 'Translating...') });
-        await translateTripContent(currentTripId, newLang);
+        // Run in background so it doesn't block UI
+        translateTripContent(currentTripId, newLang);
       }
     }
   };
