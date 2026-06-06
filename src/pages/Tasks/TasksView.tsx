@@ -164,7 +164,12 @@ export default function TasksView() {
 
     if (currentTripId && canWrite) {
       try {
-        await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { reminderSent: true });
+        await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { 
+          reminderSent: true,
+          reminderDate: null,
+          reminderLocation: null,
+          priority: 'high'
+        });
       } catch (err) {
         console.error('Failed to update task reminderSent', err);
       }
@@ -360,7 +365,7 @@ export default function TasksView() {
           </div>
         ) : (
           filtered.map(task => (
-            <div key={task.id} className={`card p-3 flex items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''}`}>
+            <div key={task.id} className={`card p-3 flex items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
               <button onClick={() => toggle(task)} className="shrink-0 text-brand-600 dark:text-brand-400 hover:scale-110 transition-transform">
                 {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
               </button>
@@ -381,7 +386,7 @@ export default function TasksView() {
                   <button onClick={() => setEditingTaskId(null)} className="text-slate-400 hover:text-slate-500 p-1"><X size={16} /></button>
                 </div>
               ) : (
-                <p className={`flex-1 text-sm text-slate-800 dark:text-white ${task.completed ? 'line-through text-slate-400' : ''}`} dir="auto">
+                <p className={`flex-1 text-sm ${task.priority === 'high' ? 'font-bold text-red-900 dark:text-red-100' : 'text-slate-800 dark:text-white'} ${task.completed ? 'line-through !text-slate-400 !font-normal' : ''}`} dir="auto">
                   {task.text}
                   <span className="ms-2 opacity-50">
                     {task.priority === 'high' ? '🔥' : task.priority === 'medium' ? '⭐' : '📝'}
