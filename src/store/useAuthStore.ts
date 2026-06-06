@@ -75,6 +75,7 @@ export const useAuthStore = create<AuthState>()(
         fontSize: s.fontSize,
         autoBackupInterval: s.autoBackupInterval,
         lastBackupTime: s.lastBackupTime,
+        emailjsConfig: s.emailjsConfig,
       }),
     },
   ),
