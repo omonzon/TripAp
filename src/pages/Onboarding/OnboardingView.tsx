@@ -208,6 +208,7 @@ export default function OnboardingView() {
         tripStyle: form.tripStyle,
         participants: [{ email: appUser.email, name: appUser.name, role: 'admin' }],
         phase: 'pre',
+        createdBy: appUser.email,
       };
 
       // Write trip to Firestore

@@ -48,17 +48,21 @@ service cloud.firestore {
       }
 
       // Trip profile — only members can read, only admins can update/delete
-      // Anyone authenticated can create a new trip
+      // Only authenticated users can create the 'main' profile and MUST set createdBy to their own email
       match /profile/{doc} {
         allow read: if isMember();
-        allow create: if request.auth != null;
+        allow create: if request.auth != null && doc == 'main' && request.resource.data.createdBy == request.auth.token.email;
         allow update, delete: if isAdmin();
       }
 
-      // Users subcollection — admins manage membership, users can add themselves initially
+      // Users subcollection — admins manage membership
+      // Users can only add themselves initially if they are the creator of the trip
       match /users/{userEmail} {
         allow read: if isMember();
-        allow create: if request.auth != null && (request.auth.token.email == userEmail || isAdmin());
+        allow create: if request.auth != null && (
+          (request.auth.token.email == userEmail && get(/databases/$(database)/documents/trips/$(tripId)/profile/main).data.createdBy == request.auth.token.email) ||
+          isAdmin()
+        );
         allow update, delete: if isAdmin();
       }
 

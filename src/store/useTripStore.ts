@@ -22,6 +22,7 @@ export interface TripProfile {
   photoAlbums?: string[];
   tripStyle?: string[]; // e.g. diving, trekking, food, etc.
   phase: TripPhase;
+  createdBy?: string;
 }
 
 export interface Participant {
