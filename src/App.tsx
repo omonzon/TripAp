@@ -12,6 +12,7 @@ import { AuthScreen } from '@/components/auth/AuthScreen';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { TabBar } from '@/components/layout/TabBar';
 import { Toast } from '@/components/ui/Toast';
+import { ToSModal } from '@/components/ToSModal';
 import { createFullBackup } from '@/services/backupService';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/services/firebase';
@@ -165,6 +166,10 @@ export default function App() {
 
   if (!firebaseUser || !appUser) {
     return <AuthScreen />;
+  }
+
+  if (!appUser.tosAccepted) {
+    return <ToSModal />;
   }
 
   // If no trip created, show onboarding

@@ -30,8 +30,16 @@
     "offlineError": "You are offline. This action will sync when you reconnect."
   },
   "auth": {
-    "title": "Welcome to TravelPlatform",
-    "subtitle": "AI-driven trip planning for groups and families",
+    "title": "Sign In",
+    "subtitle": "Organize your trips securely",
+    "tosTitle": "Terms of Service & Liability Waiver",
+    "tosText1": "The app is provided 'AS IS'. The creator is not liable for any direct, indirect, incidental, or consequential damages, including but not limited to loss of data, financial losses, or physical harm.",
+    "tosText2": "AI Limitations: AI suggestions (itineraries, tasks, tips) are generated automatically and may be inaccurate or unsafe. You must verify all information independently. The creator bears no responsibility for AI errors.",
+    "tosText3": "Data Risk: Your data is stored on third-party servers. We do not guarantee data persistence or security. You are solely responsible for backing up your trips.",
+    "tosText4": "Acceptance: By using this application, you agree not to sue or hold the creator accountable for ANY damages arising from the use of this system.",
+    "tosAgree": "I have read, understood, and agree",
+    "signInWithGoogle": "Sign in with Google",
+    "signOut": "Sign Out",
     "restricted": "Access restricted. Contact your trip admin.",
     "signIn": "Sign in with Google",
     "signingIn": "Signing in..."
@@ -176,7 +184,14 @@
     "userManagement": "User Management",
     "addUser": "Add User",
     "tabs": "Visible Tabs",
-    "saved": "Settings saved!"
+    "saved": "Settings saved!",
+    "confirmRemoveAdminTitle": "Remove Admin Rights",
+    "confirmRemoveAdminDesc": "Are you sure you want to remove your admin rights? You will not be able to restore them yourself.",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete My Account Permanently",
+    "deleteAccountDesc": "This action will completely delete your account. It cannot be undone. Note that some data in trips you created may remain for other participants.",
+    "confirmDeleteAccountTitle": "Delete Account",
+    "confirmDeleteAccountDesc": "Are you absolutely sure you want to delete your account? All your personal info will be removed. Click delete to proceed."
   },
   "onboarding": {
     "title": "Create Your Trip",

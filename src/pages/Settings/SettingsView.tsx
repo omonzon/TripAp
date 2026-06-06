@@ -4,7 +4,7 @@ import { getDoc, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUni
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
-  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table
+  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -56,6 +56,11 @@ export default function SettingsView() {
   const [localModelInput, setLocalModelInput] = useState(localModelName);
   const [isValidating, setIsValidating] = useState(false);
   const [availableGeminiModels, setAvailableGeminiModels] = useState<string[]>([]);
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testMessage, setTestMessage] = useState('');
+  
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [saved, setSaved] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [addingUser, setAddingUser] = useState(false);
@@ -84,15 +89,38 @@ export default function SettingsView() {
   }, [isSuperAdmin]);
 
   const saveAffiliates = async () => {
+    if (!appUser?.email) return;
+    setSavingAffiliates(true);
     try {
       const parsed = JSON.parse(affiliateLinks);
-      setSavingAffiliates(true);
-      await setDoc(doc(db, 'platform_settings', 'affiliates'), { links: parsed }, { merge: true });
-      showToast({ type: 'success', message: 'Affiliate links saved successfully' });
+      await setDoc(doc(db, 'config', 'global'), { affiliateLinks: parsed }, { merge: true });
+      showToast({ type: 'success', message: 'Affiliate links saved!' });
     } catch (e) {
-      showToast({ type: 'error', message: 'Invalid JSON format for affiliate links' });
+      showToast({ type: 'error', message: 'Invalid JSON format' });
+    }
+    setSavingAffiliates(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!appUser?.email) return;
+    setDeletingAccount(true);
+    try {
+      const { auth } = await import('@/services/firebase');
+      const currentUser = auth.currentUser;
+      
+      await deleteDoc(doc(db, 'users', appUser.email));
+      
+      if (currentUser) {
+        await currentUser.delete();
+      }
+      
+      showToast({ type: 'success', message: 'Account deleted.' });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Failed to delete account. You may need to sign out and sign in again before deleting.' });
     } finally {
-      setSavingAffiliates(false);
+      setDeletingAccount(false);
+      setShowDeleteAccountConfirm(false);
     }
   };
 
@@ -785,6 +813,49 @@ export default function SettingsView() {
           </div>
         </div>
       )}
+
+      {/* ── Danger Zone: Delete Account ──────────────────────────────────── */}
+      <section className="card p-5 space-y-4 border-2 border-red-500/20">
+        <h3 className="font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+          <AlertTriangle size={18} />
+          {t('tabs.dangerZone', 'Danger Zone')}
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {t('tabs.deleteAccountDesc', 'This action will completely delete your account. It cannot be undone.')}
+        </p>
+        
+        {!showDeleteAccountConfirm ? (
+          <button 
+            onClick={() => setShowDeleteAccountConfirm(true)} 
+            className="w-full btn-secondary text-red-500 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-2"
+          >
+            {t('tabs.deleteAccount', 'Delete My Account Permanently')} <Trash2 size={16} />
+          </button>
+        ) : (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center animate-fade-in">
+            <p className="text-sm text-red-600 dark:text-red-400 font-bold mb-3">
+              {t('tabs.confirmDeleteAccountDesc', 'Are you absolutely sure you want to delete your account?')}
+            </p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowDeleteAccountConfirm(false)}
+                disabled={deletingAccount}
+                className="flex-1 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
+              >
+                {t('app.cancel', 'Cancel')}
+              </button>
+              <button 
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex justify-center items-center gap-2"
+              >
+                {deletingAccount && <Loader2 size={14} className="animate-spin" />}
+                {t('app.confirm', 'Yes, Delete')}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* App version */}
       <p className="text-xs text-center text-slate-400 dark:text-slate-600 pb-2">

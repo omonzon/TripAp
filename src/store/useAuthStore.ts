@@ -8,6 +8,7 @@ export interface AppUser {
   role: 'admin' | 'editor' | 'viewer';
   allowedTabs?: Record<string, boolean>;
   photoURL?: string;
+  tosAccepted?: boolean;
 }
 
 interface AuthState {
