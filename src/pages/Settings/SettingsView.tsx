@@ -149,24 +149,41 @@ export default function SettingsView() {
   const addUser = async () => {
     if (!newUserEmail.trim() || !currentTripId) return;
     setAddingUser(true);
+    let successCount = 0;
+    const cleanEmail = newUserEmail.trim().toLowerCase();
+
     try {
-      await setDoc(doc(db, 'trips', currentTripId, 'users', newUserEmail.trim()), {
-        email: newUserEmail.trim(),
-        name: newUserEmail.trim().split('@')[0],
+      await setDoc(doc(db, 'trips', currentTripId, 'users', cleanEmail), {
+        email: cleanEmail,
+        name: cleanEmail.split('@')[0],
         role: newUserRole,
       });
-      if (tripProfile) {
-        await setDoc(doc(db, 'users', newUserEmail.trim()), {
+      console.log("Successfully wrote to trips/users subcollection");
+      successCount++;
+    } catch (e: any) {
+      console.error("Error writing to trips/users subcollection:", e);
+      showToast({ type: 'error', message: 'Permission error adding to trip: ' + e.message });
+    }
+
+    if (successCount === 1 && tripProfile) {
+      try {
+        await setDoc(doc(db, 'users', cleanEmail), {
           trips: arrayUnion({ id: currentTripId, name: tripProfile.name, destinations: tripProfile.destinations })
         }, { merge: true });
+        console.log("Successfully wrote to global users document");
+        successCount++;
+      } catch (e: any) {
+        console.error("Error writing to global users document:", e);
+        showToast({ type: 'error', message: 'Permission error updating user profile: ' + e.message });
       }
+    }
+
+    if (successCount === 2 || (!tripProfile && successCount === 1)) {
       setNewUserEmail('');
       showToast({ type: 'success', message: t('settings.userAdded') });
-    } catch {
-      showToast({ type: 'error', message: t('app.error') });
-    } finally {
-      setAddingUser(false);
     }
+    
+    setAddingUser(false);
   };
 
   const updateParticipant = async (email: string, updates: any) => {

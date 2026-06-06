@@ -55,14 +55,18 @@ service cloud.firestore {
         allow update, delete: if isAdmin();
       }
 
+      // Helper: check if user is the verifiable creator of the trip
+      function isTripCreator(userEmail) {
+        return request.auth.token.email == userEmail &&
+               exists(/databases/$(database)/documents/trips/$(tripId)/profile/main) &&
+               get(/databases/$(database)/documents/trips/$(tripId)/profile/main).data.get('createdBy', '') == request.auth.token.email;
+      }
+
       // Users subcollection — admins manage membership
       // Users can only add themselves initially if they are the creator of the trip
       match /users/{userEmail} {
         allow read: if isMember();
-        allow create: if request.auth != null && (
-          (request.auth.token.email == userEmail && get(/databases/$(database)/documents/trips/$(tripId)/profile/main).data.createdBy == request.auth.token.email) ||
-          isAdmin()
-        );
+        allow create: if request.auth != null && (isTripCreator(userEmail) || isAdmin());
         allow update, delete: if isAdmin();
       }
 
