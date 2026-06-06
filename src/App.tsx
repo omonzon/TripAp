@@ -13,6 +13,8 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { TabBar } from '@/components/layout/TabBar';
 import { Toast } from '@/components/ui/Toast';
 import { createFullBackup } from '@/services/backupService';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 import '@/i18n';
 
 // Lazy-load all heavy tab views
@@ -97,6 +99,21 @@ export default function App() {
     window.addEventListener('offline', down);
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
   }, [setOnline]);
+
+  // Sync trip profile from Firestore when currentTripId changes
+  useEffect(() => {
+    if (!currentTripId) {
+      useTripStore.getState().setTripProfile(null);
+      return;
+    }
+    const profileRef = doc(db, 'trips', currentTripId, 'profile', 'main');
+    const unsub = onSnapshot(profileRef, (snap) => {
+      if (snap.exists()) {
+        useTripStore.getState().setTripProfile(snap.data() as any);
+      }
+    });
+    return () => unsub();
+  }, [currentTripId]);
 
   // Auto Backup worker
   useEffect(() => {
