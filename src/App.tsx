@@ -26,7 +26,6 @@ const LocationView    = lazy(() => import('@/pages/Locations/LocationView'));
 const TranslationView = lazy(() => import('@/pages/Translate/TranslationView'));
 const AIAssistantView = lazy(() => import('@/pages/AIAssistant/AIAssistantView'));
 const MemoriesView    = lazy(() => import('@/pages/Memories/MemoriesView'));
-const ServicesView    = lazy(() => import('@/pages/Services/ServicesView'));
 const SettingsView    = lazy(() => import('@/pages/Settings/SettingsView'));
 const OnboardingView  = lazy(() => import('@/pages/Onboarding/OnboardingView'));
 
@@ -39,7 +38,6 @@ export const TAB_DEFS = [
   { id: 'translate',  icon: Languages,      labelKey: 'tabs.translate',  component: TranslationView },
   { id: 'ai',         icon: Sparkles,       labelKey: 'tabs.ai',         component: AIAssistantView },
   { id: 'memories',   icon: Camera,         labelKey: 'tabs.memories',   component: MemoriesView },
-  { id: 'services',   icon: Briefcase,      labelKey: 'tabs.services',   component: ServicesView },
   { id: 'settings',   icon: Settings,       labelKey: 'tabs.settings',   component: SettingsView },
 ] as const;
 

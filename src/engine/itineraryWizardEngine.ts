@@ -1,7 +1,7 @@
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile, ItineraryDay, ItineraryItem } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 
 export type WizardStage = 'origin' | 'regions' | 'sites' | 'food' | 'hotels' | 'transport';
@@ -63,10 +63,20 @@ Return ONLY valid JSON matching this schema:
 }`;
 
   try {
+    let affiliateLinks = '';
+    try {
+      const snap = await getDoc(doc(db, 'platform_settings', 'affiliates'));
+      if (snap.exists() && snap.data().links) {
+        affiliateLinks = JSON.stringify(snap.data().links);
+      }
+    } catch(e) {}
+
+    const promptInstruction = prompt + (affiliateLinks ? `\n\nCRITICAL: When recommending hotels, flights, cars, attractions, or restaurants, you MUST include a direct booking link. Combine your search parameters with these affiliate base links: ${affiliateLinks}. Make sure bad reviews don't contradict user requests, and place the final booking link right inside the item's text.` : '');
+
     const result = await callAI(
       [{ role: 'user', text: `${context}\n\n${prompt}` }],
       provider,
-      { isJson: true, systemInstruction: prompt, maxRetries: 2 }
+      { isJson: true, systemInstruction: promptInstruction, maxRetries: 2 }
     );
     
     interface AILawItem { type: string; text: string; }

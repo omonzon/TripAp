@@ -25,8 +25,8 @@ const PROVIDERS = [
 ] as const;
 
 const LANGUAGES = [
+  { code: 'en', label: 'English 🇺🇸' },
   { code: 'he', label: 'עברית 🇮🇱' },
-  { code: 'en', label: 'English 🇬🇧' },
   { code: 'fr', label: 'Français 🇫🇷' },
   { code: 'de', label: 'Deutsch 🇩🇪' },
   { code: 'es', label: 'Español 🇪🇸' },
@@ -65,6 +65,34 @@ export default function SettingsView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exportingType, setExportingType] = useState<string | null>(null);
   const [emailSaved, setEmailSaved] = useState(false);
+
+  // Super Admin specific state
+  const isSuperAdmin = appUser?.email === 'omonzon@gmail.com';
+  const [affiliateLinks, setAffiliateLinks] = useState('{}');
+  const [savingAffiliates, setSavingAffiliates] = useState(false);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      getDoc(doc(db, 'platform_settings', 'affiliates')).then(snap => {
+        if (snap.exists() && snap.data().links) {
+          setAffiliateLinks(JSON.stringify(snap.data().links, null, 2));
+        }
+      }).catch(console.error);
+    }
+  }, [isSuperAdmin]);
+
+  const saveAffiliates = async () => {
+    try {
+      const parsed = JSON.parse(affiliateLinks);
+      setSavingAffiliates(true);
+      await setDoc(doc(db, 'platform_settings', 'affiliates'), { links: parsed }, { merge: true });
+      showToast({ type: 'success', message: 'Affiliate links saved successfully' });
+    } catch (e) {
+      showToast({ type: 'error', message: 'Invalid JSON format for affiliate links' });
+    } finally {
+      setSavingAffiliates(false);
+    }
+  };
 
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const userRole = useUserRole();
@@ -407,35 +435,64 @@ export default function SettingsView() {
             <Users size={18} className="text-brand-500" />
             {t('settings.userManagement')}
           </h3>
-          <div className="flex gap-2">
+          <div className="space-y-2">
             <input
               id="add-user-email"
               type="email"
               value={newUserEmail}
               onChange={e => setNewUserEmail(e.target.value)}
               placeholder="user@email.com"
-              className="input-base flex-1 text-sm"
+              className="input-base w-full text-sm"
+              dir="ltr"
             />
-            <select
-              value={newUserRole}
-              onChange={e => setNewUserRole(e.target.value as any)}
-              className="input-base text-sm w-28 shrink-0"
-            >
-              <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
-              <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
-              <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
-            </select>
-            <button
-              id="btn-add-user"
-              onClick={addUser}
-              disabled={addingUser || !newUserEmail.trim()}
-              className="btn-primary flex items-center gap-2 shrink-0"
-            >
-              {addingUser ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              {t('settings.addUser')}
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={newUserRole}
+                onChange={e => setNewUserRole(e.target.value as any)}
+                className="input-base text-sm flex-1"
+              >
+                <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
+                <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
+                <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
+              </select>
+              <button
+                id="btn-add-user"
+                onClick={addUser}
+                disabled={addingUser || !newUserEmail.trim()}
+                className="btn-primary flex items-center justify-center gap-2 px-6 shrink-0"
+              >
+                {addingUser ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                {t('settings.addUser')}
+              </button>
+            </div>
           </div>
           <p className="text-xs text-slate-400">{t('settings.addUserHelp')}</p>
+        </section>
+      )}
+
+      {/* ── Affiliate Links (Super Admin only) ────────────────────────── */}
+      {isSuperAdmin && (
+        <section className="card p-5 space-y-4 border-2 border-brand-500">
+          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Globe size={18} className="text-brand-500" />
+            Super Admin: Global Affiliate Links
+          </h3>
+          <p className="text-xs text-slate-500">Define affiliate links in JSON format to be used globally by the AI.</p>
+          <textarea
+            value={affiliateLinks}
+            onChange={(e) => setAffiliateLinks(e.target.value)}
+            className="input-base w-full h-40 font-mono text-sm"
+            dir="ltr"
+            placeholder={`{\n  "Booking.com": "https://booking.com/?aid=123",\n  "RentalCars": "..."\n}`}
+          />
+          <button
+            onClick={saveAffiliates}
+            disabled={savingAffiliates}
+            className="btn-primary flex items-center gap-2"
+          >
+            {savingAffiliates ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            Save Affiliate Links
+          </button>
         </section>
       )}
 

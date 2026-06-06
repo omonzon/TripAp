@@ -305,28 +305,34 @@ export default function TasksView() {
         <div className="card p-4 space-y-3">
           <div className="flex justify-between items-center mb-1">
             <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('tasks.addManual', 'Add Task')}</h3>
-            <button onClick={handleGenerateSmartTasks} disabled={generatingTasks} className="btn-secondary text-xs py-1 px-3 flex items-center gap-1.5 transition-all">
-              {generatingTasks ? <Loader2 size={12} className="animate-spin text-brand-500" /> : <Sparkles size={12} className="text-amber-500" />}
-              {t('tasks.generateSmart', 'AI Smart Tasks')}
-            </button>
           </div>
-          <form onSubmit={addTask} className="flex gap-2">
-            <div className="flex flex-1 gap-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 items-center">
+          <form onSubmit={addTask} className="space-y-3">
+            <div className="flex w-full gap-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 items-center">
               <input
                 id="new-task-input"
                 value={newTask}
                 onChange={e => setNewTask(e.target.value)}
                 placeholder={t('tasks.placeholder')}
-                className="flex-1 py-2.5 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none"
+                className="flex-1 py-2.5 w-full bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none"
                 dir="auto"
               />
-                <DictationButton onResult={setNewTask} />
+              <DictationButton onResult={setNewTask} />
+            </div>
+            
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex gap-1.5 flex-wrap">
+                {(['low', 'medium', 'high'] as const).map(p => (
+                  <button key={p} type="button" onClick={() => setPriority(p)} className={`badge border-2 cursor-pointer transition-all ${priority === p ? 'border-brand-500' : 'border-transparent'} ${PRIORITIES[p || 'medium'].color}`}>
+                    {t(`tasks.${p}`)}
+                  </button>
+                ))}
               </div>
-              <div className="flex gap-2">
+              
+              <div className="flex gap-1.5 flex-wrap items-center">
                 <button
                   type="button"
                   onClick={() => setVisibility(v => v === 'shared' ? 'private' : 'shared')}
-                  className={`p-2 rounded-xl border flex items-center justify-center transition-colors ${
+                  className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${
                     visibility === 'private'
                       ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400'
                       : 'bg-green-50 border-green-200 text-green-600 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400'
@@ -335,18 +341,18 @@ export default function TasksView() {
                 >
                   {visibility === 'private' ? <Lock size={16} /> : <Users size={16} />}
                 </button>
-                <button type="submit" id="btn-add-task" disabled={!newTask.trim()} className="btn-primary flex items-center gap-1 text-sm py-2.5">
+                
+                <button onClick={handleGenerateSmartTasks} disabled={generatingTasks} type="button" className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 transition-all">
+                  {generatingTasks ? <Loader2 size={12} className="animate-spin text-brand-500" /> : <Sparkles size={12} className="text-amber-500" />}
+                  {t('tasks.generateSmart', 'AI Smart Tasks')}
+                </button>
+                
+                <button type="submit" id="btn-add-task" disabled={!newTask.trim()} className="btn-primary flex items-center gap-1 text-sm py-1.5 px-3 rounded-lg">
                   <Plus size={16} />
                 </button>
               </div>
+            </div>
           </form>
-          <div className="flex gap-2 flex-wrap">
-            {(['low', 'medium', 'high'] as const).map(p => (
-              <button key={p} onClick={() => setPriority(p)} className={`badge border-2 cursor-pointer transition-all ${priority === p ? 'border-brand-500' : 'border-transparent'} ${PRIORITIES[p || 'medium'].color}`}>
-                {t(`tasks.${p}`)}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

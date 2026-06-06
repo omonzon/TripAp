@@ -1,4 +1,4 @@
-import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile } from '@/store/useTripStore';
@@ -87,10 +87,20 @@ ${documentsText}
 `;
 
   try {
+    let affiliateLinks = '';
+    try {
+      const snap = await getDoc(doc(db, 'platform_settings', 'affiliates'));
+      if (snap.exists() && snap.data().links) {
+        affiliateLinks = JSON.stringify(snap.data().links);
+      }
+    } catch(e) {}
+
+    const promptInstruction = COMPREHENSIVE_PROMPT + (affiliateLinks ? `\n\nCRITICAL: When recommending hotels, flights, cars, attractions, or restaurants, you MUST include a direct booking link. Combine your search parameters with these affiliate base links: ${affiliateLinks}. Make sure bad reviews don't contradict user requests, and place the final booking link right inside the item's text.` : '');
+
     const result = await callAI(
       [{ role: 'user', text: `Generate comprehensive trip data:\n${context}` }],
       provider,
-      { isJson: true, systemInstruction: COMPREHENSIVE_PROMPT, maxRetries: 2 }
+      { isJson: true, systemInstruction: promptInstruction, maxRetries: 2 }
     );
 
     const parsed = parseAIJson<ComprehensiveOutput>(result, {
