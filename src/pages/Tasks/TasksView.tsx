@@ -243,6 +243,21 @@ export default function TasksView() {
     }
   };
 
+  const removeReminder = async () => {
+    if (!reminderTask || !currentTripId) return;
+    try {
+      await updateDoc(doc(db, 'trips', currentTripId, 'tasks', reminderTask.id), {
+        reminderDate: null,
+        reminderLocation: null,
+        reminderSent: false
+      });
+      setReminderTask(null);
+      showToast({ type: 'success', message: t('tasks.reminderRemoved', 'התראה הוסרה') });
+    } catch {
+      showToast({ type: 'error', message: t('app.error') });
+    }
+  };
+
   const toggle = async (task: Task) => {
     if (!currentTripId) return;
     await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { completed: !task.completed });
@@ -450,6 +465,9 @@ export default function TasksView() {
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setReminderTask(null)} className="flex-1 btn-secondary py-2">{t('app.cancel', 'Cancel')}</button>
+              {(reminderTask.reminderDate || reminderTask.reminderLocation) && (
+                <button onClick={removeReminder} className="flex-1 btn-secondary py-2 !text-red-500 border-red-200 hover:bg-red-50 dark:border-red-900/30 dark:hover:bg-red-900/20">{t('tasks.removeReminder', 'הסר')}</button>
+              )}
               <button onClick={saveReminder} className="flex-1 btn-primary py-2">{t('app.save', 'Save')}</button>
             </div>
           </div>
