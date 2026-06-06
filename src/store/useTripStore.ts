@@ -148,6 +148,6 @@ export const useUserRole = () => {
   const tripProfile = useTripStore(s => s.tripProfile);
   const appUser = useAuthStore(s => s.appUser);
   if (!tripProfile || !appUser) return 'viewer';
-  const p = tripProfile.participants?.find(x => x.email === appUser.email);
+  const p = tripProfile.participants?.find(x => x.email.toLowerCase() === appUser.email.toLowerCase());
   return p?.role || 'viewer';
 };
