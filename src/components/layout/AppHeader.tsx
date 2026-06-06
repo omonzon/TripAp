@@ -150,6 +150,9 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                 <div className="fixed top-16 left-4 right-4 sm:absolute sm:top-full sm:mt-1 sm:end-0 sm:left-auto sm:right-auto sm:w-80 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
                 <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                   <h3 className="font-bold text-sm text-slate-700 dark:text-slate-200">{t('app.notifications', 'התראות')}</h3>
+                  <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700" title={t('app.close', 'Close')}>
+                    <X size={16} />
+                  </button>
                 </div>
                 <div className="max-h-64 overflow-y-auto p-2">
                   <div className="p-2 flex gap-3 items-start hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer mb-1">

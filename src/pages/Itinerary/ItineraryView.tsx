@@ -128,7 +128,7 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
         {[
           { label: t('itinerary.flight.time'), val: item.flightData?.time ?? '--:--' },
           { label: t('itinerary.flight.status'), val: item.flightData?.status ?? '-', highlight: true },
-          { label: t('itinerary.flight.terminalGate'), val: `${item.flightData?.terminal ? `T${item.flightData.terminal}/` : ''}${item.flightData?.gate ?? '-'}` },
+          { label: t('itinerary.flight.terminalGate'), val: document.documentElement.dir === 'rtl' ? `${item.flightData?.gate ?? '-'}${item.flightData?.terminal ? `/T${item.flightData.terminal}` : ''}` : `${item.flightData?.terminal ? `T${item.flightData.terminal}/` : ''}${item.flightData?.gate ?? '-'}` },
           { label: t('itinerary.flight.checkin'), val: item.flightData?.checkin ?? '-' },
         ].map(({ label, val, highlight }) => (
           <div key={label} className="bg-white dark:bg-slate-800 p-2 rounded shadow-sm text-center">
@@ -621,11 +621,14 @@ export default function ItineraryView() {
       {/* Delete Day Modal */}
       {dayToDelete && createPortal(
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 dark:border-slate-800 text-center space-y-4">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 dark:border-slate-800 text-center relative">
+            <button onClick={() => setDayToDelete(null)} className="absolute top-4 end-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
+              <X size={20} />
+            </button>
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-2 mt-2">
               <Trash2 size={24} />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-4">
               {t('itinerary.confirmDeleteDay', 'Delete entire day?')}
             </h3>
             <p className="text-sm text-slate-500">

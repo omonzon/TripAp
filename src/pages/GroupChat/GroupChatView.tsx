@@ -167,8 +167,11 @@ export default function GroupChatView() {
       {/* Delete Confirmation Modal */}
       {messageToDelete && createPortal(
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fade-in" dir="rtl">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-800" onClick={e => e.stopPropagation()}>
-            <div className="p-6 text-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-800 relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setMessageToDelete(null)} className="absolute top-4 end-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
+              <X size={20} />
+            </button>
+            <div className="p-6 text-center mt-2">
               <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={24} />
               </div>
