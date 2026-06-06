@@ -4,6 +4,11 @@ import App from './App.tsx';
 import './index.css';
 import { initFirebaseAuth } from './services/authService.ts';
 
+// Handle Vite chunk loading errors (usually means a new version was deployed)
+window.addEventListener('vite:preloadError', () => {
+  window.location.reload();
+});
+
 // Initialize Firebase auth listener before rendering
 initFirebaseAuth();
 
