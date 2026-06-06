@@ -65,13 +65,7 @@ export default function SettingsView() {
   const [exportingType, setExportingType] = useState<string | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (!currentTripId || !isAdmin) return;
-    const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'users'), snap => {
-      setParticipants(snap.docs.map(d => d.data()));
-    });
-    return () => unsub();
-  }, [currentTripId, isAdmin]);
+
   const [emailSaved, setEmailSaved] = useState(false);
 
   // Super Admin specific state
@@ -105,6 +99,14 @@ export default function SettingsView() {
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const userRole = useUserRole();
   const isAdmin = userRole === 'admin';
+
+  useEffect(() => {
+    if (!currentTripId || !isAdmin) return;
+    const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'users'), snap => {
+      setParticipants(snap.docs.map(d => d.data()));
+    });
+    return () => unsub();
+  }, [currentTripId, isAdmin]);
 
   const saveAISettings = async () => {
     if (providerType === 'gemini' && localKey.trim()) {
