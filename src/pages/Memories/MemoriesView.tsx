@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText } from 'lucide-react';
+import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText, Trash2 } from 'lucide-react';
 import { useTripStore } from '@/store/useTripStore';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
@@ -256,7 +256,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                         <span className="text-xs font-semibold text-brand-600">{e.authorName}</span>
                         <span className="text-[10px] text-slate-400" dir="ltr">{new Date(e.createdAt).toLocaleString()}</span>
                       </div>
-                      {(e.authorName === appUser?.name || journalMode === 'global') && (
+                      {(e.authorName === appUser?.name || journalMode === 'group') && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => { setEditingId(e.id); setEditText(e.text); setEditImageLink(e.imageLink || ''); }} className="text-slate-400 hover:text-brand-500 transition-colors p-1">
                             <PenTool size={12} />
