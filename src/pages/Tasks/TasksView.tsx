@@ -289,8 +289,11 @@ export default function TasksView() {
 
   return (
     <div className="space-y-5 animate-fade-in max-w-2xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('tasks.title')}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          {t('tasks.title')}
+          {!canWrite && <span className="text-xs font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">מצב צפייה</span>}
+        </h2>
         <div className="flex gap-2 text-xs font-medium">
           <span className="badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">{pending} {t('tasks.pending')}</span>
           <span className="badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">{done} {t('tasks.completed')}</span>
@@ -365,7 +368,7 @@ export default function TasksView() {
           </div>
         ) : (
           filtered.map(task => (
-            <div key={task.id} className={`card p-3 flex items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
+            <div key={task.id} className={`card p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
               <button onClick={() => toggle(task)} className="shrink-0 text-brand-600 dark:text-brand-400 hover:scale-110 transition-transform">
                 {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
               </button>
