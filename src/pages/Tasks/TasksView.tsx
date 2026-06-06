@@ -392,11 +392,11 @@ export default function TasksView() {
               
               <span className={`badge text-[10px] ${PRIORITIES[task.priority || 'medium']?.color}`}>{t(`tasks.${task.priority || 'medium'}`)}</span>
               {canWrite && (
-                <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 shrink-0">
                   <button onClick={() => {
                     setEditingTaskId(task.id);
                     setEditTaskText(task.text);
-                  }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
+                  }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                     <Edit2 size={14} />
                   </button>
                   <button onClick={() => {
@@ -405,10 +405,10 @@ export default function TasksView() {
                     setReminderLng(task.reminderLocation?.lng.toString() || '');
                     setEnableLocation(!!task.reminderLocation);
                     setReminderTask(task);
-                  }} className={`p-1.5 rounded-lg transition-all ${task.reminderDate || task.reminderLocation ? 'text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                  }} className={`p-1.5 rounded-lg transition-all ${task.reminderDate || task.reminderLocation ? 'opacity-100 text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100 text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                     <Bell size={14} />
                   </button>
-                  <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                     <Trash2 size={14} />
                   </button>
                 </div>
