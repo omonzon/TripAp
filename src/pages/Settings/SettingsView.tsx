@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getDoc, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { getDoc, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
@@ -63,6 +63,15 @@ export default function SettingsView() {
   const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exportingType, setExportingType] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!currentTripId || !isAdmin) return;
+    const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'users'), snap => {
+      setParticipants(snap.docs.map(d => d.data()));
+    });
+    return () => unsub();
+  }, [currentTripId, isAdmin]);
   const [emailSaved, setEmailSaved] = useState(false);
 
   // Super Admin specific state
@@ -155,6 +164,15 @@ export default function SettingsView() {
       showToast({ type: 'error', message: t('app.error') });
     } finally {
       setAddingUser(false);
+    }
+  };
+
+  const updateParticipant = async (email: string, updates: any) => {
+    if (!currentTripId) return;
+    try {
+      await setDoc(doc(db, 'trips', currentTripId, 'users', email), updates, { merge: true });
+    } catch (e) {
+      showToast({ type: 'error', message: t('app.error') });
     }
   };
 
@@ -435,6 +453,63 @@ export default function SettingsView() {
             </div>
           </div>
           <p className="text-xs text-slate-400">{t('settings.addUserHelp')}</p>
+          
+          {/* List of participants */}
+          <div className="space-y-3 mt-6 border-t border-slate-200 dark:border-slate-800 pt-4">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-white">Trip Participants</h4>
+            {participants.map(p => (
+              <div key={p.email} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-sm">
+                      {p.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800 dark:text-white">{p.name}</div>
+                      <div className="text-xs text-slate-500" dir="ltr">{p.email}</div>
+                    </div>
+                  </div>
+                  <select 
+                    value={p.role}
+                    onChange={(e) => updateParticipant(p.email, { role: e.target.value })}
+                    className="input-base text-xs py-1 px-2"
+                  >
+                    <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
+                    <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
+                    <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
+                  </select>
+                </div>
+                
+                {p.role !== 'admin' && (
+                  <div className="border-t border-slate-200 dark:border-slate-800 pt-2">
+                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Visible Tabs</div>
+                    <div className="flex flex-wrap gap-2">
+                      {TAB_DEFS.map(tab => {
+                        const isVisible = p.allowedTabs?.[tab.id] !== false;
+                        const Icon = tab.icon;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => updateParticipant(p.email, { 
+                              allowedTabs: { ...(p.allowedTabs || {}), [tab.id]: !isVisible } 
+                            })}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                              isVisible 
+                                ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-800 dark:text-brand-300' 
+                                : 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700'
+                            }`}
+                          >
+                            <Icon size={12} className={isVisible ? 'text-brand-500' : 'text-slate-400'} />
+                            <span>{t(tab.labelKey)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -464,24 +539,7 @@ export default function SettingsView() {
         </section>
       )}
 
-      {/* ── Visible Tabs ────────────────────────────────────────────────── */}
-      {isAdmin && (
-        <section className="card p-5 space-y-3">
-          <h3 className="font-bold text-slate-800 dark:text-white">{t('settings.tabs')}</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {TAB_DEFS.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <div key={tab.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
-                  <Icon size={15} className="text-brand-500" />
-                  <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">{tab.id}</span>
-                  <CheckCircle2 size={15} className="text-green-500" />
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+
 
       {/* ── Backup & Restore ─────────────────────────────────────────────── */}
       <section className="card p-5 space-y-4">

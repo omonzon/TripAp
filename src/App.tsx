@@ -113,6 +113,26 @@ export default function App() {
     return () => unsub();
   }, [currentTripId]);
 
+  // Sync current user's trip-specific permissions
+  useEffect(() => {
+    if (!currentTripId || !firebaseUser?.email) return;
+    const userRef = doc(db, 'trips', currentTripId, 'users', firebaseUser.email);
+    const unsub = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const currentAppUser = useAuthStore.getState().appUser;
+        if (currentAppUser) {
+          useAuthStore.getState().setAppUser({ 
+            ...currentAppUser, 
+            role: data.role || 'viewer', 
+            allowedTabs: data.allowedTabs 
+          });
+        }
+      }
+    });
+    return () => unsub();
+  }, [currentTripId, firebaseUser?.email]);
+
   // Auto Backup worker
   useEffect(() => {
     if (!currentTripId || !appUser?.email || autoBackupInterval === 0 || !isOnline) return;
