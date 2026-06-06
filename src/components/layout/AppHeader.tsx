@@ -33,7 +33,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-slate-200 dark:border-slate-800">
+    <header className="sticky top-0 z-50 glass border-b border-slate-200 dark:border-slate-800 pt-[env(safe-area-inset-top)]">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         {/* Logo + Trip Name */}
         <div className="flex items-center gap-3 min-w-0">

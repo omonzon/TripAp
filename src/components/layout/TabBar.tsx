@@ -59,7 +59,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
 
       {/* Mobile bottom bar */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-slate-200 dark:border-slate-800 px-2 py-1"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-slate-200 dark:border-slate-800 px-2 py-1 pb-[env(safe-area-inset-bottom)]"
         aria-label="Mobile navigation"
       >
         <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap hide-scrollbar px-2">
