@@ -131,12 +131,14 @@ export default function TasksView() {
     showToast({ type: 'success', message: `⏰ Reminder: ${task.text}` });
     
     // Desktop/Mobile Push Notification
-    if (Notification.permission === 'granted') {
-      new Notification('TravelPlatform Reminder', { body: task.text });
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(p => {
-        if (p === 'granted') new Notification('TravelPlatform Reminder', { body: task.text });
-      });
+    if (Notification && Notification.permission === 'granted') {
+      try { new Notification('TravelPlatform Reminder', { body: task.text }); } catch (e) {}
+    } else if (Notification && Notification.permission !== 'denied') {
+      try {
+        Notification.requestPermission().then(p => {
+          if (p === 'granted') new Notification('TravelPlatform Reminder', { body: task.text });
+        }).catch(() => {});
+      } catch (e) {}
     }
 
     // EmailJS (if configured)
@@ -160,16 +162,22 @@ export default function TasksView() {
       }
     }
 
-    if (currentTripId) {
-      await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { reminderSent: true });
+    if (currentTripId && canWrite) {
+      try {
+        await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { reminderSent: true });
+      } catch (err) {
+        console.error('Failed to update task reminderSent', err);
+      }
     }
   };
+
+  const triggeredRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date().getTime();
       tasks.forEach(task => {
-        if (!task.completed && task.reminderDate && !task.reminderSent) {
+        if (!task.completed && task.reminderDate && !task.reminderSent && !triggeredRef.current.has(task.id)) {
           const reminderTime = new Date(task.reminderDate).getTime();
           if (now >= reminderTime) {
             if (task.reminderLocation) {
@@ -178,10 +186,14 @@ export default function TasksView() {
                   const latDiff = pos.coords.latitude - task.reminderLocation!.lat;
                   const lngDiff = pos.coords.longitude - task.reminderLocation!.lng;
                   const dist = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
-                  if (dist < 0.05) triggerReminder(task); // roughly 5km
+                  if (dist < 0.05) {
+                    triggeredRef.current.add(task.id);
+                    triggerReminder(task);
+                  }
                 });
               }
             } else {
+              triggeredRef.current.add(task.id);
               triggerReminder(task);
             }
           }
