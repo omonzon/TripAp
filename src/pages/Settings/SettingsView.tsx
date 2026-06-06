@@ -12,6 +12,7 @@ import { useTripStore, useUserRole } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
 import { exportTripToFile } from '@/services/backupService';
+import { syncUserSettingsToCloud } from '@/services/authService';
 import { exportTripToHTML, exportTripToPDF, exportTripToCSV } from '@/services/exportService';
 import { fetchGeminiModels } from '@/services/ai';
 import { TAB_DEFS } from '@/App';
@@ -63,6 +64,7 @@ export default function SettingsView() {
   const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exportingType, setExportingType] = useState<string | null>(null);
+  const [emailSaved, setEmailSaved] = useState(false);
 
   const selectedProvider = PROVIDERS.find(p => p.id === providerType) ?? PROVIDERS[0];
   const userRole = useUserRole();
@@ -95,6 +97,12 @@ export default function SettingsView() {
     if (providerType === 'ollama') {
       setLocalConfig(localUrlInput, localModelInput);
     }
+    
+    // Use setTimeout to allow Zustand state to update before syncing
+    setTimeout(() => {
+      syncUserSettingsToCloud();
+    }, 100);
+
     setSaved(true);
     showToast({ type: 'success', message: t('settings.saved') });
     setTimeout(() => setSaved(false), 3000);
@@ -486,7 +494,10 @@ export default function SettingsView() {
           </div>
           <select 
             value={autoBackupInterval.toString()}
-            onChange={e => setAutoBackupInterval(parseInt(e.target.value, 10))}
+            onChange={e => {
+              setAutoBackupInterval(parseInt(e.target.value, 10));
+              setTimeout(() => syncUserSettingsToCloud(), 100);
+            }}
             className="input-base text-sm py-1.5 w-32"
           >
             <option value="0">{t('settings.disabled', 'Disabled')}</option>
@@ -557,6 +568,19 @@ export default function SettingsView() {
             />
           </div>
         </div>
+
+        <button
+          onClick={async () => {
+            await syncUserSettingsToCloud();
+            setEmailSaved(true);
+            showToast({ type: 'success', message: t('settings.saved') });
+            setTimeout(() => setEmailSaved(false), 3000);
+          }}
+          className="btn-primary w-full flex items-center justify-center gap-2 mt-3"
+        >
+          {emailSaved ? <CheckCircle2 size={16} className="text-white" /> : <Mail size={16} />}
+          {emailSaved ? t('settings.saved') : t('app.save')}
+        </button>
       </section>
 
       {/* ── Trip Albums ─────────────────────────────────────────────────── */}

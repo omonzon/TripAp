@@ -14,6 +14,7 @@ import {
 import { auth, googleProvider, db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
+import { useAIStore } from '@/store/useAIStore';
 import type { AppUser } from '@/store/useAuthStore';
 
 export function initFirebaseAuth() {
@@ -57,13 +58,31 @@ export function initFirebaseAuth() {
       }
     });
 
-    // Check if user has an active trip saved
     const profileRef = doc(db, 'users', firebaseUser.email!, 'settings', 'app');
     const profileSnap = await getDoc(profileRef);
     if (profileSnap.exists()) {
-      const savedTripId = profileSnap.data()?.activeTripId as string | undefined;
+      const data = profileSnap.data();
+      const savedTripId = data?.activeTripId as string | undefined;
       if (savedTripId) {
         useTripStore.getState().setCurrentTrip(savedTripId);
+      }
+      
+      // Sync global settings from cloud
+      if (data.emailjsConfig) useAuthStore.getState().setEmailjsConfig(data.emailjsConfig);
+      if (data.language) useAuthStore.getState().setLanguage(data.language);
+      if (data.fontSize) useAuthStore.getState().setFontSize(data.fontSize);
+      if (data.autoBackupInterval !== undefined) useAuthStore.getState().setAutoBackupInterval(data.autoBackupInterval);
+      if (data.isDarkMode !== undefined) {
+         useAuthStore.setState({ isDarkMode: data.isDarkMode });
+         if (data.isDarkMode) document.documentElement.classList.add('dark');
+         else document.documentElement.classList.remove('dark');
+      }
+      
+      if (data.aiSettings) {
+         const ai = data.aiSettings;
+         if (ai.providerType) useAIStore.getState().setProvider(ai.providerType);
+         if (ai.apiKey) useAIStore.getState().setApiKey(ai.apiKey);
+         if (ai.models) useAIStore.setState({ models: ai.models });
       }
     }
 
@@ -89,4 +108,24 @@ export async function signOut() {
   await firebaseSignOut(auth);
   useTripStore.getState().setCurrentTrip(null);
   useTripStore.getState().setTripProfile(null);
+}
+
+export async function syncUserSettingsToCloud() {
+  const { appUser, emailjsConfig, language, isDarkMode, fontSize, autoBackupInterval } = useAuthStore.getState();
+  const { providerType, apiKey, models } = useAIStore.getState();
+  
+  if (!appUser) return;
+  const profileRef = doc(db, 'users', appUser.email, 'settings', 'app');
+  await setDoc(profileRef, {
+    emailjsConfig: emailjsConfig || null,
+    language,
+    isDarkMode,
+    fontSize,
+    autoBackupInterval,
+    aiSettings: {
+      providerType,
+      apiKey,
+      models
+    }
+  }, { merge: true });
 }

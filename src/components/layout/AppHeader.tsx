@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { translateTripContent } from '@/services/translationService';
 import { showToast } from '@/components/ui/Toast';
-import { signOut } from '@/services/authService';
+import { signOut, syncUserSettingsToCloud } from '@/services/authService';
 import type { TabId } from '@/App';
 
 interface AppHeaderProps {
@@ -24,6 +24,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
   const handleLanguageToggle = async () => {
     const newLang = language === 'he' ? 'en' : 'he';
     setLanguage(newLang);
+    syncUserSettingsToCloud();
     
     if (currentTripId && appUser && (appUser.role === 'admin' || appUser.role === 'editor')) {
       if (window.confirm(t('app.translatePrompt', 'Do you want to translate your trip content to the new language?'))) {
@@ -116,7 +117,10 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
 
           {/* Font Size Toggle */}
           <button
-            onClick={() => setFontSize(fontSize === 'small' ? 'medium' : fontSize === 'medium' ? 'large' : fontSize === 'large' ? 'xlarge' : 'small')}
+            onClick={() => {
+              setFontSize(fontSize === 'small' ? 'medium' : fontSize === 'medium' ? 'large' : fontSize === 'large' ? 'xlarge' : 'small');
+              syncUserSettingsToCloud();
+            }}
             className="btn-ghost p-2"
             aria-label="Toggle font size"
             title={t('app.fontSize', 'Font Size')}
@@ -126,7 +130,10 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
 
           {/* Dark mode toggle */}
           <button
-            onClick={toggleDarkMode}
+            onClick={() => {
+              toggleDarkMode();
+              syncUserSettingsToCloud();
+            }}
             className="btn-ghost p-2"
             aria-label="Toggle dark mode"
             title={isDarkMode ? t('app.lightMode', 'Light Mode') : t('app.darkMode', 'Dark Mode')}
