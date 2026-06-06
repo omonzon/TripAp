@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { getDoc, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
@@ -73,7 +73,7 @@ export default function SettingsView() {
 
   useEffect(() => {
     if (isSuperAdmin) {
-      getDoc(doc(db, 'platform_settings', 'affiliates')).then(snap => {
+      getDoc(doc(db, 'platform_settings', 'affiliates')).then((snap: any) => {
         if (snap.exists() && snap.data().links) {
           setAffiliateLinks(JSON.stringify(snap.data().links, null, 2));
         }
