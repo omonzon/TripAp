@@ -68,7 +68,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-slate-200 dark:border-slate-800 px-2 py-1 pb-[env(safe-area-inset-bottom)]"
         aria-label="Mobile navigation"
       >
-        <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap hide-scrollbar px-2">
+        <div className="flex items-center gap-3 md:gap-1 overflow-x-auto whitespace-nowrap hide-scrollbar px-2">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -80,7 +80,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
                 aria-current={isActive ? 'page' : undefined}
                 title={t(tab.labelKey)}
                 className={`
-                  flex flex-col items-center gap-0.5 px-3 py-2 min-w-[52px]
+                  flex flex-col items-center justify-center gap-0.5 px-3 py-2 min-w-[64px] flex-shrink-0
                   transition-all duration-150 rounded-xl
                   ${isActive
                     ? 'text-brand-600 dark:text-brand-400'
@@ -93,7 +93,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
                   strokeWidth={isActive ? 2.5 : 1.5}
                   className={isActive ? 'scale-110 transition-transform' : ''}
                 />
-                <span className={`${textClassMobile} font-medium leading-none`}>{t(tab.labelKey)}</span>
+                <span className={`${textClassMobile} font-medium leading-none mt-1`}>{t(tab.labelKey)}</span>
                 {isActive && <div className="w-1 h-1 rounded-full bg-brand-500 mt-0.5" />}
               </button>
             );

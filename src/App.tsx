@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Map, CheckSquare, MessageCircle, Receipt, Navigation,
@@ -7,6 +7,7 @@ import {
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { AuthScreen } from '@/components/auth/AuthScreen';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { TabBar } from '@/components/layout/TabBar';
@@ -55,6 +56,9 @@ export default function App() {
   const { firebaseUser, appUser, authLoading, isDarkMode, language, fontSize, autoBackupInterval, lastBackupTime, setLastBackupTime } = useAuthStore();
   const { currentTripId, isOnline, setOnline } = useTripStore();
   const [activeTab, setActiveTab] = React.useState<TabId>('itinerary');
+  
+  const mainRef = useRef<HTMLElement>(null);
+  usePullToRefresh(mainRef);
 
   // Apply dark mode
   useEffect(() => {
@@ -166,8 +170,9 @@ export default function App() {
         />
 
         <main
+          ref={mainRef}
           id="main-content"
-          className="flex-1 overflow-y-auto px-4 py-6 md:px-6 pb-24 md:pb-6"
+          className="flex-1 overflow-y-auto px-4 py-6 md:px-6 pb-24 md:pb-6 relative"
           dir={language === 'he' ? 'rtl' : 'ltr'}
         >
           <Suspense fallback={<PageLoader />}>

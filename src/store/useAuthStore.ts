@@ -72,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (s) => ({
         isDarkMode: s.isDarkMode,
         language: s.language,
+        fontSize: s.fontSize,
         autoBackupInterval: s.autoBackupInterval,
         lastBackupTime: s.lastBackupTime,
       }),
