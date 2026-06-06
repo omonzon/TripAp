@@ -32,34 +32,23 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
     }
   };
 
+  const iconSize = fontSize === 'xlarge' ? 22 : fontSize === 'large' ? 18 : 16;
+
   return (
     <header className="sticky top-0 z-50 glass border-b border-slate-200 dark:border-slate-800 pt-[env(safe-area-inset-top)]">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         {/* Logo + Trip Name */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div 
-            className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center shrink-0"
-            title={t('app.name')}
+        <div className="flex items-center min-w-0 relative">
+          <button 
+            onClick={() => setShowTripsDropdown(!showTripsDropdown)}
+            className="flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 p-1 -ms-1 rounded-lg transition-colors text-start"
+            title={t('app.myTrips', 'My Trips')}
           >
-            <Globe className="w-4 h-4 text-white" />
-          </div>
-          <div className="min-w-0 relative">
-            <button 
-              onClick={() => setShowTripsDropdown(!showTripsDropdown)}
-              className="flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 p-1 -ms-1 rounded-lg transition-colors text-start"
-            >
-              <div className="min-w-0">
-                <h1 className="font-bold text-sm leading-none text-slate-900 dark:text-white truncate">
-                  {tripProfile?.name ?? t('app.name')}
-                </h1>
-                {tripProfile && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                    {tripProfile.destinations.join(' · ')}
-                  </p>
-                )}
-              </div>
-              <ChevronDown size={14} className="text-slate-400 shrink-0 ms-1" />
-            </button>
+            <div className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center shrink-0">
+              <Globe className="w-4 h-4 text-white" />
+            </div>
+            <ChevronDown size={16} className="text-slate-400 shrink-0 ms-1" />
+          </button>
 
             {showTripsDropdown && (
               <>
@@ -98,7 +87,6 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                 </div>
               </>
             )}
-          </div>
         </div>
 
         {/* Controls */}
@@ -109,7 +97,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
               className="flex items-center gap-1 text-amber-500 text-xs font-medium px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/20"
               title={t('app.offline')}
             >
-              <WifiOff size={12} /> {t('app.offline')}
+              <WifiOff size={iconSize - 4} /> {t('app.offline')}
             </div>
           )}
 
@@ -120,18 +108,18 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
             aria-label="Toggle language"
             title={t('app.language', 'Language')}
           >
-            <Languages size={16} className="inline me-1" />
+            <Languages size={iconSize} className="inline me-1" />
             {language === 'en' ? 'עב' : 'EN'}
           </button>
 
           {/* Font Size Toggle */}
           <button
-            onClick={() => setFontSize(fontSize === 'small' ? 'medium' : fontSize === 'medium' ? 'large' : 'small')}
+            onClick={() => setFontSize(fontSize === 'small' ? 'medium' : fontSize === 'medium' ? 'large' : fontSize === 'large' ? 'xlarge' : 'small')}
             className="btn-ghost p-2"
             aria-label="Toggle font size"
             title={t('app.fontSize', 'Font Size')}
           >
-            <Type size={16} />
+            <Type size={iconSize} />
           </button>
 
           {/* Dark mode toggle */}
@@ -141,7 +129,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
             aria-label="Toggle dark mode"
             title={isDarkMode ? t('app.lightMode', 'Light Mode') : t('app.darkMode', 'Dark Mode')}
           >
-            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            {isDarkMode ? <Sun size={iconSize} /> : <Moon size={iconSize} />}
           </button>
 
           {/* Notifications */}
@@ -152,7 +140,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
               title={t('app.notifications', 'Notifications')}
               onClick={() => setShowNotifications(!showNotifications)}
             >
-              <Bell size={16} />
+              <Bell size={iconSize} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-900" />
             </button>
             
@@ -163,7 +151,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                 </div>
                 <div className="max-h-64 overflow-y-auto p-2">
                   <div className="p-2 flex gap-3 items-start hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer mb-1">
-                    <div className="mt-0.5 text-brand-500"><CheckCircle2 size={16} /></div>
+                    <div className="mt-0.5 text-brand-500"><CheckCircle2 size={iconSize} /></div>
                     <div>
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-200">ברוכים הבאים ל-TravelPlatform!</p>
                       <p className="text-xs text-slate-500 mt-0.5">המערכת מוכנה להתחיל לתכנן את הטיול הבא שלכם.</p>
@@ -178,7 +166,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
           {appUser && (
             <div className="flex items-center gap-2 ms-1">
               <div
-                className="w-7 h-7 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold cursor-pointer"
+                className={`${fontSize === 'xlarge' ? 'w-8 h-8 text-sm' : 'w-7 h-7 text-xs'} rounded-full gradient-brand flex items-center justify-center text-white font-bold cursor-pointer`}
                 title={appUser.name}
               >
                 {appUser.name[0]?.toUpperCase()}
@@ -189,7 +177,7 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                 aria-label={t('app.logout')}
                 title={t('app.logout')}
               >
-                <LogOut size={15} />
+                <LogOut size={iconSize - 1} />
               </button>
             </div>
           )}

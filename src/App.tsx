@@ -64,9 +64,10 @@ export default function App() {
 
   // Apply font size
   useEffect(() => {
-    document.documentElement.classList.remove('text-sm', 'text-base', 'text-lg');
+    document.documentElement.classList.remove('text-sm', 'text-base', 'text-lg', 'text-xl');
     if (fontSize === 'small') document.documentElement.classList.add('text-sm');
     else if (fontSize === 'large') document.documentElement.classList.add('text-lg');
+    else if (fontSize === 'xlarge') document.documentElement.classList.add('text-xl');
     else document.documentElement.classList.add('text-base');
   }, [fontSize]);
 

@@ -16,7 +16,7 @@ interface AuthState {
   authLoading: boolean;
   loginError: string | null;
   isDarkMode: boolean;
-  fontSize: 'small' | 'medium' | 'large';
+  fontSize: 'small' | 'medium' | 'large' | 'xlarge';
   language: 'en' | 'he' | 'fr' | 'de' | 'es' | 'nl' | 'is';
   autoBackupInterval: number;
   lastBackupTime: number;
