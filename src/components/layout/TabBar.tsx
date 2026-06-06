@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TabId, TAB_DEFS } from '@/App';
 import type { AppUser } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface TabBarProps {
   tabs: typeof TAB_DEFS;
@@ -12,6 +13,11 @@ interface TabBarProps {
 
 export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
   const { t } = useTranslation();
+  const { fontSize } = useAuthStore();
+  
+  const iconSizeDesktop = fontSize === 'xlarge' ? 24 : fontSize === 'large' ? 22 : 18;
+  const iconSizeMobile = fontSize === 'xlarge' ? 26 : fontSize === 'large' ? 24 : 20;
+  const textClassMobile = fontSize === 'xlarge' ? 'text-xs' : fontSize === 'large' ? 'text-[10px]' : 'text-[9px]';
 
   const visibleTabs = tabs.filter((tab) => {
     if (appUser.role === 'admin') return true;
@@ -45,7 +51,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
               `}
             >
               <Icon
-                size={18}
+                size={iconSizeDesktop}
                 className={isActive ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400'}
               />
               {t(tab.labelKey)}
@@ -83,11 +89,11 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
                 `}
               >
                 <Icon
-                  size={20}
+                  size={iconSizeMobile}
                   strokeWidth={isActive ? 2.5 : 1.5}
                   className={isActive ? 'scale-110 transition-transform' : ''}
                 />
-                <span className="text-[9px] font-medium leading-none">{t(tab.labelKey)}</span>
+                <span className={`${textClassMobile} font-medium leading-none`}>{t(tab.labelKey)}</span>
                 {isActive && <div className="w-1 h-1 rounded-full bg-brand-500 mt-0.5" />}
               </button>
             );
