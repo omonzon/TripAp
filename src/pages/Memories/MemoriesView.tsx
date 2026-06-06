@@ -55,6 +55,7 @@ interface JournalEntry {
   text: string;
   createdAt: number;
   authorName: string;
+  imageLink?: string;
 }
 
 export default function MemoriesView() {
@@ -72,6 +73,11 @@ export default function MemoriesView() {
   const [postLength, setPostLength] = useState<'short'|'medium'|'long'>('medium');
   const [generatedPost, setGeneratedPost] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [newImageLink, setNewImageLink] = useState('');
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [editImageLink, setEditImageLink] = useState('');
 
   // Load journal from Firestore
   useEffect(() => {
@@ -104,7 +110,8 @@ export default function MemoriesView() {
       id: Date.now().toString(),
       text: newEntry.trim(),
       createdAt: Date.now(),
-      authorName: appUser.name
+      authorName: appUser.name,
+      imageLink: newImageLink.trim() || undefined
     };
 
     try {
@@ -113,10 +120,35 @@ export default function MemoriesView() {
         updatedAt: Date.now() 
       }, { merge: true });
       setNewEntry('');
+      setNewImageLink('');
     } catch (e) {
       console.error(e);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const deleteEntry = async (entryId: string) => {
+    if (!currentTripId || !appUser) return;
+    if (!confirm(t('app.confirmDelete', 'Are you sure you want to delete this entry?'))) return;
+    const docId = journalMode === 'group' ? 'global' : `private_${appUser.email}`;
+    const newEntries = entries.filter(e => e.id !== entryId);
+    try {
+      await setDoc(doc(db, 'trips', currentTripId, 'journal', docId), { entries: newEntries, updatedAt: Date.now() }, { merge: true });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveEditEntry = async () => {
+    if (!currentTripId || !appUser || !editingId) return;
+    const docId = journalMode === 'group' ? 'global' : `private_${appUser.email}`;
+    const newEntries = entries.map(e => e.id === editingId ? { ...e, text: editText.trim(), imageLink: editImageLink.trim() || undefined } : e);
+    try {
+      await setDoc(doc(db, 'trips', currentTripId, 'journal', docId), { entries: newEntries, updatedAt: Date.now() }, { merge: true });
+      setEditingId(null);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -146,13 +178,13 @@ export default function MemoriesView() {
       const photosCtx = tripProfile?.photoAlbums?.length ? `Album Links: ${tripProfile.photoAlbums.join(', ')}` : '';
       
       const language = i18n.language === 'he' ? 'Hebrew' : 'English';
-      const formattedJournal = entries.map(e => `[${new Date(e.createdAt).toLocaleString()}] ${e.authorName}: ${e.text}`).join('\n\n');
+      const formattedJournal = entries.map(e => `[${new Date(e.createdAt).toLocaleString()}] ${e.authorName}: ${e.text} ${e.imageLink ? `(Image/Album: ${e.imageLink})` : ''}`).join('\n\n');
       const prompt = `Generate a beautifully formatted social media post about our trip. 
 Length: ${postLength}.
 Places visited: ${places}.
 Personal notes/journal: ${formattedJournal}.
 ${photosCtx}
-Include emojis, a warm tone, and mention our photos/videos. If album links are provided, you can add them to the bottom of the post.
+Include emojis, a warm tone, and mention our photos/videos. If image or album links are provided in the journal entries, you MUST integrate these specific links naturally into the post so that the images can be displayed.
 Reply strictly in ${language} using markdown formatting. DO NOT output code blocks, just raw formatted text.`;
 
       const system = `You are an expert social media copywriter. Use the context of the trip: ${getUnifiedContext()}`;
@@ -218,12 +250,55 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                 <p className="text-sm text-slate-400 text-center py-4">No entries yet. Write your first thought!</p>
               ) : (
                 entries.map(e => (
-                  <div key={e.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-fade-in">
+                  <div key={e.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-fade-in group">
                     <div className="flex justify-between items-start mb-1.5">
-                      <span className="text-xs font-semibold text-brand-600">{e.authorName}</span>
-                      <span className="text-[10px] text-slate-400" dir="ltr">{new Date(e.createdAt).toLocaleString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-brand-600">{e.authorName}</span>
+                        <span className="text-[10px] text-slate-400" dir="ltr">{new Date(e.createdAt).toLocaleString()}</span>
+                      </div>
+                      {(e.authorName === appUser?.name || journalMode === 'global') && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => { setEditingId(e.id); setEditText(e.text); setEditImageLink(e.imageLink || ''); }} className="text-slate-400 hover:text-brand-500 transition-colors p-1">
+                            <PenTool size={12} />
+                          </button>
+                          <button onClick={() => deleteEntry(e.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{e.text}</p>
+                    {editingId === e.id ? (
+                      <div className="space-y-2 mt-2">
+                        <textarea
+                          value={editText}
+                          onChange={(ev) => setEditText(ev.target.value)}
+                          className="input-base w-full text-sm"
+                          rows={3}
+                          dir="auto"
+                        />
+                        <input
+                          type="url"
+                          value={editImageLink}
+                          onChange={(ev) => setEditImageLink(ev.target.value)}
+                          placeholder="Image or album URL (optional)"
+                          className="input-base w-full text-sm"
+                          dir="ltr"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => setEditingId(null)} className="btn-secondary text-xs py-1 px-3">Cancel</button>
+                          <button onClick={saveEditEntry} className="btn-primary text-xs py-1 px-3">Save</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{e.text}</p>
+                        {e.imageLink && (
+                          <div className="mt-2 w-32">
+                            <AlbumPreview url={e.imageLink} />
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 ))
               )}
@@ -237,6 +312,14 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-brand-500 resize-none shadow-sm"
                 rows={3}
                 dir="auto"
+              />
+              <input
+                type="url"
+                value={newImageLink}
+                onChange={e => setNewImageLink(e.target.value)}
+                placeholder="Image or album URL (optional)"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-brand-500 shadow-sm"
+                dir="ltr"
               />
               <button 
                 onClick={saveJournalEntry}
