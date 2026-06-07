@@ -47,8 +47,8 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
             className="flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 p-1 -ms-1 rounded-lg transition-colors text-start"
             title={t('app.myTrips', 'My Trips')}
           >
-            <div className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center shrink-0">
-              <Globe className="w-4 h-4 text-white" />
+            <div className="shrink-0 flex items-center justify-center">
+              <img src="/logo.png" alt="TripAp Logo" className="w-8 h-8 rounded-xl object-cover shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" />
             </div>
             <ChevronDown size={16} className="text-slate-400 shrink-0 ms-1" />
           </button>

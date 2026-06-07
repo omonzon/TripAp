@@ -154,11 +154,14 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen gradient-hero">
-        <div className="text-center text-white">
-          <Globe className="w-16 h-16 mx-auto mb-4 animate-pulse text-brand-300" />
-          <h1 className="text-2xl font-bold">{t('app.name')}</h1>
-          <p className="text-brand-200 mt-2">{t('app.loading')}</p>
+      <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="text-center flex flex-col items-center">
+          <img src="/logo.png" alt="TripAp Logo" className="w-24 h-24 mb-6 drop-shadow-xl animate-pulse rounded-2xl" />
+          <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white mb-2">{t('app.name')}</h1>
+          <div className="flex items-center gap-2 text-brand-500 mt-2">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <p className="text-sm font-medium">{t('app.loading')}</p>
+          </div>
         </div>
       </div>
     );

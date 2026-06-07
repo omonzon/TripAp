@@ -54,7 +54,7 @@ body::after {
   position: fixed;
   inset: 0;
   background: url('/logo.png') center/300px no-repeat;
-  opacity: 0.03;
+  opacity: 0.08;
   pointer-events: none;
   z-index: -1;
 }
@@ -65,7 +65,7 @@ body::after {
 }
 
 .dark body::after {
-  opacity: 0.02;
+  opacity: 0.06;
 }
 
 [dir="rtl"] { direction: rtl; }
