@@ -63,12 +63,17 @@ export default function SettingsView() {
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Bug reporting
+  const [bugReport, setBugReport] = useState('');
+  const [sendingBug, setSendingBug] = useState(false);
+  const [bugSent, setBugSent] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [addingUser, setAddingUser] = useState(false);
   const [newUserRole, setNewUserRole] = useState<'viewer' | 'editor' | 'admin'>('viewer');
   const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [exportingType, setExportingType] = useState<string | null>(null);
+  const [exportingType, setExportingType] = useState<'html' | 'pdf' | 'csv' | 'backup' | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
 
 
@@ -312,7 +317,29 @@ export default function SettingsView() {
     }
   };
 
-
+  const handleReportBug = async () => {
+    if (!bugReport.trim() || !appUser) return;
+    setSendingBug(true);
+    try {
+      await addDoc(collection(db, 'feedback'), {
+        userEmail: appUser.email,
+        userName: appUser.name,
+        userAgent: navigator.userAgent,
+        text: bugReport.trim(),
+        currentTripId,
+        timestamp: Date.now(),
+        date: new Date().toISOString()
+      });
+      setBugSent(true);
+      setBugReport('');
+      showToast({ type: 'success', message: 'תודה! הדיווח נשלח בהצלחה.' });
+      setTimeout(() => setBugSent(false), 5000);
+    } catch (e) {
+      showToast({ type: 'error', message: t('app.error') });
+    } finally {
+      setSendingBug(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl mx-auto pb-8">
@@ -515,7 +542,7 @@ export default function SettingsView() {
             <h4 className="text-sm font-bold text-slate-800 dark:text-white">Trip Participants</h4>
             {participants.map(p => (
               <div key={p.email} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-sm shrink-0">
                       {(p.nickname || p.name).charAt(0).toUpperCase()}
@@ -873,6 +900,32 @@ export default function SettingsView() {
             </div>
           </div>
         )}
+      </section>
+
+      {/* ── Bug Reporting & Feedback ───────────────────────────────────── */}
+      <section className="card p-5 space-y-4 border-2 border-amber-500/20">
+        <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <AlertTriangle size={18} className="text-amber-500" />
+          דיווח על באגים והצעות לשיפור
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          נתקלתם בבעיה? יש לכם רעיון איך לשפר? ספרו לנו (אנחנו מצרפים אוטומטית מידע על הדפדפן כדי שנוכל לחקור את הבעיה).
+        </p>
+        <textarea
+          value={bugReport}
+          onChange={(e) => setBugReport(e.target.value)}
+          placeholder="מה קרה? באיזה מסך? מה חסר לך?"
+          className="input-base w-full h-24 resize-none"
+          dir="auto"
+        />
+        <button
+          onClick={handleReportBug}
+          disabled={!bugReport.trim() || sendingBug}
+          className="btn-primary w-full flex items-center justify-center gap-2"
+        >
+          {sendingBug ? <Loader2 size={16} className="animate-spin" /> : (bugSent ? <CheckCircle2 size={16} /> : <FileText size={16} />)}
+          {bugSent ? 'נשלח בהצלחה' : 'שלח דיווח'}
+        </button>
       </section>
 
       {/* App version */}

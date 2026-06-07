@@ -30,7 +30,9 @@ export default function OnboardingView() {
   const [isValidating, setIsValidating] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
-  const [tempApiKey, setTempApiKey] = useState(apiKey || '');
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [keyError, setKeyError] = useState<string | null>(null);
+  const [keySuccess, setKeySuccess] = useState(false);
   const [form, setForm] = useState({
     name: '',
     destinations: '',
@@ -45,12 +47,14 @@ export default function OnboardingView() {
   });
   const [constraintCount, setConstraintCount] = useState(0);
   const [generating, setGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<string>('');
   const [restoring, setRestoring] = useState(false);
   const [addedSegments, setAddedSegments] = useState<{ id: string, type: 'text' | 'file', title: string, constraintsFound: number }[]>([]);
   const [currentSegmentText, setCurrentSegmentText] = useState('');
 
   const next = () => {
     let nextStep = step + 1;
+    if (nextStep === 2) nextStep = 3; // Skip Step 2 (Admin User display)
     // If skipAI is true, jump from Step 3 (Trip Details) to Step 6 (Review)
     if (skipAI && nextStep === 4) {
       nextStep = 6;
@@ -60,6 +64,7 @@ export default function OnboardingView() {
   
   const back = () => {
     let prevStep = step - 1;
+    if (prevStep === 2) prevStep = 1; // Skip Step 2
     // If skipAI is true, jump back from Step 6 (Review) to Step 3 (Trip Details)
     if (skipAI && prevStep === 5) {
       prevStep = 3;
@@ -70,14 +75,16 @@ export default function OnboardingView() {
   const handleValidateKey = async () => {
     if (!tempApiKey.trim()) return;
     setIsValidating(true);
+    setKeyError(null);
+    setKeySuccess(false);
     try {
       const models = await fetchGeminiModels(tempApiKey.trim());
       setAvailableModels(models);
       if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
       else if (models.length > 0) setSelectedModel(models[0]);
-      showToast({ type: 'success', message: t('onboarding.keyValidated', 'API Key Validated!') });
+      setKeySuccess(true);
     } catch (err) {
-      showToast({ type: 'error', message: t('onboarding.keyInvalid', 'Invalid API Key.') });
+      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי. אנא ודא שהעתקת אותו נכון.'));
     } finally {
       setIsValidating(false);
     }
@@ -118,10 +125,15 @@ export default function OnboardingView() {
       const constraints = getConstraints(graph);
       setConstraintCount(prev => prev + constraints.length);
       
-      setAddedSegments([...addedSegments, {
+      
+      const summary = constraints.length > 0 
+        ? constraints.map(c => c.type).slice(0, 3).join(', ') 
+        : 'טקסט כללי';
+
+      setAddedSegments(prev => [...prev, {
         id: Date.now().toString(),
         type: 'text',
-        title: `Text Snippet (${currentSegmentText.substring(0, 20)}...)`,
+        title: `טקסט (${summary})`,
         constraintsFound: constraints.length
       }]);
       
@@ -163,11 +175,14 @@ export default function OnboardingView() {
       updateTripGraph(graph);
       const constraints = getConstraints(graph);
       setConstraintCount(prev => prev + constraints.length);
-      
+      const summary = constraints.length > 0 
+        ? constraints.map(c => c.type).slice(0, 3).join(', ') 
+        : 'מסמך כללי';
+
       setAddedSegments(prev => [...prev, {
         id: Date.now().toString(),
         type: 'file',
-        title: file.name || 'Screenshot/Pasted Image',
+        title: `${file.name || 'תמונה/מסמך'} (${summary})`,
         constraintsFound: constraints.length
       }]);
       
@@ -236,12 +251,14 @@ export default function OnboardingView() {
       // Comprehensive AI Generation
       if (!skipAI && tempApiKey.trim()) {
         showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is building your comprehensive trip data...') });
+        setGenerationProgress(t('onboarding.startingGeneration', 'מתחיל ניתוח...'));
         await generateComprehensiveTrip(
           profile, 
           form.bookings, 
           getProviderForTask('itinerary'), 
           i18n.language, 
-          appUser.email
+          appUser.email,
+          setGenerationProgress
         );
       }
 
@@ -249,10 +266,12 @@ export default function OnboardingView() {
       setCurrentTrip(tripId);
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
       
-    } catch (err) {
-      showToast({ type: 'error', message: t('app.error') });
+    } catch (err: any) {
+      console.error(err);
+      showToast({ type: 'error', message: err.message || t('app.error') });
     } finally {
       setGenerating(false);
+      setGenerationProgress('');
     }
   };
 
@@ -379,11 +398,28 @@ export default function OnboardingView() {
                   type="password" 
                   className="input-base pl-10 text-left" 
                   value={tempApiKey} 
-                  onChange={(e) => setTempApiKey(e.target.value)} 
+                  onChange={(e) => {
+                    setTempApiKey(e.target.value);
+                    setKeyError(null);
+                    setKeySuccess(false);
+                    setAvailableModels([]);
+                  }} 
                   placeholder="AIzaSy..." 
                   dir="ltr"
                 />
               </div>
+              {keyError && (
+                <p className="text-xs text-red-500 mt-2 flex items-center gap-1 animate-fade-in">
+                  <AlertTriangle size={12} />
+                  {keyError}
+                </p>
+              )}
+              {keySuccess && (
+                <p className="text-xs text-green-500 mt-2 flex items-center gap-1 animate-fade-in">
+                  <CheckCircle2 size={12} />
+                  המפתח אומת בהצלחה!
+                </p>
+              )}
               <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
                 <CheckCircle2 size={12} className="text-green-500" />
                 המפתח נשמר מקומית בדפדפן שלכם ולא עובר לשרתים שלנו.
@@ -464,7 +500,7 @@ export default function OnboardingView() {
               <input id="trip-destinations" className="input-base" value={form.destinations} onChange={(e) => setForm({ ...form, destinations: e.target.value })} placeholder={t('onboarding.destinationsPlaceholder')} />
               <p className="text-xs text-slate-400 mt-1">{t('onboarding.destinationsHelp')}</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.startDate')}</label>
                 <input id="trip-start" type="date" className="input-base" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
@@ -481,7 +517,7 @@ export default function OnboardingView() {
         {step === 4 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step3')}</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.budget')}</label>
                 <input id="trip-budget" type="number" className="input-base" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="5000" />
@@ -560,18 +596,18 @@ export default function OnboardingView() {
               </p>
             </div>
 
-            {/* List of added bookings */}
             {addedSegments.length > 0 && (
               <div className="space-y-2 mb-4">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white">{t('onboarding.addedDocuments', 'Added Documents')}</h3>
-                {addedSegments.map(seg => (
-                  <div key={seg.id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700 animate-fade-in">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white">מסמכים שנסרקו:</h3>
+                {addedSegments.map((seg, idx) => (
+                  <div key={seg.id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 animate-fade-in shadow-sm">
                     <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 overflow-hidden">
-                       {seg.type === 'file' ? <FileText size={16} className="shrink-0" /> : <FileText size={16} className="shrink-0" />}
-                       <span className="truncate">{seg.title}</span>
+                       <span className="font-bold text-brand-600">{idx + 1}.</span>
+                       {seg.type === 'file' ? <FileText size={16} className="shrink-0 text-slate-400" /> : <FileText size={16} className="shrink-0 text-slate-400" />}
+                       <span className="truncate font-medium">{seg.title}</span>
                     </div>
                     <span className="text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 px-2 py-1 rounded-full shrink-0">
-                      {seg.constraintsFound} constraints
+                      {seg.constraintsFound} פרטים שחולצו
                     </span>
                   </div>
                 ))}
@@ -659,18 +695,18 @@ export default function OnboardingView() {
 
         {step === 1 && (
           <>
-            <button onClick={handleSkipAI} className="btn-secondary ms-auto px-6" disabled={!tosAccepted}>
-              {t('app.skip', 'Skip')}
-            </button>
-            {availableModels.length === 0 ? (
-              <button onClick={handleValidateKey} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim() || isValidating || !tosAccepted}>
-                {isValidating ? <Loader2 size={16} className="animate-spin" /> : t('onboarding.validateKey', 'Validate')} <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button onClick={handleAISetupNext} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim() || !tosAccepted}>
-                {t('app.next')} <ArrowRight size={16} />
+            {!skipAI && availableModels.length === 0 && (
+              <button onClick={handleValidateKey} className="btn-secondary flex items-center gap-2" disabled={!tempApiKey.trim() || isValidating}>
+                {isValidating ? <Loader2 size={16} className="animate-spin" /> : t('onboarding.validateKey', 'Validate')}
               </button>
             )}
+            <button 
+              onClick={skipAI ? handleSkipAI : handleAISetupNext} 
+              className="btn-primary flex items-center gap-2 ms-auto" 
+              disabled={!tosAccepted || (!skipAI && availableModels.length === 0)}
+            >
+              {t('app.continue', 'המשך')} <ArrowRight size={16} />
+            </button>
           </>
         )}
 
@@ -696,18 +732,27 @@ export default function OnboardingView() {
         )}
 
         {step === 6 && (
-          <button
-            id="btn-create-trip"
-            onClick={createTrip}
-            disabled={generating || !form.name}
-            className="btn-primary flex items-center gap-2 ms-auto"
-          >
-            {generating ? (
-              <><Loader2 size={16} className="animate-spin" /> {t('onboarding.generating')}</>
-            ) : (
-              <><Globe size={16} /> {t('onboarding.createTrip')}</>
+          <div className="flex flex-col gap-4 w-full">
+            {generating && (
+              <div className="bg-brand-50 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-800 p-4 rounded-xl text-center space-y-2 animate-pulse">
+                <div className="flex justify-center mb-2"><Loader2 size={24} className="text-brand-500 animate-spin" /></div>
+                <p className="font-bold text-brand-700 dark:text-brand-300">{generationProgress}</p>
+                <p className="text-xs text-red-500 font-bold mt-2">⚠️ לא לרענן או לצאת מהמסך בזמן ניתוח ה AI!</p>
+              </div>
             )}
-          </button>
+            <button
+              id="btn-create-trip"
+              onClick={createTrip}
+              disabled={generating || !form.name}
+              className="btn-primary flex items-center justify-center gap-2 ms-auto mt-2"
+            >
+              {generating ? (
+                <><Loader2 size={16} className="animate-spin" /> {t('onboarding.generating')}</>
+              ) : (
+                <><Globe size={16} /> {t('onboarding.createTrip')}</>
+              )}
+            </button>
+          </div>
         )}
       </div>
 

@@ -379,9 +379,9 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                     <AlbumPreview url={url} />
                     <button 
                       onClick={() => removeAlbumUrl(url)}
-                      className="absolute top-1 right-1 p-1.5 bg-white/80 dark:bg-black/60 hover:bg-red-500 hover:text-white rounded-md text-slate-600 dark:text-slate-300 transition-colors opacity-0 group-hover:opacity-100 z-10 backdrop-blur-sm"
+                      className="absolute top-1 right-1 p-1.5 bg-white/80 dark:bg-black/60 hover:bg-red-500 hover:text-white rounded-md text-slate-600 dark:text-slate-300 transition-colors z-10 backdrop-blur-sm shadow-sm"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} className="text-red-500 hover:text-white" />
                     </button>
                   </div>
                 ))}

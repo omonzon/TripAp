@@ -45,6 +45,8 @@ Your job is to generate a MASSIVE comprehensive trip JSON with 4 sections:
 Language rule: Translate all generated text (itinerary descriptions, task texts, document titles) into the requested language (Hebrew or English).
 The keys of the JSON must remain in English.
 
+CRITICAL RULE FOR ITINERARY TEXT: Do NOT duplicate the 'title' inside the 'text'. The 'text' should only contain the description of the activity. Do NOT repeat the location name twice in the text.
+
 Return ONLY valid JSON matching this exact schema:
 {
   "itinerary": [
@@ -70,7 +72,8 @@ export async function generateComprehensiveTrip(
   documentsText: string,
   provider: AIProvider,
   language: string = 'he',
-  authorEmail: string
+  authorEmail: string,
+  onProgress?: (msg: string) => void
 ): Promise<void> {
   const context = `
 Trip Name: ${tripProfile.name}
@@ -87,6 +90,7 @@ ${documentsText}
 `;
 
   try {
+    if (onProgress) onProgress(language === 'he' ? 'קורא נתונים ומסמכים...' : 'Reading data and documents...');
     let affiliateLinks = '';
     try {
       const snap = await getDoc(doc(db, 'platform_settings', 'affiliates'));
@@ -97,18 +101,22 @@ ${documentsText}
 
     const promptInstruction = COMPREHENSIVE_PROMPT + (affiliateLinks ? `\n\nCRITICAL: When recommending hotels, flights, cars, attractions, or restaurants, you MUST include a direct booking link. Combine your search parameters with these affiliate base links: ${affiliateLinks}. Make sure bad reviews don't contradict user requests, and place the final booking link right inside the item's text.` : '');
 
+    if (onProgress) onProgress(language === 'he' ? 'מכין מסלול מדהים (זה עשוי לקחת כדקה)...' : 'Preparing amazing route (may take a minute)...');
     const result = await callAI(
       [{ role: 'user', text: `Generate comprehensive trip data:\n${context}` }],
       provider,
       { isJson: true, systemInstruction: promptInstruction, maxRetries: 2 }
     );
 
+    if (onProgress) onProgress(language === 'he' ? 'מפענח את התוצאות...' : 'Parsing results...');
     const parsed = parseAIJson<ComprehensiveOutput>(result, {
       itinerary: [], tasks: [], expenses: [], documents: []
     });
 
     const tripRef = doc(db, 'trips', tripProfile.id);
     const promises: Promise<any>[] = [];
+
+    if (onProgress) onProgress(language === 'he' ? 'שומר מסלול ומשימות...' : 'Saving itinerary and tasks...');
 
     // 1. Itinerary
     if (parsed.itinerary && Array.isArray(parsed.itinerary)) {
