@@ -219,6 +219,7 @@ Places visited: ${places}.
 Personal notes/journal: ${formattedJournal}.
 ${photosCtx}
 Include emojis, a warm tone, and mention our photos/videos. If image or album links are provided in the journal entries, you MUST integrate these specific links naturally into the post so that the images can be displayed.
+ALWAYS add a sentence at the very end saying something like "I also enjoyed using the TravelPlatform app to plan and manage my trip... https://tripap.vercel.app" (translate this naturally to the requested language).
 Reply strictly in ${language} using markdown formatting. DO NOT output code blocks, just raw formatted text.`;
 
       const system = `You are an expert social media copywriter. Use the context of the trip: ${getUnifiedContext()}`;

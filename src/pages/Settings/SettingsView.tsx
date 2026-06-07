@@ -363,6 +363,11 @@ export default function SettingsView() {
               </button>
             </div>
             <p className="text-xs text-slate-400 mt-1">{t('settings.apiKeyHelp')}</p>
+            <div className="text-xs text-brand-600 dark:text-brand-400 mt-2 flex gap-3">
+              {providerType === 'gemini' && <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="hover:underline">Get a free Google Gemini API Key</a>}
+              {providerType === 'openai' && <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="hover:underline">Get OpenAI API Key</a>}
+              {providerType === 'anthropic' && <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="hover:underline">Get Anthropic API Key</a>}
+            </div>
           </div>
         )}
 
@@ -508,18 +513,27 @@ export default function SettingsView() {
               <div key={p.email} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-sm">
-                      {p.name.charAt(0).toUpperCase()}
+                    <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-sm shrink-0">
+                      {(p.nickname || p.name).charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-800 dark:text-white">{p.name}</div>
+                    <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="text-sm font-semibold text-slate-800 dark:text-white">{p.name}</div>
+                        <input
+                          type="text"
+                          value={p.nickname || ''}
+                          onChange={(e) => updateParticipant(p.email, { nickname: e.target.value })}
+                          placeholder={t('settings.nickname', 'Nickname')}
+                          className="input-base text-xs py-0.5 px-2 h-6 w-full sm:w-24"
+                        />
+                      </div>
                       <div className="text-xs text-slate-500" dir="ltr">{p.email}</div>
                     </div>
                   </div>
                   <select 
                     value={p.role}
                     onChange={(e) => updateParticipant(p.email, { role: e.target.value })}
-                    className="input-base text-xs py-1 px-2"
+                    className="input-base text-xs py-1 px-2 shrink-0"
                   >
                     <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
                     <option value="editor">{t('settings.roleEditor', 'Editor')}</option>

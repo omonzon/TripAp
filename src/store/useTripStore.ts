@@ -28,6 +28,7 @@ export interface TripProfile {
 export interface Participant {
   email: string;
   name: string;
+  nickname?: string;
   role: 'admin' | 'editor' | 'viewer';
 }
 

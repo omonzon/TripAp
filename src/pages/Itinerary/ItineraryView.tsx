@@ -7,7 +7,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import {
-  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown
+  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -18,6 +18,8 @@ import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
 import { extractAndIntegrateDocument } from '@/engine/documentAnalyzer';
 import ItineraryWizard from './ItineraryWizard';
+import LocationInfoModal from '@/components/LocationInfoModal';
+import DailyBriefingModal from '@/components/DailyBriefingModal';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, { color: string; emoji: string }> = {
@@ -166,9 +168,14 @@ export default function ItineraryView() {
   const [tempMapUrl, setTempMapUrl] = useState('');
   const [dayToDelete, setDayToDelete] = useState<string | null>(null);
   const [isScanningDoc, setIsScanningDoc] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const [infoLocation, setInfoLocation] = useState<string | null>(null);
+  const [showDailyBriefing, setShowDailyBriefing] = useState(false);
+  const [todayItems, setTodayItems] = useState<ItineraryItem[]>([]);
   const fileRef = useRef<HTMLInputElement>(null!);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  const todayIso = new Date().toISOString().split('T')[0];
   const userRole = useUserRole();
   const canWrite = userRole === 'admin' || userRole === 'editor';
 
@@ -190,14 +197,26 @@ export default function ItineraryView() {
     return () => unsub();
   }, [currentTripId, setDays, t]);
 
-  // ── Scroll to today ───────────────────────────────────────────────────────
+  // ── Scroll to today & Check Briefing ──────────────────────────────────────
   useEffect(() => {
-    if (!days.length || loading) return;
-    const today = new Date().toISOString().split('T')[0];
-    const todayDay = days.find(d => d.isoDate === today);
-    const node = todayDay ? dayRefs.current[todayDay.id] : null;
-    if (node) setTimeout(() => node.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-  }, [days, loading]);
+    if (days.length > 0 && !hasScrolled) {
+      const todayDay = days.find(d => d.isoDate === todayIso);
+      const targetId = todayDay?.id || days[0].id;
+      setTimeout(() => {
+        dayRefs.current[targetId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+      setHasScrolled(true);
+
+      // Check for Daily Briefing
+      if (todayDay && currentTripId) {
+        const briefingKey = `briefing_${currentTripId}_${todayIso}`;
+        if (!localStorage.getItem(briefingKey)) {
+          setTodayItems(todayDay.items || []);
+          setShowDailyBriefing(true);
+        }
+      }
+    }
+  }, [days, hasScrolled, todayIso, currentTripId]);
 
   // ── AI add item ───────────────────────────────────────────────────────────
   const handleAiAdd = async (e: React.FormEvent) => {
@@ -444,15 +463,17 @@ export default function ItineraryView() {
           )}
         </div>
       ) : (
-        days.map(day => (
+        days.map(day => {
+          const isToday = day.isoDate === todayIso;
+          return (
           <div
             key={day.id}
             ref={el => { dayRefs.current[day.id] = el; }}
             data-dayid={day.id}
-            className="card overflow-hidden scroll-mt-24"
+            className={`card overflow-hidden scroll-mt-24 ${isToday ? 'ring-2 ring-brand-500 shadow-brand-500/20 dark:shadow-brand-500/10' : ''}`}
           >
             {/* Day header */}
-            <div className="bg-slate-50 dark:bg-slate-900/60 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div className={`px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between ${isToday ? 'bg-brand-50 dark:bg-brand-900/40' : 'bg-slate-50 dark:bg-slate-900/60'}`}>
               <h3 className="font-bold text-slate-800 dark:text-white">
                 {day.title}
                 {day.items?.some(i => i.fixed) && (
@@ -554,14 +575,24 @@ export default function ItineraryView() {
                         </div>
                       )}
                       <div className="mt-1 text-xl shrink-0 w-8 text-center">{iconInfo.emoji}</div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 mt-1">
+                        <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content" dangerouslySetInnerHTML={{ __html: item.text }} />
+                        {(item.type === 'location' || item.type === 'poi') && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
+                            className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                          >
+                            <Info size={10} />
+                            {t('itinerary.expand', 'Expand')}
+                          </button>
+                        )}
                         {item.fixed && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-1.5 py-0.5 rounded mb-1">
                             <Lock size={9} /> {t('itinerary.fixed')}
                           </span>
                         )}
                         {editingItemId === item.id ? (
-                          <div className="space-y-2">
+                          <div className="space-y-2 mt-2">
                             <IconSelector selected={editItemType} onSelect={setEditItemType} />
                             <div className="flex gap-2 border dark:border-slate-600 rounded-xl p-2 bg-white dark:bg-slate-700 items-start">
                               <textarea
@@ -652,7 +683,8 @@ export default function ItineraryView() {
               )}
             </div>
           </div>
-        ))
+          );
+        })
       )}
       
       {showWizard && <ItineraryWizard onClose={() => setShowWizard(false)} />}
@@ -715,6 +747,23 @@ export default function ItineraryView() {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Location Info Modal */}
+      {infoLocation && (
+        <LocationInfoModal locationName={infoLocation} onClose={() => setInfoLocation(null)} />
+      )}
+
+      {/* Daily Briefing Modal */}
+      {showDailyBriefing && (
+        <DailyBriefingModal 
+          todayItems={todayItems} 
+          tripName={tripProfile?.name || 'Trip'} 
+          onClose={() => {
+            localStorage.setItem(`briefing_${currentTripId}_${todayIso}`, 'true');
+            setShowDailyBriefing(false);
+          }} 
+        />
       )}
 
     </div>
