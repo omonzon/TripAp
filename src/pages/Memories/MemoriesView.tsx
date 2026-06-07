@@ -82,7 +82,47 @@ export default function MemoriesView() {
 
   // Extract all locations in order for the interactive map
   const allLocations = React.useMemo(() => {
-    return days.flatMap(d => d.items.filter(i => i.type !== 'flight' && i.type !== 'note').map(i => i.text.replace(/<[^>]*>?/gm, '').trim()));
+    const validTypes = ['location', 'poi', 'accommodation', 'food', 'activity'];
+    const maxWaypoints = 8;
+    
+    let locations = days.flatMap(d => d.items
+      .filter(i => validTypes.includes(i.type || ''))
+      .map(i => {
+         const plainText = i.text.replace(/<[^>]*>?/gm, '').trim();
+         
+         // Try to find English text (often the actual place name)
+         const engMatch = plainText.match(/[a-zA-Z0-9\s&'-]{4,}/);
+         if (engMatch && engMatch[0].trim().length > 3) {
+             return engMatch[0].trim();
+         }
+         
+         // If no English, try to extract from colon (e.g. "המלצה: מלון דן")
+         const parts = plainText.split(':');
+         if (parts.length > 1) {
+             return parts[1].split('.')[0].trim();
+         }
+         
+         // Fallback to first short sentence
+         return plainText.split(/[.!?\n|]/)[0].substring(0, 40).trim();
+      })
+      .filter(t => t.length > 2)
+    );
+    
+    // De-duplicate
+    locations = Array.from(new Set(locations));
+    
+    // If we have too many, Google Maps URL will overflow. Keep first and last, and sample the middle.
+    if (locations.length > maxWaypoints + 2) {
+       const step = (locations.length - 2) / maxWaypoints;
+       const sampled = [locations[0]];
+       for (let i = 1; i <= maxWaypoints; i++) {
+          sampled.push(locations[Math.floor(i * step)]);
+       }
+       sampled.push(locations[locations.length - 1]);
+       locations = sampled;
+    }
+    
+    return locations;
   }, [days]);
 
   const mapUrl = React.useMemo(() => {
@@ -268,7 +308,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
             {t('tabs.memories') || 'Memories & Journey'}
           </h1>
           <p className="text-sm text-slate-500">
-            Document your experiences and generate beautiful posts
+            {t('memories.subtitle', 'תעדו את החוויות שלכם וצרו פוסטים יפים')}
           </p>
         </div>
       </div>
