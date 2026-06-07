@@ -503,12 +503,13 @@ Return ONLY valid JSON in this exact schema:
 }
 
 CRITICAL: Include the exact dates and participant counts in the URL query strings to make the links precise!
+IMPORTANT: Do NOT include the entire activity text in the search queries! Use concise keywords (e.g., just the city name or flight route).
 Guidelines for URLs:
-- Car rental: https://www.rentalcars.com/search-results?location=...&pickUpDate=${tripProfile.startDate}&returnDate=${tripProfile.endDate}
-- Hotel/Accommodation: https://www.booking.com/searchresults.html?ss=...&checkin=${tripProfile.startDate}&checkout=${tripProfile.endDate}&group_adults=${tripProfile.participants.length}
-- Expedia: https://www.expedia.com/Hotel-Search?destination=...&startDate=${tripProfile.startDate}&endDate=${tripProfile.endDate}&adults=${tripProfile.participants.length}
-- Flights: https://www.google.com/travel/flights?q=... or Skyscanner
-- Tours/Attractions/Cruises/Ski: https://www.viator.com/searchResults/all?text=... or GetYourGuide
+- Car rental: https://www.expedia.com/carsearch?locn=CITY_NAME&d1=${tripProfile.startDate}&d2=${tripProfile.endDate}
+- Hotel/Accommodation: https://www.booking.com/searchresults.html?ss=CITY_NAME&checkin=${tripProfile.startDate}&checkout=${tripProfile.endDate}&group_adults=${tripProfile.participants.length}
+- Expedia: https://www.expedia.com/Hotel-Search?destination=CITY_NAME&startDate=${tripProfile.startDate}&endDate=${tripProfile.endDate}&adults=${tripProfile.participants.length}
+- Flights: https://www.google.com/travel/flights?q=Flights%20to%20DESTINATION_CITY
+- Tours/Attractions/Cruises/Ski: https://www.viator.com/searchResults/all?text=CITY_NAME+ACTIVITY
 
 Items to process:
 ${JSON.stringify(itemsPayload, null, 2)}`;
