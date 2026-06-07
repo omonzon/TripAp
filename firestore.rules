@@ -4,7 +4,7 @@ service cloud.firestore {
 
     // Global user registry (email-keyed)
     match /users/{email} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && request.auth.token.email == email;
       allow create: if request.auth != null && (
         request.auth.token.email == email ||
         request.resource.data.keys().hasOnly(['trips'])

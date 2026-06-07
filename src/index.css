@@ -119,6 +119,15 @@ body::after {
   }
 }
 
+.dark .card, .dark .card-hover {
+  background-color: rgba(30, 41, 59, 0.85); /* slate-800 */
+  border-color: rgba(51, 65, 85, 0.5); /* slate-700 */
+}
+
+.dark .card-hover:hover {
+  background-color: rgba(30, 41, 59, 0.95);
+}
+
 @utility btn-primary {
   background-color: #2563eb;
   color: #ffffff;

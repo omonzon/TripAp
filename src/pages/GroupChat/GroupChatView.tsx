@@ -91,9 +91,9 @@ export default function GroupChatView() {
           messages.map(msg => {
             const me = isMe(msg.authorEmail);
             return (
-              <div key={msg.id} className={`flex ${me ? 'justify-end' : 'justify-start'} group items-center gap-2`}>
+              <div key={msg.id} className={`flex ${me ? 'justify-end' : 'justify-start'} group items-center gap-2 animate-fade-in`}>
                 
-                {/* Actions (Edit/Delete) - Placed before the bubble so they appear on the inside (center) of the chat area */}
+                {/* Actions (Edit/Delete) */}
                 {me && editingId !== msg.id && (
                   <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
                     <button onClick={() => { setEditingId(msg.id); setEditText(msg.text); }} className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-brand-500 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">

@@ -143,6 +143,12 @@ ${documentsText}
       itinerary: [], tasks: [], expenses: [], documents: []
     });
 
+    // Tag items with AI author
+    parsed.itinerary = parsed.itinerary.map(day => ({
+      ...day,
+      items: day.items.map(item => ({ ...item, authorName: 'AI' }))
+    }));
+
     const tripRef = doc(db, 'trips', tripProfile.id);
     const promises: Promise<any>[] = [];
 

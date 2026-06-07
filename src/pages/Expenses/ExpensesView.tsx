@@ -241,7 +241,10 @@ export default function ExpensesView() {
               ) : (
                 expenses.map(ex => (
                   <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="p-3 font-medium text-slate-800 dark:text-white">{ex.store || '—'}</td>
+                    <td className="p-3 font-medium text-slate-800 dark:text-white">
+                      <div>{ex.store || '—'}</div>
+                      {ex.authorEmail && <div className="text-[10px] text-slate-400 font-normal mt-0.5">{ex.authorEmail.split('@')[0]}</div>}
+                    </td>
                     <td className="p-3 font-bold text-slate-900 dark:text-white">
                       {ex.amount.toLocaleString()} <span className="text-xs font-normal text-slate-400">{ex.currency}</span>
                     </td>

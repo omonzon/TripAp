@@ -80,63 +80,28 @@ export default function MemoriesView() {
   const [editImageLink, setEditImageLink] = useState('');
   const [newAlbumUrl, setNewAlbumUrl] = useState('');
 
-  // Extract all locations in order for the interactive map
-  const allLocations = React.useMemo(() => {
-    const validTypes = ['location', 'poi', 'accommodation', 'food', 'activity'];
-    const maxWaypoints = 8;
+  // Use the trip profile destinations for a clean and accurate map route
+  const mapUrl = React.useMemo(() => {
+    const dests = tripProfile?.destinations || [];
+    if (dests.length === 0) return null;
     
-    let locations = days.flatMap(d => d.items
-      .filter(i => validTypes.includes(i.type || ''))
-      .map(i => {
-         const plainText = i.text.replace(/<[^>]*>?/gm, '').trim();
-         
-         // Try to find English text (often the actual place name)
-         const engMatch = plainText.match(/[a-zA-Z0-9\s&'-]{4,}/);
-         if (engMatch && engMatch[0].trim().length > 3) {
-             return engMatch[0].trim();
-         }
-         
-         // If no English, try to extract from colon (e.g. "המלצה: מלון דן")
-         const parts = plainText.split(':');
-         if (parts.length > 1) {
-             return parts[1].split('.')[0].trim();
-         }
-         
-         // Fallback to first short sentence
-         return plainText.split(/[.!?\n|]/)[0].substring(0, 40).trim();
-      })
-      .filter(t => t.length > 2)
-    );
-    
-    // De-duplicate
-    locations = Array.from(new Set(locations));
-    
-    // If we have too many, Google Maps URL will overflow. Keep first and last, and sample the middle.
-    if (locations.length > maxWaypoints + 2) {
-       const step = (locations.length - 2) / maxWaypoints;
-       const sampled = [locations[0]];
-       for (let i = 1; i <= maxWaypoints; i++) {
-          sampled.push(locations[Math.floor(i * step)]);
-       }
-       sampled.push(locations[locations.length - 1]);
-       locations = sampled;
+    // If only one destination, just search for it
+    if (dests.length === 1) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dests[0])}`;
     }
     
-    return locations;
-  }, [days]);
-
-  const mapUrl = React.useMemo(() => {
-    if (allLocations.length === 0) return null;
-    const origin = encodeURIComponent(allLocations[0]);
-    const destination = encodeURIComponent(allLocations[allLocations.length - 1]);
+    // Route from first to last destination
+    const origin = encodeURIComponent(dests[0]);
+    const destination = encodeURIComponent(dests[dests.length - 1]);
     let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
     
-    if (allLocations.length > 2) {
-      const waypoints = allLocations.slice(1, -1).map(loc => encodeURIComponent(loc)).join('|');
+    // Add waypoints if there are any between start and end
+    if (dests.length > 2) {
+      const waypoints = dests.slice(1, -1).map(loc => encodeURIComponent(loc)).join('|');
       url += `&waypoints=${waypoints}`;
     }
     return url;
-  }, [allLocations]);
+  }, [tripProfile?.destinations]);
 
   // Load journal from Firestore
   useEffect(() => {
@@ -328,7 +293,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
             </div>
             <h3 className="text-xl font-bold mb-1">{t('memories.tripMap', 'מפת המסלול שלנו')}</h3>
             <p className="text-brand-50 text-sm max-w-lg mx-auto">
-              צפו בפריסת כל הנקודות והתחנות של הטיול בגוגל מפות ({allLocations.length} מיקומים)
+              צפו בפריסת כל הנקודות והתחנות של הטיול בגוגל מפות ({tripProfile?.destinations?.length || 0} מיקומים)
             </p>
             <span className="mt-4 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-brand-700 text-xs font-bold shadow-sm group-hover:bg-brand-50 transition-colors">
               פתח מפה <ExternalLink size={12} />

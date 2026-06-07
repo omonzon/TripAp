@@ -55,6 +55,7 @@ export interface ItineraryItem {
   id: string;
   type: string;
   text: string;
+  authorName?: string;
   fixed?: boolean;
   flightData?: FlightData;
   referrals?: ReferralLink[];
