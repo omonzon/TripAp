@@ -509,6 +509,10 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                   dir="auto"
                 >
                   {generatedPost}
+                  <div className="mt-4 pt-3 border-t border-brand-200/50 dark:border-slate-700/50 flex items-center justify-end gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="font-medium">נוצר באמצעות TripAp AI</span>
+                    <img src="/logo.png" className="w-5 h-5 object-contain opacity-80" alt="TripAp" />
+                  </div>
                 </div>
               </div>
             )}

@@ -49,9 +49,23 @@ body {
   word-wrap: break-word;
 }
 
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url('/logo.png') center/300px no-repeat;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .dark body {
   background-color: #020617;
   color: #f1f5f9;
+}
+
+.dark body::after {
+  opacity: 0.02;
 }
 
 [dir="rtl"] { direction: rtl; }

@@ -62,6 +62,9 @@ async function generateHTML(tripId: string) {
       </style>
     </head>
     <body>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="https://trip-ap.vercel.app/logo.png" alt="TripAp" style="width: 80px; height: 80px; object-fit: contain;" />
+      </div>
       <h1>טיול: ${tripProfile.name}</h1>
       <p><strong>יעדים:</strong> ${(tripProfile.destinations || []).join(', ')}</p>
       <p><strong>תאריכים:</strong> ${tripProfile.startDate} - ${tripProfile.endDate}</p>
