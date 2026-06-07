@@ -13,6 +13,7 @@ import { showToast } from '@/components/ui/Toast';
 import { restoreTripFromFile } from '@/services/backupService';
 import { UploadCloud } from 'lucide-react';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
+import TermsOfServiceModal from '@/components/TermsOfServiceModal';
 
 const STEPS = 6;
 
@@ -24,6 +25,8 @@ export default function OnboardingView() {
 
   const [step, setStep] = useState(1);
   const [skipAI, setSkipAI] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
+  const [showTos, setShowTos] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
@@ -388,7 +391,7 @@ export default function OnboardingView() {
             </div>
             
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
-              <label className="flex items-center gap-3 cursor-pointer group">
+              <label className="flex items-center gap-3 cursor-pointer group mb-2">
                 <input 
                   type="checkbox" 
                   checked={skipAI}
@@ -397,6 +400,18 @@ export default function OnboardingView() {
                 />
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
                   דלג על AI כרגע (יצירת טיול ריק בלבד, ניתן להוסיף מפתח מאוחר יותר)
+                </span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-all cursor-pointer"
+                />
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
+                  אני מסכים ל<button onClick={(e) => { e.preventDefault(); setShowTos(true); }} className="text-brand-600 hover:underline">תנאי השימוש</button> לרבות הסרת אחריות על אובדן ושיבוש נתונים.
                 </span>
               </label>
             </div>
@@ -644,15 +659,15 @@ export default function OnboardingView() {
 
         {step === 1 && (
           <>
-            <button onClick={handleSkipAI} className="btn-secondary ms-auto px-6">
+            <button onClick={handleSkipAI} className="btn-secondary ms-auto px-6" disabled={!tosAccepted}>
               {t('app.skip', 'Skip')}
             </button>
             {availableModels.length === 0 ? (
-              <button onClick={handleValidateKey} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim() || isValidating}>
+              <button onClick={handleValidateKey} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim() || isValidating || !tosAccepted}>
                 {isValidating ? <Loader2 size={16} className="animate-spin" /> : t('onboarding.validateKey', 'Validate')} <ArrowRight size={16} />
               </button>
             ) : (
-              <button onClick={handleAISetupNext} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim()}>
+              <button onClick={handleAISetupNext} className="btn-primary flex items-center gap-2" disabled={!tempApiKey.trim() || !tosAccepted}>
                 {t('app.next')} <ArrowRight size={16} />
               </button>
             )}
@@ -702,10 +717,12 @@ export default function OnboardingView() {
           <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700">
             <UploadCloud size={16} />
             {t('onboarding.restoreBtn', 'Restore Trip from File')}
-            <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
+            <input type="file" accept=".json" className="hidden" onChange={handleRestore} disabled={!tosAccepted} />
           </label>
         </div>
       )}
+
+      {showTos && <TermsOfServiceModal onClose={() => setShowTos(false)} />}
     </div>
   );
 }
