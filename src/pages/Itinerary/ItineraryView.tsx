@@ -146,6 +146,63 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
   );
 }
 
+// ── Service Links Widget ───────────────────────────────────────────────────────
+function ServiceLinks({ item, isoDate, participantsCount, tripName }: { item: ItineraryItem, isoDate: string, participantsCount: number, tripName: string }) {
+  if (item.referrals && item.referrals.length > 0) {
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {item.referrals.map((ref, idx) => (
+          <a key={idx} href={ref.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors border border-emerald-200 dark:border-emerald-800">
+            <Link size={10} /> {ref.title}
+          </a>
+        ))}
+      </div>
+    );
+  }
+
+  // Fallback defaults
+  if (item.type !== 'hotel' && item.type !== 'home' && item.type !== 'flight') return null;
+
+  const getNextDay = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      d.setDate(d.getDate() + 1);
+      return d.toISOString().split('T')[0];
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const nextIsoDate = getNextDay(isoDate);
+  const cleanText = encodeURIComponent(item.text.replace(/<[^>]*>?/gm, '').trim() || tripName);
+  
+  if (item.type === 'flight') {
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        <a href={`https://www.google.com/travel/flights?q=Flights+to+${cleanText}+on+${isoDate}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-800">
+          <Plane size={10} /> Google Flights
+        </a>
+        <a href={`https://www.skyscanner.net/transport/flights-from/anywhere/${isoDate}/?adults=${participantsCount}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
+          <Plane size={10} /> Skyscanner
+        </a>
+      </div>
+    );
+  }
+
+  // Accommodations (hotel, home)
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      <a href={`https://www.booking.com/searchresults.html?ss=${cleanText}&checkin=${isoDate}&checkout=${nextIsoDate}&group_adults=${participantsCount}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-800">
+        <Hotel size={10} /> Booking.com
+      </a>
+      <a href={`https://www.expedia.com/Hotel-Search?destination=${cleanText}&startDate=${isoDate}&endDate=${nextIsoDate}&adults=${participantsCount}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors border border-yellow-200 dark:border-yellow-800">
+        <Hotel size={10} /> Expedia
+      </a>
+    </div>
+  );
+}
+
 // ── Main Itinerary View ───────────────────────────────────────────────────────
 export default function ItineraryView() {
   const { t } = useTranslation();
@@ -172,6 +229,7 @@ export default function ItineraryView() {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [infoLocation, setInfoLocation] = useState<string | null>(null);
   const [showDailyBriefing, setShowDailyBriefing] = useState(false);
+  const [isScanningReferrals, setIsScanningReferrals] = useState(false);
   const [todayItems, setTodayItems] = useState<ItineraryItem[]>([]);
   const fileRef = useRef<HTMLInputElement>(null!);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -214,6 +272,7 @@ export default function ItineraryView() {
         if (!localStorage.getItem(briefingKey)) {
           setTodayItems(todayDay.items || []);
           setShowDailyBriefing(true);
+          localStorage.setItem(briefingKey, 'true');
         }
       }
     }
@@ -382,6 +441,90 @@ export default function ItineraryView() {
     }
   };
 
+  const handleScanReferrals = async () => {
+    if (!currentTripId || !tripProfile || !days.length) return;
+    
+    const apiKey = useAIStore.getState().apiKey;
+    if (!apiKey) {
+      showToast({ type: 'warning', message: t('itinerary.missingApiKey', 'Please set your Gemini API key in Settings first.') });
+      return;
+    }
+
+    setIsScanningReferrals(true);
+    showToast({ type: 'info', message: 'סורק ומייצר הפניות הזמנה...' });
+
+    try {
+      const itemsToScan = days.flatMap(d => d.items.map(i => ({ dayId: d.docId, item: i }))).filter(x => !x.item.referrals || x.item.referrals.length === 0);
+      if (itemsToScan.length === 0) {
+        showToast({ type: 'success', message: 'כל ההפניות מעודכנות!' });
+        setIsScanningReferrals(false);
+        return;
+      }
+
+      const itemsPayload = itemsToScan.map(x => ({ id: x.item.id, text: x.item.text, type: x.item.type }));
+      
+      const prompt = `Identify relevant booking/referral aggregator search links for these trip activities based on their type and text.
+The trip destination is ${tripProfile.destinations.join(', ')} with ${tripProfile.participants.length} participants.
+Return ONLY valid JSON in this exact schema:
+{
+  "results": [
+    {
+      "id": "item_id_here",
+      "referrals": [
+        { "title": "short title (e.g. Booking.com, Viator, Rentalcars, PADI)", "url": "valid search URL" }
+      ]
+    }
+  ]
+}
+
+Guidelines for URLs:
+- Car rental: https://www.rentalcars.com/search-results?location=...
+- Hotel/Accommodation: https://www.booking.com/searchresults.html?ss=...
+- Flights: https://www.google.com/travel/flights?q=... or Skyscanner
+- Tours/Attractions/Show tickets/Cruises/Diving/Ski: https://www.viator.com/searchResults/all?text=... or https://www.tripadvisor.com/Search?q=... or GetYourGuide
+
+Items to process:
+${JSON.stringify(itemsPayload, null, 2)}`;
+
+      const system = `You are an expert travel assistant API. Return ONLY JSON.`;
+      
+      const response = await callAI([{ role: 'user', text: prompt }], getProviderForTask('chat'), { systemInstruction: system });
+      const parsed = parseAIJson<{ results: { id: string; referrals: { title: string; url: string; icon?: string }[] }[] }>(response, { results: [] });
+      
+      if (parsed && parsed.results) {
+        const dayUpdates: Record<string, ItineraryItem[]> = {};
+        for (const res of parsed.results) {
+          const original = itemsToScan.find(x => x.item.id === res.id);
+          if (original) {
+            const dayId = original.dayId;
+            if (!dayUpdates[dayId]) {
+              const d = days.find(day => day.docId === dayId);
+              if (d) dayUpdates[dayId] = [...d.items];
+            }
+            const itemIdx = dayUpdates[dayId].findIndex(i => i.id === res.id);
+            if (itemIdx >= 0) {
+              dayUpdates[dayId][itemIdx] = { ...dayUpdates[dayId][itemIdx], referrals: res.referrals };
+            }
+          }
+        }
+
+        const batch = writeBatch(db);
+        for (const [dayDocId, updatedItems] of Object.entries(dayUpdates)) {
+          const ref = doc(db, 'trips', currentTripId, 'itinerary', dayDocId);
+          batch.update(ref, { items: updatedItems });
+        }
+        await batch.commit();
+
+        showToast({ type: 'success', message: 'נמצאו הפניות חדשות להזמנות!' });
+      }
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'error', message: 'שגיאה בסריקת הפניות' });
+    } finally {
+      setIsScanningReferrals(false);
+    }
+  };
+
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
 
   return (
@@ -390,12 +533,16 @@ export default function ItineraryView() {
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
         {canWrite && (
           <div className="flex items-center gap-2">
-            <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc} className="btn-secondary flex items-center gap-2 text-sm py-2">
+            <button onClick={handleScanReferrals} disabled={isScanningReferrals} className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
+              {isScanningReferrals ? <Loader2 size={15} className="animate-spin" /> : <Link size={15} />} 
+              <span className="hidden sm:inline">סרוק הפניות</span>
+            </button>
+            <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc} className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
               {isScanningDoc ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />} 
               <span className="hidden sm:inline">{t('itinerary.scanDoc', 'Scan Doc')}</span>
             </button>
             <input ref={fileRef} type="file" accept="application/pdf, image/*" capture="environment" className="hidden" onChange={handleScanDocument} />
-            <button onClick={handleAddDay} className="btn-secondary flex items-center gap-2 text-sm py-2">
+            <button onClick={handleAddDay} className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
               <Plus size={15} /> <span className="hidden sm:inline">{t('itinerary.newDay')}</span>
             </button>
           </div>
@@ -593,6 +740,7 @@ export default function ItineraryView() {
                             <Lock size={9} /> {t('itinerary.fixed')}
                           </span>
                         )}
+                        <ServiceLinks item={item} isoDate={day.isoDate || day.date} participantsCount={tripProfile?.participants?.length || 2} tripName={tripProfile?.name || ''} />
                         {editingItemId === item.id ? (
                           <div className="space-y-2 mt-2">
                             <IconSelector selected={editItemType} onSelect={setEditItemType} />

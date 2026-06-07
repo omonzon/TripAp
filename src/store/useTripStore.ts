@@ -45,12 +45,19 @@ export interface ItineraryDay {
   items: ItineraryItem[];
 }
 
+export interface ReferralLink {
+  title: string;
+  url: string;
+  icon?: string;
+}
+
 export interface ItineraryItem {
   id: string;
   type: string;
   text: string;
   fixed?: boolean;
   flightData?: FlightData;
+  referrals?: ReferralLink[];
 }
 
 export interface FlightData {

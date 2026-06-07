@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText, Trash2, Plus } from 'lucide-react';
+import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText, Trash2, Plus, ExternalLink } from 'lucide-react';
 import { useTripStore } from '@/store/useTripStore';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
@@ -79,6 +79,24 @@ export default function MemoriesView() {
   const [editText, setEditText] = useState('');
   const [editImageLink, setEditImageLink] = useState('');
   const [newAlbumUrl, setNewAlbumUrl] = useState('');
+
+  // Extract all locations in order for the interactive map
+  const allLocations = React.useMemo(() => {
+    return days.flatMap(d => d.items.filter(i => i.type !== 'flight' && i.type !== 'note').map(i => i.text.replace(/<[^>]*>?/gm, '').trim()));
+  }, [days]);
+
+  const mapUrl = React.useMemo(() => {
+    if (allLocations.length === 0) return null;
+    const origin = encodeURIComponent(allLocations[0]);
+    const destination = encodeURIComponent(allLocations[allLocations.length - 1]);
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    
+    if (allLocations.length > 2) {
+      const waypoints = allLocations.slice(1, -1).map(loc => encodeURIComponent(loc)).join('|');
+      url += `&waypoints=${waypoints}`;
+    }
+    return url;
+  }, [allLocations]);
 
   // Load journal from Firestore
   useEffect(() => {
@@ -219,7 +237,7 @@ Places visited: ${places}.
 Personal notes/journal: ${formattedJournal}.
 ${photosCtx}
 Include emojis, a warm tone, and mention our photos/videos. If image or album links are provided in the journal entries, you MUST integrate these specific links naturally into the post so that the images can be displayed.
-ALWAYS add a sentence at the very end saying something like "I also enjoyed using the TravelPlatform app to plan and manage my trip... https://tripap.vercel.app" (translate this naturally to the requested language).
+ALWAYS add the exact sentence at the very end (if in Hebrew): "גם אני נהנתי מהאפליקציה בטיול שלי, מוזמנים גם: https://trip-ap.vercel.app/". If in English: "I also enjoyed using the TravelPlatform app for my trip, try it out: https://trip-ap.vercel.app/"
 Reply strictly in ${language} using markdown formatting. DO NOT output code blocks, just raw formatted text.`;
 
       const system = `You are an expert social media copywriter. Use the context of the trip: ${getUnifiedContext()}`;
@@ -254,6 +272,30 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
           </p>
         </div>
       </div>
+
+      {mapUrl && (
+        <a href={mapUrl} target="_blank" rel="noreferrer" className="block w-full mb-6 relative rounded-2xl overflow-hidden group shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700 h-48 bg-slate-100 dark:bg-slate-800">
+          {/* Abstract Map Background CSS Pattern */}
+          <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '30px 30px' }}></div>
+          
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-600/90 to-brand-400/80 dark:from-brand-900/90 dark:to-brand-800/80"></div>
+          
+          {/* Content */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg">
+              <MapPin size={24} className="text-white" />
+            </div>
+            <h3 className="text-xl font-bold mb-1">{t('memories.tripMap', 'מפת המסלול שלנו')}</h3>
+            <p className="text-brand-50 text-sm max-w-lg mx-auto">
+              צפו בפריסת כל הנקודות והתחנות של הטיול בגוגל מפות ({allLocations.length} מיקומים)
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-brand-700 text-xs font-bold shadow-sm group-hover:bg-brand-50 transition-colors">
+              פתח מפה <ExternalLink size={12} />
+            </span>
+          </div>
+        </a>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column: Journal & Photos */}

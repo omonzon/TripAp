@@ -103,7 +103,7 @@ export default function LocationInfoModal({ locationName, onClose }: LocationInf
                 Reddit <ExternalLink size={12} />
               </a>
               <a
-                href={`https://www.google.com/search?q=${searchQuery}`}
+                href={`https://www.google.com/search?q=${searchQuery}+travel+tips+forum`}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"

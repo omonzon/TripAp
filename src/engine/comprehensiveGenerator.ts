@@ -12,6 +12,7 @@ export interface ComprehensiveOutput {
       text: string;
       fixed?: boolean;
       flightData?: Record<string, string>;
+      referrals?: { title: string; url: string; icon?: string }[];
     }[];
   }[];
   tasks: {
@@ -53,7 +54,14 @@ Return ONLY valid JSON matching this exact schema:
     {
       "isoDate": "YYYY-MM-DD",
       "title": "String",
-      "items": [ { "type": "flight", "text": "String", "fixed": true } ]
+      "items": [ 
+        { 
+          "type": "flight", 
+          "text": "String", 
+          "fixed": true,
+          "referrals": [ { "title": "short search title (Booking.com/Viator/Rentalcars/PADI)", "url": "valid search aggregator URL" } ]
+        } 
+      ]
     }
   ],
   "tasks": [
@@ -134,7 +142,8 @@ ${documentsText}
             id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
             type: item.type || 'note',
             text: item.text || '',
-            fixed: item.fixed || false
+            fixed: item.fixed || false,
+            referrals: item.referrals || []
           }))
         };
         // Use setDoc to use the isoDate as docId for predictable sorting if we want,

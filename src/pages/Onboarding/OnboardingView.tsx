@@ -424,6 +424,12 @@ export default function OnboardingView() {
                 <CheckCircle2 size={12} className="text-green-500" />
                 המפתח נשמר מקומית בדפדפן שלכם ולא עובר לשרתים שלנו.
               </p>
+              <div className="flex flex-wrap gap-3 mt-4 mb-2 items-center bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">איך משיגים מפתח?</span>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline flex items-center gap-1"><span className="text-[10px]">🔗</span> Google AI</a>
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline flex items-center gap-1"><span className="text-[10px]">🔗</span> Anthropic</a>
+                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline flex items-center gap-1"><span className="text-[10px]">🔗</span> OpenAI</a>
+              </div>
             </div>
             
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800">

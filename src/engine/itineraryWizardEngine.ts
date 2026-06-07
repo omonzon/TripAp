@@ -53,10 +53,14 @@ Return ONLY valid JSON matching this schema:
 {
   "days": [
     {
-      "title": "Day 1: Arrival & Exploration",
+      "title": "String",
       "items": [
-        { "type": "flight", "text": "Arrival at airport" },
-        { "type": "food", "text": "Dinner at local spot" }
+        {
+          "type": "flight",
+          "text": "String",
+          "fixed": true,
+          "referrals": [ { "title": "short search title (Booking.com/Viator/Rentalcars/PADI)", "url": "valid search aggregator URL" } ]
+        }
       ]
     }
   ]
@@ -79,7 +83,7 @@ Return ONLY valid JSON matching this schema:
       { isJson: true, systemInstruction: promptInstruction, maxRetries: 2 }
     );
     
-    interface AILawItem { type: string; text: string; }
+    interface AILawItem { type: string; text: string; referrals?: { title: string, url: string, icon?: string }[]; }
     interface AILawDay { title: string; items: AILawItem[]; }
     const parsed = parseAIJson<{ days: AILawDay[] }>(result, { days: [] });
     
@@ -93,6 +97,7 @@ Return ONLY valid JSON matching this schema:
         id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         type: item.type,
         text: item.text,
+        referrals: item.referrals || []
       }));
 
       generatedDays.push({
