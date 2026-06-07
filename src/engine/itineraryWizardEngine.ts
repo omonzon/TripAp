@@ -59,12 +59,19 @@ Return ONLY valid JSON matching this schema:
           "type": "flight",
           "text": "String",
           "fixed": true,
-          "referrals": [ { "title": "short search title (Booking.com/Viator/Rentalcars/PADI)", "url": "valid search aggregator URL" } ]
+          "referrals": [ { "title": "short search title (Booking.com/Viator/Rentalcars/PADI)", "url": "precise URL with dates/pax" } ]
         }
       ]
     }
   ]
-}`;
+}
+
+CRITICAL: Include the exact dates and participant counts in the URL query strings to make the links precise!
+- Car rental: https://www.rentalcars.com/search-results?location=...&pickUpDate=${profile.startDate}&returnDate=${profile.endDate}
+- Hotel: https://www.booking.com/searchresults.html?ss=...&checkin=${profile.startDate}&checkout=${profile.endDate}&group_adults=${profile.participants.length}
+- Expedia: https://www.expedia.com/Hotel-Search?destination=...&startDate=${profile.startDate}&endDate=${profile.endDate}&adults=${profile.participants.length}
+- Flights: https://www.google.com/travel/flights?q=... or Skyscanner
+- Tours/Attractions/Cruises/Ski: https://www.viator.com/searchResults/all?text=... or GetYourGuide`;
 
   try {
     let affiliateLinks = '';

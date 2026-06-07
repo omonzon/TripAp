@@ -454,17 +454,42 @@ export default function ItineraryView() {
     showToast({ type: 'info', message: 'סורק ומייצר הפניות הזמנה...' });
 
     try {
-      const itemsToScan = days.flatMap(d => d.items.map(i => ({ dayId: d.docId, item: i }))).filter(x => !x.item.referrals || x.item.referrals.length === 0);
-      if (itemsToScan.length === 0) {
+      // 1. De-duplicate consecutive identical items
+      const dayUpdates: Record<string, ItineraryItem[]> = {};
+      let duplicatesRemoved = 0;
+      
+      const cleanDays = days.map(d => {
+        const uniqueItems: ItineraryItem[] = [];
+        for (const item of d.items) {
+          const prev = uniqueItems[uniqueItems.length - 1];
+          if (!prev || prev.text.trim() !== item.text.trim()) {
+            uniqueItems.push(item);
+          } else {
+            duplicatesRemoved++;
+          }
+        }
+        if (uniqueItems.length !== d.items.length) {
+          dayUpdates[d.docId] = uniqueItems;
+        }
+        return { ...d, items: uniqueItems };
+      });
+
+      const itemsToScan = cleanDays.flatMap(d => d.items.map(i => ({ dayId: d.docId, item: i }))).filter(x => !x.item.referrals || x.item.referrals.length === 0);
+      
+      if (itemsToScan.length === 0 && duplicatesRemoved === 0) {
         showToast({ type: 'success', message: 'כל ההפניות מעודכנות!' });
         setIsScanningReferrals(false);
         return;
       }
 
-      const itemsPayload = itemsToScan.map(x => ({ id: x.item.id, text: x.item.text, type: x.item.type }));
-      
-      const prompt = `Identify relevant booking/referral aggregator search links for these trip activities based on their type and text.
-The trip destination is ${tripProfile.destinations.join(', ')} with ${tripProfile.participants.length} participants.
+      if (itemsToScan.length > 0) {
+        const itemsPayload = itemsToScan.map(x => ({ id: x.item.id, text: x.item.text, type: x.item.type }));
+        
+        const prompt = `Identify relevant booking/referral aggregator search links for these trip activities based on their type and text.
+The trip destination is ${tripProfile.destinations.join(', ')}.
+Dates: ${tripProfile.startDate} to ${tripProfile.endDate}.
+Participants: ${tripProfile.participants.length} total.
+
 Return ONLY valid JSON in this exact schema:
 {
   "results": [
@@ -477,37 +502,41 @@ Return ONLY valid JSON in this exact schema:
   ]
 }
 
+CRITICAL: Include the exact dates and participant counts in the URL query strings to make the links precise!
 Guidelines for URLs:
-- Car rental: https://www.rentalcars.com/search-results?location=...
-- Hotel/Accommodation: https://www.booking.com/searchresults.html?ss=...
+- Car rental: https://www.rentalcars.com/search-results?location=...&pickUpDate=${tripProfile.startDate}&returnDate=${tripProfile.endDate}
+- Hotel/Accommodation: https://www.booking.com/searchresults.html?ss=...&checkin=${tripProfile.startDate}&checkout=${tripProfile.endDate}&group_adults=${tripProfile.participants.length}
+- Expedia: https://www.expedia.com/Hotel-Search?destination=...&startDate=${tripProfile.startDate}&endDate=${tripProfile.endDate}&adults=${tripProfile.participants.length}
 - Flights: https://www.google.com/travel/flights?q=... or Skyscanner
-- Tours/Attractions/Show tickets/Cruises/Diving/Ski: https://www.viator.com/searchResults/all?text=... or https://www.tripadvisor.com/Search?q=... or GetYourGuide
+- Tours/Attractions/Cruises/Ski: https://www.viator.com/searchResults/all?text=... or GetYourGuide
 
 Items to process:
 ${JSON.stringify(itemsPayload, null, 2)}`;
 
-      const system = `You are an expert travel assistant API. Return ONLY JSON.`;
-      
-      const response = await callAI([{ role: 'user', text: prompt }], getProviderForTask('chat'), { systemInstruction: system });
-      const parsed = parseAIJson<{ results: { id: string; referrals: { title: string; url: string; icon?: string }[] }[] }>(response, { results: [] });
-      
-      if (parsed && parsed.results) {
-        const dayUpdates: Record<string, ItineraryItem[]> = {};
-        for (const res of parsed.results) {
-          const original = itemsToScan.find(x => x.item.id === res.id);
-          if (original) {
-            const dayId = original.dayId;
-            if (!dayUpdates[dayId]) {
-              const d = days.find(day => day.docId === dayId);
-              if (d) dayUpdates[dayId] = [...d.items];
-            }
-            const itemIdx = dayUpdates[dayId].findIndex(i => i.id === res.id);
-            if (itemIdx >= 0) {
-              dayUpdates[dayId][itemIdx] = { ...dayUpdates[dayId][itemIdx], referrals: res.referrals };
+        const system = `You are an expert travel assistant API. Return ONLY JSON.`;
+        
+        const response = await callAI([{ role: 'user', text: prompt }], getProviderForTask('chat'), { systemInstruction: system });
+        const parsed = parseAIJson<{ results: { id: string; referrals: { title: string; url: string; icon?: string }[] }[] }>(response, { results: [] });
+        
+        if (parsed && parsed.results) {
+          for (const res of parsed.results) {
+            const original = itemsToScan.find(x => x.item.id === res.id);
+            if (original) {
+              const dayId = original.dayId;
+              if (!dayUpdates[dayId]) {
+                const d = cleanDays.find(day => day.docId === dayId);
+                if (d) dayUpdates[dayId] = [...d.items];
+              }
+              const itemIdx = dayUpdates[dayId].findIndex(i => i.id === res.id);
+              if (itemIdx >= 0) {
+                dayUpdates[dayId][itemIdx] = { ...dayUpdates[dayId][itemIdx], referrals: res.referrals };
+              }
             }
           }
         }
+      }
 
+      if (Object.keys(dayUpdates).length > 0) {
         const batch = writeBatch(db);
         for (const [dayDocId, updatedItems] of Object.entries(dayUpdates)) {
           const ref = doc(db, 'trips', currentTripId, 'itinerary', dayDocId);
@@ -515,7 +544,9 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
         }
         await batch.commit();
 
-        showToast({ type: 'success', message: 'נמצאו הפניות חדשות להזמנות!' });
+        showToast({ type: 'success', message: duplicatesRemoved > 0 ? `נמצאו הפניות חדשות, והוסרו ${duplicatesRemoved} כפילויות!` : 'נמצאו הפניות חדשות להזמנות!' });
+      } else {
+        showToast({ type: 'success', message: 'אין הפניות חדשות להוספה.' });
       }
     } catch (err) {
       console.error(err);

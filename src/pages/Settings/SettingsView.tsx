@@ -215,7 +215,7 @@ export default function SettingsView() {
       }
     }
 
-    if (successCount === 2 || (!tripProfile && successCount === 1)) {
+    if (successCount > 0) {
       setNewUserEmail('');
       showToast({ type: 'success', message: t('settings.userAdded') });
     }
@@ -223,12 +223,24 @@ export default function SettingsView() {
     setAddingUser(false);
   };
 
-  const updateParticipant = async (email: string, updates: any) => {
+  const updateParticipant = async (email: string, data: any) => {
     if (!currentTripId) return;
     try {
-      await setDoc(doc(db, 'trips', currentTripId, 'users', email), updates, { merge: true });
+      await setDoc(doc(db, 'trips', currentTripId, 'users', email), data, { merge: true });
     } catch (e) {
       showToast({ type: 'error', message: t('app.error') });
+    }
+  };
+
+  const removeParticipant = async (email: string) => {
+    if (!currentTripId || !isAdmin) return;
+    if (confirm(t('settings.confirmRemoveUser', 'האם אתה בטוח שברצונך להסיר משתמש זה מהטיול?'))) {
+      try {
+        await deleteDoc(doc(db, 'trips', currentTripId, 'users', email));
+        showToast({ type: 'success', message: t('settings.userRemoved', 'המשתמש הוסר בהצלחה') });
+      } catch (err) {
+        showToast({ type: 'error', message: t('errors.general', 'אירעה שגיאה') });
+      }
     }
   };
 
@@ -541,35 +553,46 @@ export default function SettingsView() {
           <div className="space-y-3 mt-6 border-t border-slate-200 dark:border-slate-800 pt-4">
             <h4 className="text-sm font-bold text-slate-800 dark:text-white">Trip Participants</h4>
             {participants.map(p => (
-              <div key={p.email} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-sm shrink-0">
-                      {(p.nickname || p.name).charAt(0).toUpperCase()}
+              <div key={p.email} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900 dark:text-brand-300 flex items-center justify-center font-bold text-sm shrink-0">
+                      {p.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <div className="text-sm font-semibold text-slate-800 dark:text-white">{p.name}</div>
+                        <div className="text-sm font-semibold text-slate-800 dark:text-white truncate">{p.name}</div>
                         <input
                           type="text"
                           value={p.nickname || ''}
                           onChange={(e) => updateParticipant(p.email, { nickname: e.target.value })}
                           placeholder={t('settings.nickname', 'Nickname')}
-                          className="input-base text-xs py-0.5 px-2 h-6 w-full sm:w-24"
+                          className="input-base text-xs py-0.5 px-2 h-6 w-full sm:w-28 shrink-0"
                         />
                       </div>
-                      <div className="text-xs text-slate-500" dir="ltr">{p.email}</div>
+                      <div className="text-xs text-slate-500 truncate" dir="ltr">{p.email}</div>
                     </div>
                   </div>
-                  <select 
-                    value={p.role}
-                    onChange={(e) => updateParticipant(p.email, { role: e.target.value })}
-                    className="input-base text-xs py-1 px-2 shrink-0"
-                  >
-                    <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
-                    <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
-                    <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
-                  </select>
+                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                    <select 
+                      value={p.role}
+                      onChange={(e) => updateParticipant(p.email, { role: e.target.value })}
+                      className="input-base text-xs py-1 px-2 shrink-0 w-full sm:w-auto"
+                    >
+                      <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
+                      <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
+                      <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
+                    </select>
+                    {isAdmin && p.email !== appUser?.email && (
+                      <button 
+                        onClick={() => removeParticipant(p.email)}
+                        className="text-red-500 hover:text-red-600 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0 border border-transparent hover:border-red-200 dark:hover:border-red-800"
+                        title={t('settings.removeUser', 'הסר משתמש')}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 
                 {p.role !== 'admin' && (
@@ -909,7 +932,11 @@ export default function SettingsView() {
           דיווח על באגים והצעות לשיפור
         </h3>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          נתקלתם בבעיה? יש לכם רעיון איך לשפר? ספרו לנו (אנחנו מצרפים אוטומטית מידע על הדפדפן כדי שנוכל לחקור את הבעיה).
+          נתקלתם בבעיה? יש לכם רעיון איך לשפר? ספרו לנו! 
+          <br/>
+          <span className="text-xs text-brand-600 dark:text-brand-400 font-medium">
+            (שימו לב: אף מידע אישי או פרטים על הטיולים שלכם לא נשלחים בדיווח זה. נשלח רק התוכן שתכתבו ופרטים טכניים על הדפדפן).
+          </span>
         </p>
         <textarea
           value={bugReport}

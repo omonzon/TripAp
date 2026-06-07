@@ -59,21 +59,42 @@ Return ONLY valid JSON matching this exact schema:
           "type": "flight", 
           "text": "String", 
           "fixed": true,
-          "referrals": [ { "title": "short search title (Booking.com/Viator/Rentalcars/PADI)", "url": "valid search aggregator URL" } ]
+          "referrals": [ { "title": "short search title", "url": "precise URL with dates/pax" } ]
         } 
       ]
     }
   ],
   "tasks": [
-    { "text": "String", "category": "String", "priority": "high" }
+    {
+      "text": "String",
+      "category": "String",
+      "priority": "low|medium|high"
+    }
   ],
   "expenses": [
-    { "store": "String", "amount": 100, "currency": "USD", "category": "transportation", "notes": "String" }
+    {
+      "store": "String",
+      "amount": Number,
+      "currency": "String",
+      "category": "String",
+      "notes": "String (optional)"
+    }
   ],
   "documents": [
-    { "title": "String", "referenceNumber": "String", "notes": "String" }
+    {
+      "title": "String",
+      "referenceNumber": "String",
+      "notes": "String (optional)"
+    }
   ]
-}`;
+}
+
+CRITICAL: Include the exact dates and participant counts in the URL query strings for referrals to make the links precise! Use the dates and participants from the provided context.
+- Car rental: https://www.rentalcars.com/search-results?location=...&pickUpDate=YYYY-MM-DD&returnDate=YYYY-MM-DD
+- Hotel: https://www.booking.com/searchresults.html?ss=...&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&group_adults=N
+- Expedia: https://www.expedia.com/Hotel-Search?destination=...&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&adults=N
+- Flights: https://www.google.com/travel/flights?q=... or Skyscanner
+- Tours/Activities/Ski/Diving: https://www.viator.com/searchResults/all?text=... or GetYourGuide`;
 
 export async function generateComprehensiveTrip(
   tripProfile: TripProfile,
