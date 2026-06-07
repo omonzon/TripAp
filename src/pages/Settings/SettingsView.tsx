@@ -7,6 +7,7 @@ import {
   Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle
 } from 'lucide-react';
 import { db } from '@/services/firebase';
+import { deleteAllUserTrips } from '@/services/tripService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, useUserRole } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
@@ -108,6 +109,9 @@ export default function SettingsView() {
       const { auth } = await import('@/services/firebase');
       const currentUser = auth.currentUser;
       
+      // Wipe all user data (trips they own, remove from trips they don't)
+      await deleteAllUserTrips(appUser.email);
+
       await deleteDoc(doc(db, 'users', appUser.email));
       
       if (currentUser) {

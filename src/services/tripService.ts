@@ -1,0 +1,73 @@
+import { collection, doc, deleteDoc, getDocs, getDoc, updateDoc, query, where } from 'firebase/firestore';
+import { db } from './firebase';
+
+/**
+ * Deletes all documents in a specified subcollection of a trip.
+ */
+async function deleteSubcollection(tripId: string, subcollectionName: string) {
+  const q = query(collection(db, 'trips', tripId, subcollectionName));
+  const snapshot = await getDocs(q);
+  const deletePromises = snapshot.docs.map(document => 
+    deleteDoc(doc(db, 'trips', tripId, subcollectionName, document.id))
+  );
+  await Promise.all(deletePromises);
+}
+
+/**
+ * Completely deletes a trip, including all its known subcollections and profile.
+ */
+export async function deleteTripCompletely(tripId: string) {
+  const subcollections = [
+    'itinerary',
+    'expenses',
+    'journal',
+    'tasks',
+    'group_chat',
+    'aiChats'
+  ];
+
+  for (const subcol of subcollections) {
+    await deleteSubcollection(tripId, subcol);
+  }
+
+  // Delete the main profile document
+  await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
+  
+  // Delete the trip document itself (though deleting subcollections + profile usually leaves it empty)
+  await deleteDoc(doc(db, 'trips', tripId));
+}
+
+/**
+ * Deletes all trips created by the user, and removes the user from trips they don't own.
+ */
+export async function deleteAllUserTrips(userEmail: string) {
+  const userRef = doc(db, 'users', userEmail);
+  const userSnap = await getDocs(query(collection(db, 'users'), where('email', '==', userEmail))); // Or getDoc if ID is email
+  // Assuming doc ID is email:
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return;
+  
+  const userData = snap.data();
+  const trips = userData.trips || [];
+  
+  for (const trip of trips) {
+    const tripId = trip.id;
+    const profileRef = doc(db, 'trips', tripId, 'profile', 'main');
+    const profileSnap = await getDoc(profileRef);
+    
+    if (profileSnap.exists()) {
+      const profileData = profileSnap.data();
+      if (profileData.createdBy === userEmail) {
+        // User is the owner, wipe the trip completely
+        await deleteTripCompletely(tripId);
+      } else {
+        // User is not the owner, just remove them from the trip
+        const newParticipants = (profileData.participants || []).filter((p: any) => p.email !== userEmail);
+        await updateDoc(profileRef, { participants: newParticipants });
+        
+        // Remove from users subcollection
+        await deleteDoc(doc(db, 'trips', tripId, 'users', userEmail));
+      }
+    }
+  }
+}

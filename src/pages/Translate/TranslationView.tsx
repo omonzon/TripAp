@@ -8,6 +8,7 @@ import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
+import { compressImageToBase64 } from '@/utils/imageCompressor';
 
 const LANGUAGE_PAIRS = [
   { from: 'auto', to: 'he', label: '→ עברית' },
@@ -78,24 +79,20 @@ export default function TranslationView() {
     setIsScanning(true);
     setMenuData(null);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64 = (reader.result as string).split(',')[1];
-        const prompt = `Analyze this restaurant menu image and return structured info in Hebrew. Return ONLY valid JSON:
+      const base64 = await compressImageToBase64(file);
+      const prompt = `Analyze this restaurant menu image and return structured info in Hebrew. Return ONLY valid JSON:
 {"currency":"ISK","items":[{"name":"Dish Name","description":"Short Hebrew description","vegan":false,"glutenFree":false,"containsPork":false,"priceISK":2490}]}`;
-        const text = await callAI(prompt, getProviderForTask('vision'), {
-          isJson: true, base64Image: base64, mimeType: file.type,
-        });
-        const result = parseAIJson<MenuAnalysis>(text, { items: [], currency: 'ISK' });
-        // Add ILS prices (assuming ISK/ILS ~0.0514 rate)
-        result.items = result.items.map(item => ({
-          ...item,
-          priceILS: item.priceISK ? Math.round(item.priceISK * 0.0514) : undefined,
-        }));
-        setMenuData(result);
-        setIsScanning(false);
-      };
+      const text = await callAI(prompt, getProviderForTask('vision'), {
+        isJson: true, base64Image: base64, mimeType: 'image/jpeg',
+      });
+      const result = parseAIJson<MenuAnalysis>(text, { items: [], currency: 'ISK' });
+      // Add ILS prices (assuming ISK/ILS ~0.0514 rate)
+      result.items = result.items.map(item => ({
+        ...item,
+        priceILS: item.priceISK ? Math.round(item.priceISK * 0.0514) : undefined,
+      }));
+      setMenuData(result);
+      setIsScanning(false);
     } catch {
       showToast({ type: 'error', message: t('errors.scanFailed') });
       setIsScanning(false);

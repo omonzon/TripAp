@@ -20,6 +20,7 @@ import { extractAndIntegrateDocument } from '@/engine/documentAnalyzer';
 import ItineraryWizard from './ItineraryWizard';
 import LocationInfoModal from '@/components/LocationInfoModal';
 import DailyBriefingModal from '@/components/DailyBriefingModal';
+import { compressImageToBase64 } from '@/utils/imageCompressor';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, { color: string; emoji: string }> = {
@@ -345,37 +346,38 @@ export default function ItineraryView() {
     showToast({ type: 'info', message: t('itinerary.scanningDoc', 'Scanning document and updating trip...') });
 
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(',')[1];
-          const res = await extractAndIntegrateDocument(
-            tripProfile,
-            days,
-            base64,
-            file.type,
-            getProviderForTask('extraction'),
-            appUser.email
-          );
-          
-          const eventsCount = res.itineraryEvents?.length || 0;
-          const expensesCount = res.expenses?.length || 0;
-          
-          showToast({ 
-            type: 'success', 
-            message: t('itinerary.scanSuccess', 'Document scanned! Extracted {{events}} events and {{expenses}} expenses.', { events: eventsCount, expenses: expensesCount }) 
-          });
-        } catch (err) {
-          showToast({ type: 'error', message: t('errors.scanFailed', 'Failed to scan document.') });
-        } finally {
-          setIsScanningDoc(false);
-          if (fileRef.current) fileRef.current.value = '';
-        }
-      };
+      let base64 = '';
+      if (file.type.startsWith('image/')) {
+        base64 = await compressImageToBase64(file);
+      } else {
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Failed to read document'));
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const res = await extractAndIntegrateDocument(
+        tripProfile,
+        days,
+        base64,
+        file.type,
+        getProviderForTask('extraction'),
+        appUser.email
+      );
+      
+      const eventsCount = res.itineraryEvents?.length || 0;
+      const expensesCount = res.expenses?.length || 0;
+      
+      showToast({ 
+        type: 'success', 
+        message: t('itinerary.scanSuccess', 'Document scanned! Extracted {{events}} events and {{expenses}} expenses.', { events: eventsCount, expenses: expensesCount }) 
+      });
     } catch (err) {
+      showToast({ type: 'error', message: t('errors.scanFailed', 'Failed to scan document.') });
+    } finally {
       setIsScanningDoc(false);
-      showToast({ type: 'error', message: t('errors.scanFailed') });
       if (fileRef.current) fileRef.current.value = '';
     }
   };

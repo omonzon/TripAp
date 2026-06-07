@@ -12,6 +12,7 @@ import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
+import { compressImageToBase64 } from '@/utils/imageCompressor';
 
 interface Expense {
   id: string;
@@ -77,25 +78,25 @@ export default function ExpensesView() {
     if (!file) return;
     setIsScanning(true);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64 = (reader.result as string).split(',')[1];
-        const prompt = `Analyze this receipt image. Return ONLY valid JSON: {"store":"string","amount":number,"currency":"ISK or EUR or USD etc","category":"food|supermarket|transportation|gifts|clothing|other"}`;
-        const text = await callAI(prompt, getProviderForTask('vision'), { isJson: true, base64Image: base64, mimeType: file.type });
-        const result = parseAIJson<{ store: string; amount: number; currency: string; category: string }>(text, { store: '', amount: 0, currency: 'USD', category: 'other' });
-        const converted = (toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1)).toFixed(2);
-        setForm({
-          store: result.store ?? '',
-          amount: String(result.amount ?? ''),
-          currency: result.currency ?? 'USD',
-          category: result.category ?? 'other',
-          amountConverted: converted,
-          notes: '',
-        });
-        setShowForm(true);
-        setIsScanning(false);
-      };
+      // Compress image before sending to AI
+      const base64 = await compressImageToBase64(file);
+      
+      const prompt = `Analyze this receipt image. Return ONLY valid JSON: {"store":"string","amount":number,"currency":"ISK or EUR or USD etc","category":"food|supermarket|transportation|gifts|clothing|other"}`;
+      const text = await callAI(prompt, getProviderForTask('vision'), { isJson: true, base64Image: base64, mimeType: 'image/jpeg' });
+      
+      const result = parseAIJson<{ store: string; amount: number; currency: string; category: string }>(text, { store: '', amount: 0, currency: 'USD', category: 'other' });
+      const converted = (toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1)).toFixed(2);
+      
+      setForm({
+        store: result.store ?? '',
+        amount: String(result.amount ?? ''),
+        currency: result.currency ?? 'USD',
+        category: result.category ?? 'other',
+        amountConverted: converted,
+        notes: '',
+      });
+      setShowForm(true);
+      setIsScanning(false);
     } catch (err: unknown) {
       const msg = err instanceof Error && err.message.includes('429')
         ? t('app.rateLimitError')

@@ -12,6 +12,7 @@ import { fetchGeminiModels } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { restoreTripFromFile } from '@/services/backupService';
 import { UploadCloud } from 'lucide-react';
+import { compressImageToBase64 } from '@/utils/imageCompressor';
 
 const STEPS = 6;
 
@@ -135,43 +136,45 @@ export default function OnboardingView() {
     if (skipAI) return;
     setExtracting(true);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(',')[1];
-          const graph = await extractSemanticGraphFromFile(
-            base64,
-            file.type,
-            getProviderForTask('extraction'),
-            {
-              tripDestinations: form.destinations.split(',').map((d) => d.trim()),
-              tripDates: `${form.startDate} to ${form.endDate}`,
-            }
-          );
-          updateTripGraph(graph);
-          const constraints = getConstraints(graph);
-          setConstraintCount(prev => prev + constraints.length);
-          
-          setAddedSegments(prev => [...prev, {
-            id: Date.now().toString(),
-            type: 'file',
-            title: file.name || 'Screenshot/Pasted Image',
-            constraintsFound: constraints.length
-          }]);
-          
-          const fileContext = `\n\n--- Document: ${file.name || 'Image'} ---\nFound Constraints:\n${JSON.stringify(constraints, null, 2)}`;
-          setForm(prev => ({ ...prev, bookings: prev.bookings + fileContext }));
-          showToast({ type: 'success', message: t('onboarding.addedSuccess', `Analyzed document. Found ${constraints.length} constraints.`) });
-        } catch (err) {
-          showToast({ type: 'error', message: t('app.error', 'Failed to analyze document.') });
-        } finally {
-          setExtracting(false);
+      let base64 = '';
+      if (file.type.startsWith('image/')) {
+        base64 = await compressImageToBase64(file);
+      } else {
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Failed to read document'));
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const graph = await extractSemanticGraphFromFile(
+        base64,
+        file.type,
+        getProviderForTask('extraction'),
+        {
+          tripDestinations: form.destinations.split(',').map((d) => d.trim()),
+          tripDates: `${form.startDate} to ${form.endDate}`,
         }
-      };
+      );
+      updateTripGraph(graph);
+      const constraints = getConstraints(graph);
+      setConstraintCount(prev => prev + constraints.length);
+      
+      setAddedSegments(prev => [...prev, {
+        id: Date.now().toString(),
+        type: 'file',
+        title: file.name || 'Screenshot/Pasted Image',
+        constraintsFound: constraints.length
+      }]);
+      
+      const fileContext = `\n\n--- Document: ${file.name || 'Image'} ---\nFound Constraints:\n${JSON.stringify(constraints, null, 2)}`;
+      setForm(prev => ({ ...prev, bookings: prev.bookings + fileContext }));
+      showToast({ type: 'success', message: t('onboarding.addedSuccess', `Analyzed document. Found ${constraints.length} constraints.`) });
     } catch (err) {
+      showToast({ type: 'error', message: t('app.error', 'Failed to analyze document.') });
+    } finally {
       setExtracting(false);
-      showToast({ type: 'error', message: t('app.error', 'Failed to read file.') });
     }
   };
 
@@ -321,22 +324,41 @@ export default function OnboardingView() {
 
       {/* Steps */}
       <div className="card p-6 md:p-8">
-        {/* Step 1: AI Setup */}
         {step === 1 && (
-          <div className="space-y-5 animate-fade-in">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.aiSetupTitle', 'AI Integration')}</h2>
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">ברוכים הבאים ל-TripAp! 🌍</h2>
+              <p className="text-slate-600 dark:text-slate-400">
+                כדי שהאפליקציה תוכל לתכנן לכם מסלול חכם, לסרוק קבלות ולתרגם תפריטים, נצטרך מפתח API חינמי של Google Gemini.
+              </p>
+            </div>
             
-            <div className="card p-5 bg-gradient-to-r from-brand-50 to-indigo-50 dark:from-brand-950/20 dark:to-indigo-950/20 border-brand-100 dark:border-brand-800/50">
-              <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center shrink-0">
-                  <Sparkles className="text-brand-600 dark:text-brand-400 w-6 h-6" />
+            {/* API Key Guide */}
+            <div className="card p-5 bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950/30 dark:to-indigo-950/30 border border-brand-100 dark:border-brand-800/50">
+              <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <Sparkles className="text-brand-500 w-5 h-5" />
+                איך משיגים מפתח תוך דקה?
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="flex gap-3 items-start">
+                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    היכנסו לאתר <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline font-semibold">Google AI Studio</a> (התחברו עם חשבון גוגל).
+                  </p>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-1">
-                    {t('onboarding.aiSuperpowers', 'Unlock AI Superpowers')}
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {t('onboarding.aiSetupDesc', 'Provide your Gemini API key to let the AI automatically build your full itinerary, generate smart tasks, and scan your documents and expenses.')}
+                
+                <div className="flex gap-3 items-start">
+                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    לחצו על הכפתור הכחול <span className="font-semibold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">Create API key</span>.
+                  </p>
+                </div>
+                
+                <div className="flex gap-3 items-start">
+                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    העתיקו את המפתח שנוצר והדביקו אותו כאן למטה 👇
                   </p>
                 </div>
               </div>
@@ -344,10 +366,7 @@ export default function OnboardingView() {
 
             <div className="mb-2">
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                {t('onboarding.geminiApiKey', 'Gemini API Key')}
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:text-brand-600 transition-colors" title={t('onboarding.getApiKeyHelp', 'Get your free API key here')}>
-                  <Info size={16} />
-                </a>
+                המפתח שלכם (Gemini API Key)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -355,20 +374,35 @@ export default function OnboardingView() {
                 </div>
                 <input 
                   type="password" 
-                  className="input-base pl-10" 
+                  className="input-base pl-10 text-left" 
                   value={tempApiKey} 
                   onChange={(e) => setTempApiKey(e.target.value)} 
                   placeholder="AIzaSy..." 
                   dir="ltr"
                 />
               </div>
-              <p className="text-xs text-slate-400 mt-2">
-                {t('onboarding.apiKeyHelp', 'Your key is saved locally in your browser and never sent to our servers.')}
+              <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                <CheckCircle2 size={12} className="text-green-500" />
+                המפתח נשמר מקומית בדפדפן שלכם ולא עובר לשרתים שלנו.
               </p>
             </div>
             
-            {availableModels.length > 0 && (
-              <div className="mb-2 animate-fade-in">
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  checked={skipAI}
+                  onChange={(e) => setSkipAI(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-all cursor-pointer"
+                />
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
+                  דלג על AI כרגע (יצירת טיול ריק בלבד, ניתן להוסיף מפתח מאוחר יותר)
+                </span>
+              </label>
+            </div>
+
+            {availableModels.length > 0 && !skipAI && (
+              <div className="mt-4 animate-fade-in">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   {t('onboarding.selectModel', 'Select AI Model')}
                 </label>
