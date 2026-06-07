@@ -178,7 +178,7 @@ export default function App() {
   // If no trip created, show onboarding
   if (!currentTripId) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-screen flex flex-col">
         <AppHeader showTabs={false} />
         <main className="max-w-2xl mx-auto px-4 py-8">
           <Suspense fallback={<PageLoader />}>
@@ -192,7 +192,7 @@ export default function App() {
   const ActiveComponent = TAB_DEFS.find(t => t.id === activeTab)?.component ?? ItineraryView;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <AppHeader showTabs activeTab={activeTab} />
 
       {/* Offline banner */}

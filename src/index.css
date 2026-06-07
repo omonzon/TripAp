@@ -49,6 +49,11 @@ body {
   word-wrap: break-word;
 }
 
+#root {
+  position: relative;
+  z-index: 1;
+}
+
 body::after {
   content: '';
   position: fixed;
@@ -56,7 +61,7 @@ body::after {
   background: url('/logo.png') center/300px no-repeat;
   opacity: 0.08;
   pointer-events: none;
-  z-index: -1;
+  z-index: 0;
 }
 
 .dark body {

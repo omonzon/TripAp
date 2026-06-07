@@ -329,9 +329,7 @@ export default function OnboardingView() {
     <div className="max-w-2xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-2xl gradient-brand mx-auto mb-4 flex items-center justify-center shadow-lg">
-          <Globe className="w-7 h-7 text-white" />
-        </div>
+        <img src="/logo.png" alt="TripAp Logo" className="w-20 h-20 mx-auto mb-4 object-contain drop-shadow-xl" />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('onboarding.title')}</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1">{t('onboarding.stepProgress', { step, total: STEPS, defaultValue: `Step ${step} of ${STEPS}` })}</p>
       </div>
@@ -349,7 +347,9 @@ export default function OnboardingView() {
         {step === 1 && (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">ברוכים הבאים ל-TripAp! 🌍</h2>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 flex justify-center items-center gap-2">
+                ברוכים הבאים ל-TripAp! <img src="/logo.png" className="w-6 h-6 object-contain" alt="TripAp" />
+              </h2>
               <p className="text-slate-600 dark:text-slate-400">
                 כדי שהאפליקציה תוכל לתכנן לכם מסלול חכם, לסרוק קבלות ולתרגם תפריטים, נצטרך מפתח API חינמי של Google Gemini.
               </p>
