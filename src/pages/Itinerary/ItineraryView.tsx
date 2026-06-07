@@ -757,22 +757,6 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                       )}
                       <div className="mt-1 text-xl shrink-0 w-8 text-center">{iconInfo.emoji}</div>
                       <div className="flex-1 mt-1">
-                        <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content" dangerouslySetInnerHTML={{ __html: item.text }} />
-                        {(item.type === 'location' || item.type === 'poi') && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
-                            className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-                          >
-                            <Info size={10} />
-                            {t('itinerary.expand', 'Expand')}
-                          </button>
-                        )}
-                        {item.fixed && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-1.5 py-0.5 rounded mb-1">
-                            <Lock size={9} /> {t('itinerary.fixed')}
-                          </span>
-                        )}
-                        <ServiceLinks item={item} isoDate={day.isoDate || day.date} participantsCount={tripProfile?.participants?.length || 2} tripName={tripProfile?.name || ''} />
                         {editingItemId === item.id ? (
                           <div className="space-y-2 mt-2">
                             <IconSelector selected={editItemType} onSelect={setEditItemType} />
@@ -798,10 +782,24 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                           </div>
                         ) : (
                           <>
-                            <div
-                              className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content"
-                              dangerouslySetInnerHTML={{ __html: item.text }}
-                            />
+                            <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content" dangerouslySetInnerHTML={{ __html: item.text }} />
+                            {(item.type === 'location' || item.type === 'poi') && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
+                                className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                              >
+                                <Info size={10} />
+                                {t('itinerary.expand', 'Expand')}
+                              </button>
+                            )}
+                            {item.fixed && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-1.5 py-0.5 rounded mt-1 mb-1">
+                                <Lock size={9} /> {t('itinerary.fixed')}
+                              </span>
+                            )}
+                            <div className="mt-2">
+                              <ServiceLinks item={item} isoDate={day.isoDate || day.date} participantsCount={tripProfile?.participants?.length || 2} tripName={tripProfile?.name || ''} />
+                            </div>
                             {item.type === 'flight' && (
                               <FlightWidget item={item} dayDocId={day.docId} days={days} />
                             )}
