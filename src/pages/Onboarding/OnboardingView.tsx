@@ -26,7 +26,6 @@ export default function OnboardingView() {
   const [step, setStep] = useState(useAIStore.getState().apiKey ? 3 : 1);
   const [tempProvider, setTempProvider] = useState<AIProvider['type']>(useAIStore.getState().providerType);
   const [skipAI, setSkipAI] = useState(false);
-  const [tosAccepted, setTosAccepted] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -568,18 +567,6 @@ export default function OnboardingView() {
                 />
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
                   דלג על AI כרגע (יצירת טיול ריק בלבד, ניתן להוסיף מפתח מאוחר יותר)
-                </span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input 
-                  type="checkbox" 
-                  checked={tosAccepted}
-                  onChange={(e) => setTosAccepted(e.target.checked)}
-                  className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-all cursor-pointer"
-                />
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
-                  אני מסכים ל<button onClick={(e) => { e.preventDefault(); setShowTos(true); }} className="text-brand-600 hover:underline">תנאי השימוש</button> לרבות הסרת אחריות על אובדן ושיבוש נתונים.
                 </span>
               </label>
             </div>
