@@ -1,0 +1,34 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "firestore_clients_firestore/[DEFAULT]/tripapp-33420/_Mz5PPkY5W9UCD02yoS8A",
+          "value": "{\"activeTargetIds\":[2],\"updateTimeMs\":1780910964831}"
+        },
+        {
+          "name": "trip-store",
+          "value": "{\"state\":{\"currentTripId\":null,\"tripProfile\":null,\"availableTrips\":[],\"days\":[],\"offlineQueue\":[],\"isOnline\":true},\"version\":0}"
+        },
+        {
+          "name": "firestore_sequence_number_firestore/[DEFAULT]/tripapp-33420/",
+          "value": "12"
+        },
+        {
+          "name": "firestore_online_state_firestore/[DEFAULT]/tripapp-33420/",
+          "value": "{\"clientId\":\"Mz5PPkY5W9UCD02yoS8A\",\"onlineState\":\"Online\"}"
+        },
+        {
+          "name": "firestore_targets_firestore/[DEFAULT]/tripapp-33420/_2",
+          "value": "{\"state\":\"current\",\"updateTimeMs\":1780910964827}"
+        },
+        {
+          "name": "auth-store",
+          "value": "{\"state\":{\"isDarkMode\":true,\"language\":\"he\",\"fontSize\":\"medium\",\"autoBackupInterval\":0,\"lastBackupTime\":0},\"version\":0}"
+        }
+      ]
+    }
+  ]
+}

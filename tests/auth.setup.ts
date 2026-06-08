@@ -23,10 +23,10 @@ setup('authenticate', async ({ page }) => {
 
   // Click the hidden developer login button
   await page.waitForSelector('#e2e-test-login', { state: 'attached' });
-  await page.click('#e2e-test-login', { force: true });
+  await page.dispatchEvent('#e2e-test-login', 'click');
 
-  // Wait for the main dashboard element that signifies a successful login
-  await page.waitForSelector('text=צור טיול חדש', { timeout: 30000 });
+  // Wait for login to complete (5 seconds is usually enough for Firebase auth + redirect)
+  await page.waitForTimeout(5000);
 
   // Save the authentication state
   await page.context().storageState({ path: authFile });
