@@ -51,6 +51,29 @@ export default function OnboardingView() {
   const [restoring, setRestoring] = useState(false);
   const [addedSegments, setAddedSegments] = useState<{ id: string, type: 'text' | 'file', title: string, constraintsFound: number }[]>([]);
   const [currentSegmentText, setCurrentSegmentText] = useState('');
+  const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
+
+  const loadingPhrases = [
+    t('onboarding.loadingPhrase1', 'קורא מסמכים ותוהה למה אנשים מדפיסים כרטיסי טיסה...'),
+    t('onboarding.loadingPhrase2', 'מכין מסלול מדהים (ומקווה שלא תלכו לאיבוד)...'),
+    t('onboarding.loadingPhrase3', 'משלב את כל ההעדפות שלכם, גם את המוזרות שבהן...'),
+    t('onboarding.loadingPhrase4', 'אורז את המשימות לרשימה מסודרת...'),
+    t('onboarding.loadingPhrase5', 'מחפש איפה הכי זול לאכול פיצה...'),
+    t('onboarding.loadingPhrase6', 'מתמקח עם נהגי מוניות וירטואליים...'),
+    t('onboarding.loadingPhrase7', 'זה לוקח קצת זמן כי הטיול הזה פשוט גדול עלינו! סתם, עוד רגע מסיימים...')
+  ];
+
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (generating) {
+      interval = setInterval(() => {
+        setLoadingPhraseIndex((prev) => (prev + 1) % loadingPhrases.length);
+      }, 4500);
+    } else {
+      setLoadingPhraseIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [generating, loadingPhrases.length]);
 
   const next = () => {
     let nextStep = step + 1;
@@ -337,11 +360,13 @@ export default function OnboardingView() {
           </div>
         </div>
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-          {t('onboarding.generatingTitle', 'AI is building your trip...')}
+          {t('onboarding.generatingTitle', 'ה-AI בונה כעת את הטיול שלך...')}
         </h2>
-        <p className="text-slate-500 text-center max-w-sm px-4">
-          {t('onboarding.generatingSubtitle', 'We are generating your itinerary, tasks, extracting expenses, and organizing documents. This takes about 15-30 seconds.')}
-        </p>
+        <div className="h-16 flex items-center justify-center">
+          <p key={loadingPhraseIndex} className="text-brand-600 dark:text-brand-400 font-medium text-center max-w-sm px-4 animate-fade-in text-lg">
+            {loadingPhrases[loadingPhraseIndex]}
+          </p>
+        </div>
       </div>
     );
   }
