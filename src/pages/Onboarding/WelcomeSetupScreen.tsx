@@ -26,7 +26,53 @@ export default function WelcomeSetupScreen() {
   const [tempApiKey, setTempApiKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [keySuccess, setKeySuccess] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleValidateKey = async () => {
+    if (!tempApiKey.trim() && tempProvider !== 'ollama') return;
+    setIsValidating(true);
+    setKeyError(null);
+    setKeySuccess(false);
+    try {
+      if (tempProvider === 'gemini') {
+        const models = await fetchGeminiModels(tempApiKey.trim());
+        setAvailableModels(models);
+        if (models.includes('gemini-2.5-pro')) setSelectedModel('gemini-2.5-pro');
+        else if (models.includes('gemini-1.5-pro')) setSelectedModel('gemini-1.5-pro');
+        else if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
+        else if (models.length > 0) setSelectedModel(models[0]);
+      } else if (tempProvider === 'openai') {
+        let models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
+        try {
+          const dynamicModels = await fetchOpenAIModels(tempApiKey.trim());
+          if (dynamicModels.length > 0) models = dynamicModels;
+        } catch(e) { console.warn("Failed to fetch OpenAI models, using fallback", e); }
+        setAvailableModels(models);
+        if (models.includes('gpt-4o')) setSelectedModel('gpt-4o');
+        else setSelectedModel(models[0]);
+      } else if (tempProvider === 'anthropic') {
+        let models = ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'];
+        try {
+          const dynamicModels = await fetchAnthropicModels(tempApiKey.trim());
+          if (dynamicModels.length > 0) models = dynamicModels;
+        } catch(e) { console.warn("Failed to fetch Anthropic models, using fallback", e); }
+        setAvailableModels(models);
+        if (models.includes('claude-3-5-sonnet-20240620')) setSelectedModel('claude-3-5-sonnet-20240620');
+        else setSelectedModel(models[0]);
+      } else if (tempProvider === 'ollama') {
+        setAvailableModels(['llama3', 'gemma2']);
+        setSelectedModel('gemma2');
+      }
+      setKeySuccess(true);
+    } catch (err) {
+      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי. אנא ודא שהעתקת אותו נכון.'));
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   const handleValidateAndSave = async (skipAI: boolean = false) => {
     setIsSaving(true);
@@ -58,40 +104,44 @@ export default function WelcomeSetupScreen() {
       }
 
       // 2. Handle API Key
-      if (!skipAI && needsApiKey && tempApiKey.trim() && tempProvider !== 'ollama') {
+      if (!skipAI && needsApiKey && (tempApiKey.trim() || tempProvider === 'ollama')) {
         setIsValidating(true);
-        setKeyError(null);
-        try {
-          let selectedModel = '';
-          if (tempProvider === 'gemini') {
-            const models = await fetchGeminiModels(tempApiKey.trim());
-            selectedModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
-          } else if (tempProvider === 'openai') {
-            selectedModel = 'gpt-4o';
-          } else if (tempProvider === 'anthropic') {
-            selectedModel = 'claude-3-5-sonnet-20240620';
+        if (tempProvider === 'gemini') {
+          try {
+            const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${tempApiKey.trim()}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
+            });
+            if (!testRes.ok) {
+               showToast({ type: 'error', message: `המודל ${selectedModel} אינו תומך בפעולה זו (שגיאה ${testRes.status}). אנא בחר מודל אחר.` });
+               setIsValidating(false);
+               setIsSaving(false);
+               return;
+            }
+          } catch (err) {
+             showToast({ type: 'error', message: `שגיאת רשת בבדיקת המודל ${selectedModel}.` });
+             setIsValidating(false);
+             setIsSaving(false);
+             return;
           }
-          
-          setProvider(tempProvider);
-          setApiKey(tempApiKey.trim());
-          if (selectedModel) setAllGeminiModels(selectedModel);
-
-          // Save AI settings
-          if (appUser?.email) {
-            await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), {
-              aiSettings: {
-                providerType: tempProvider,
-                apiKey: tempApiKey.trim(),
-                models: useAIStore.getState().models
-              }
-            }, { merge: true });
-          }
-        } catch (err) {
-          setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי. אנא ודא שהעתקת אותו נכון.'));
-          setIsValidating(false);
-          setIsSaving(false);
-          return;
         }
+        
+        setProvider(tempProvider);
+        setApiKey(tempApiKey.trim());
+        if (selectedModel) setAllGeminiModels(selectedModel);
+
+        // Save AI settings
+        if (appUser?.email) {
+          await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), {
+            aiSettings: {
+              providerType: tempProvider,
+              apiKey: tempApiKey.trim(),
+              models: useAIStore.getState().models
+            }
+          }, { merge: true });
+        }
+        
         setIsValidating(false);
       }
 
@@ -209,6 +259,8 @@ export default function WelcomeSetupScreen() {
                 onChange={(e) => {
                   setTempProvider(e.target.value as AIProvider['type']);
                   setKeyError(null);
+                  setKeySuccess(false);
+                  setAvailableModels([]);
                 }}
               >
                 <option value="gemini">Google Gemini</option>
@@ -234,10 +286,25 @@ export default function WelcomeSetupScreen() {
                     onChange={(e) => {
                       setTempApiKey(e.target.value);
                       setKeyError(null);
+                      setKeySuccess(false);
+                      setAvailableModels([]);
                     }} 
                     placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'} 
                     dir="ltr"
                   />
+                  {tempApiKey.trim() && !keySuccess && !isValidating && (
+                    <button 
+                      onClick={handleValidateKey}
+                      className="absolute inset-y-1.5 right-1.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-md transition-colors"
+                    >
+                      אמת מפתח
+                    </button>
+                  )}
+                  {isValidating && (
+                    <div className="absolute inset-y-0 right-3 flex items-center">
+                      <Loader2 size={16} className="animate-spin text-brand-500" />
+                    </div>
+                  )}
                 </div>
                 
                 {tempProvider === 'gemini' && (
@@ -252,11 +319,33 @@ export default function WelcomeSetupScreen() {
               </div>
             )}
 
-            {keyError && (
-              <p className="text-xs text-red-500 mt-2 flex items-center gap-1 animate-fade-in">
-                <AlertTriangle size={12} />
-                {keyError}
-              </p>
+            <div className="mb-2">
+              {keyError && (
+                <p className="text-xs text-red-500 mt-2 flex items-center gap-1 animate-fade-in">
+                  <AlertTriangle size={12} />
+                  {keyError}
+                </p>
+              )}
+              {keySuccess && (
+                <p className="text-xs text-green-500 mt-2 flex items-center gap-1 animate-fade-in">
+                  <Sparkles size={12} />
+                  המפתח אומת בהצלחה!
+                </p>
+              )}
+            </div>
+
+            {availableModels.length > 0 && (
+              <div className="mt-4 animate-fade-in">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  בחר מודל
+                </label>
+                <p className="text-xs text-brand-600 dark:text-brand-400 font-medium mb-2">
+                  ✨ שימוש במודלים מתקדמים יותר יניב תוצאות טובות יותר בתכנון המסלול.
+                </p>
+                <select className="input-base" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
+                  {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
             )}
 
             <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -270,7 +359,7 @@ export default function WelcomeSetupScreen() {
               <button
                 onClick={() => handleValidateAndSave(false)}
                 className="btn-primary flex-1 flex justify-center items-center gap-2"
-                disabled={!tempApiKey.trim() || isSaving || isValidating}
+                disabled={(!keySuccess && tempProvider !== 'ollama') || isSaving || isValidating}
               >
                 {(isSaving || isValidating) ? <Loader2 size={16} className="animate-spin" /> : 'שמור והיכנס לטיול'}
               </button>
