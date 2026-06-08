@@ -260,7 +260,6 @@ export default function SettingsView() {
     }
 
     if (successCount > 0) {
-      // Send invitation email via mailto
       const tripName = tripProfile?.name || 'הטיול שלנו';
       const inviterName = appUser?.name || appUser?.email?.split('@')[0] || '';
       const appLink = window.location.origin;
@@ -275,8 +274,34 @@ export default function SettingsView() {
         ? `היי!\n\n${inviterName} מזמין/ה אותך להצטרף לארגון הטיול "${tripName}" באפליקציית הטיולים שלנו.\nהגיע הזמן להתחיל לארוז (או לפחות להעמיד פנים שאנחנו מתכננים משהו)! 😉\n\nלחץ/י כאן כדי להתחבר לטיול:\n${appLink}\n\nנתראה שם!\n${inviterName}`
         : `Hey!\n\n${inviterName} invites you to join the planning for the trip "${tripName}" on our travel app.\nIt's time to start packing (or at least pretend we're planning something)! 😉\n\nClick here to join the trip:\n${appLink}\n\nSee you there!\n${inviterName}`;
 
-      const mailtoLink = `mailto:${cleanEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = mailtoLink;
+      let emailSent = false;
+      if (emailjsConfig?.serviceId && emailjsConfig?.inviteTemplateId && emailjsConfig?.publicKey) {
+        try {
+          await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service_id: emailjsConfig.serviceId,
+              template_id: emailjsConfig.inviteTemplateId,
+              user_id: emailjsConfig.publicKey,
+              template_params: {
+                to_email: cleanEmail,
+                subject: subject,
+                message: body
+              }
+            })
+          });
+          emailSent = true;
+          showToast({ type: 'success', message: 'הזמנה נשלחה במייל (דרך EmailJS)!' });
+        } catch (e) {
+          console.error("EmailJS failed to send invite:", e);
+        }
+      }
+
+      if (!emailSent) {
+        const mailtoLink = `mailto:${cleanEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+      }
 
       setNewUserEmail('');
       showToast({ type: 'success', message: t('settings.userAdded') });
@@ -940,6 +965,16 @@ export default function SettingsView() {
               onChange={e => setEmailjsConfig({ ...emailjsConfig, bugTemplateId: e.target.value } as any)}
               className="input-base text-sm w-full"
               placeholder="e.g., template_bug123"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Invite Template ID (Optional)</label>
+            <input 
+              type="text" 
+              value={emailjsConfig?.inviteTemplateId || ''}
+              onChange={e => setEmailjsConfig({ ...emailjsConfig, inviteTemplateId: e.target.value } as any)}
+              className="input-base text-sm w-full"
+              placeholder="e.g., template_inv123"
             />
           </div>
           <div>
