@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase, CheckSquare, Navigation, Languages, Image } from 'lucide-react';
+import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase, CheckSquare, Navigation, Languages, Image, Bot } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useUserRole } from '@/store/useTripStore';
@@ -58,11 +58,11 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><CheckSquare size={16} className="text-teal-500"/> משימות</h4>
-                <p className="text-sm leading-relaxed">רשימת ציוד ומטלות לפני הטיול (כמו ויזה, ביטוח, אריזה). ניתן לסמן V על מה שבוצע.</p>
+                <p className="text-sm leading-relaxed">רשימת ציוד ומטלות לפני ובזמן הטיול (כמו ויזה, ביטוח, אריזה). ניתן לבקש התראות ולסמן V על מה שבוצע.</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Navigation size={16} className="text-indigo-500"/> מיקומים</h4>
-                <p className="text-sm leading-relaxed">רשימה מרוכזת של כל המקומות שמוזכרים במסלול. שימושי לניווט מהיר למקום מסוים בטיול.</p>
+                <p className="text-sm leading-relaxed">מראה את המיקום בזמן אמת של המשתתפים בטיול על גבי מפה, ומאפשר לבקש המלצות לאטרקציות ומקומות מעניינים בקרבת מקום.</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Map size={16} className="text-green-500"/> מפה</h4>
@@ -82,7 +82,11 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Image size={16} className="text-rose-500"/> זיכרונות</h4>
-                <p className="text-sm leading-relaxed">אלבום תמונות קבוצתי לטיול. כל חברי הקבוצה יכולים להעלות ולשתף תמונות משותפות.</p>
+                <p className="text-sm leading-relaxed">הוספת חוויות וקישורים לאלבומי תמונות. כל חברי הקבוצה יכולים להעלות ולשתף תמונות משותפות וליצור פוסט מדליק לפרסום.</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                <h4 className="font-bold mb-1 flex items-center gap-2"><Bot size={16} className="text-indigo-600"/> עוזר AI</h4>
+                <p className="text-sm leading-relaxed">עוזר חכם המלווה את הטיול ומאפשר התייעצות, קבלת מידע, וגם בקשות לעדכון ושינוי אוטומטי של מסלול הטיול.</p>
               </div>
             </div>
           </section>
@@ -112,6 +116,13 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
                   <div>
                     <h4 className="font-bold text-sm">גרירה ושחרור (Drag & Drop)</h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400">במסך המסלול, ניתן לגרור כל פריט או להזיז ימים שלמים באמצעות תפיסה מכפתור "שש הנקודות" המופיע ליד כל פריט.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <Bot className="text-slate-400 mt-0.5 shrink-0" size={18} />
+                  <div>
+                    <h4 className="font-bold text-sm">עדכון המסלול בעזרת בינה מלאכותית</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">בתחתית מסך המסלול קיימת שורת פקודה לעוזר ה-AI. ניתן לבקש ממנו בשפה חופשית להוסיף, להסיר, או לשנות פריטים במסלול והוא יעדכן את לוח הזמנים באופן אוטומטי.</p>
                   </div>
                 </div>
               </div>
@@ -149,7 +160,11 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-brand-500 mt-1">•</span> 
-                <span>סרגל העליון מאפשר מעבר למצב חשוך (<Moon size={12} className="inline" /> / <Sun size={12} className="inline" />) או החלפת שפה (EN / עב).</span>
+                <span>הסרגל העליון מאפשר מעבר למצב חשוך (<Moon size={12} className="inline" /> / <Sun size={12} className="inline" />), החלפת שפה (EN / עב), ושינוי גודל הגופן (<Type size={12} className="inline" />).</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-500 mt-1">•</span> 
+                <span>מעבר בין טיולים מתבצע דרך התפריט העליון. לכל טיול יש מסלול, הוצאות, משימות ותוכן משלו המופרדים לחלוטין מטיולים אחרים בחשבון.</span>
               </li>
             </ul>
           </section>
