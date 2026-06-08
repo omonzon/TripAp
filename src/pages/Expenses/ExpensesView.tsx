@@ -54,6 +54,7 @@ export default function ExpensesView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [form, setForm] = useState({
     store: '', amount: '', currency: 'USD',
     category: 'other', amountConverted: '', notes: '',
@@ -75,39 +76,120 @@ export default function ExpensesView() {
     return () => unsub();
   }, [currentTripId]);
 
-  // ── AI receipt scanner ────────────────────────────────────────────────────
-  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // ── AI receipt and document scanner ───────────────────────────────────────────────
+  const processFile = async (file: File) => {
+    if (!file || !currentTripId || !appUser) return;
     setIsScanning(true);
+    showToast({ type: 'info', message: t('expenses.scanning', 'סורק מסמך הוצאות...') });
+    
     try {
-      // Compress image before sending to AI
-      const base64 = await compressImageToBase64(file);
+      let base64 = '';
+      let textContent: string | undefined = undefined;
+
+      if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+        try {
+          const mammoth = await import('mammoth');
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          textContent = result.value;
+        } catch (e) {
+          console.error("Failed to parse docx", e);
+          throw new Error("Failed to parse DOCX");
+        }
+      } else if (file.type.startsWith('text/') || file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+        textContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = (e) => reject(e);
+          reader.readAsText(file);
+        });
+      } else {
+        // Assume image/pdf and use vision
+        base64 = await compressImageToBase64(file);
+      }
+
+      const prompt = `Extract all expenses from the provided document. Return ONLY a valid JSON array of objects.
+Format for each object: {"store":"string","amount":number,"currency":"ISK or EUR or USD or ILS etc","category":"food|supermarket|transportation|gifts|clothing|other"}.
+If no expenses are found, return an empty array [].
+${textContent ? `Document text:\n${textContent}` : ''}`;
+
+      const aiOptions: any = { isJson: true, systemInstruction: "You are a receipt parser. Return only a JSON array." };
+      if (base64) {
+        aiOptions.base64Image = base64;
+        aiOptions.mimeType = file.type || 'image/jpeg';
+      }
+
+      const text = await callAI(prompt, getProviderForTask(base64 ? 'vision' : 'extraction'), aiOptions);
+      // Fallback: parseAIJson handles cases where it might return a single object by returning default. We want an array.
+      let results = parseAIJson<{ store: string; amount: number; currency: string; category: string }[]>(text, []);
       
-      const prompt = `Analyze this receipt image. Return ONLY valid JSON: {"store":"string","amount":number,"currency":"ISK or EUR or USD etc","category":"food|supermarket|transportation|gifts|clothing|other"}`;
-      const text = await callAI(prompt, getProviderForTask('vision'), { isJson: true, base64Image: base64, mimeType: 'image/jpeg' });
+      // If AI returns a single object instead of array by mistake, wrap it
+      if (!Array.isArray(results) && typeof results === 'object' && results !== null) {
+        if ((results as any).amount) {
+          results = [results as any];
+        } else {
+          results = [];
+        }
+      }
+
+      if (!results || results.length === 0) {
+         showToast({ type: 'warning', message: t('expenses.noExpensesFound', 'לא נמצאו הוצאות במסמך זה.') });
+         setIsScanning(false);
+         if (fileRef.current) fileRef.current.value = '';
+         return;
+      }
+
+      // Add all to DB
+      let addedCount = 0;
+      for (const result of results) {
+        if (!result.amount || !result.currency) continue;
+        const converted = toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1);
+        const payload = {
+          store: result.store ?? 'Unknown',
+          amount: Number(result.amount),
+          currency: result.currency ?? 'USD',
+          category: result.category ?? 'other',
+          amountConverted: converted,
+          targetCurrency,
+          notes: '',
+        };
+        await addDoc(collection(db, 'trips', currentTripId, 'expenses'), {
+          ...payload,
+          authorEmail: appUser.email,
+          authorName: appUser.name,
+          createdAt: Date.now()
+        });
+        addedCount++;
+      }
       
-      const result = parseAIJson<{ store: string; amount: number; currency: string; category: string }>(text, { store: '', amount: 0, currency: 'USD', category: 'other' });
-      const converted = (toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1)).toFixed(2);
-      
-      setForm({
-        store: result.store ?? '',
-        amount: String(result.amount ?? ''),
-        currency: result.currency ?? 'USD',
-        category: result.category ?? 'other',
-        amountConverted: converted,
-        notes: '',
-      });
-      setShowForm(true);
-      setIsScanning(false);
+      if (addedCount > 0) {
+        showToast({ type: 'success', message: t('expenses.addedMultiple', `נוספו ${addedCount} הוצאות בהצלחה!`).replace('{{count}}', addedCount.toString()) });
+      } else {
+        showToast({ type: 'warning', message: t('expenses.noExpensesFound', 'לא נמצאו הוצאות במסמך זה.') });
+      }
     } catch (err: unknown) {
+      console.error(err);
       const msg = err instanceof Error && err.message.includes('429')
         ? t('app.rateLimitError')
         : t('errors.scanFailed');
       showToast({ type: 'error', message: msg });
+    } finally {
       setIsScanning(false);
+      if (fileRef.current) fileRef.current.value = '';
     }
-    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (canWrite) setIsDragging(true);
+  };
+  const handleDragLeave = () => setIsDragging(false);
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!canWrite) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) await processFile(file);
   };
 
   const updateConverted = (amount: string, currency: string) => {
@@ -152,7 +234,26 @@ export default function ExpensesView() {
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
 
   return (
-    <div className="space-y-5 animate-fade-in max-w-3xl mx-auto">
+    <div 
+      className="space-y-5 animate-fade-in max-w-3xl mx-auto relative min-h-[60vh]"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="absolute inset-0 bg-brand-50/90 dark:bg-brand-900/40 backdrop-blur-sm z-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-brand-500 animate-in fade-in">
+          <div className="w-20 h-20 rounded-full bg-brand-100 dark:bg-brand-800 flex items-center justify-center mb-4 text-brand-600 animate-bounce shadow-lg">
+            <Plus size={40} />
+          </div>
+          <h3 className="text-2xl font-bold text-brand-700 dark:text-brand-300">
+            {t('expenses.dropFileHere', 'שחרר מסמך הוצאות כאן')}
+          </h3>
+          <p className="text-brand-600/80 dark:text-brand-400 mt-2">
+            תמונות קבלה, מסמכי PDF, ורד (docx) או אקסל
+          </p>
+        </div>
+      )}
+
       <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('expenses.title')}</h2>
 
       {/* Budget progress */}
@@ -186,7 +287,7 @@ export default function ExpensesView() {
             {isScanning ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
             {t('expenses.scan')}
           </button>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScan} />
+          <input ref={fileRef} type="file" accept="*/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if(f) processFile(f); }} />
           <button
             onClick={() => { setForm({ store: '', amount: '', currency: 'USD', category: 'other', amountConverted: '', notes: '' }); setEditingId(null); setShowForm(true); }}
             id="btn-add-expense"
