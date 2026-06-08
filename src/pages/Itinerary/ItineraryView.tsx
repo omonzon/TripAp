@@ -814,7 +814,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                               {(item.authorName || 'AI') === 'AI' ? <Sparkles size={10} className="text-brand-500" /> : <User size={10} />}
                               {item.authorName || 'AI'}
                             </div>}
-                            {(item.type === 'location' || item.type === 'poi') && (
+                            {['map', 'ticket', 'food', 'hotel', 'location', 'poi'].includes(item.type || '') && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
                                 className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
