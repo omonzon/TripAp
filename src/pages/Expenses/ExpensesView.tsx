@@ -13,6 +13,7 @@ import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
+import ExpenseAnalysisReviewModal from '@/components/expenses/ExpenseAnalysisReviewModal';
 
 interface Expense {
   id: string;
@@ -55,6 +56,7 @@ export default function ExpensesView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [pendingExpenses, setPendingExpenses] = useState<{ store: string; amount: number; currency: string; category: string }[] | null>(null);
   const [form, setForm] = useState({
     store: '', amount: '', currency: 'USD',
     category: 'other', amountConverted: '', notes: '',
@@ -139,34 +141,7 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
          return;
       }
 
-      // Add all to DB
-      let addedCount = 0;
-      for (const result of results) {
-        if (!result.amount || !result.currency) continue;
-        const converted = toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1);
-        const payload = {
-          store: result.store ?? 'Unknown',
-          amount: Number(result.amount),
-          currency: result.currency ?? 'USD',
-          category: result.category ?? 'other',
-          amountConverted: converted,
-          targetCurrency,
-          notes: '',
-        };
-        await addDoc(collection(db, 'trips', currentTripId, 'expenses'), {
-          ...payload,
-          authorEmail: appUser.email,
-          authorName: appUser.name,
-          createdAt: Date.now()
-        });
-        addedCount++;
-      }
-      
-      if (addedCount > 0) {
-        showToast({ type: 'success', message: t('expenses.addedMultiple', `נוספו ${addedCount} הוצאות בהצלחה!`).replace('{{count}}', addedCount.toString()) });
-      } else {
-        showToast({ type: 'warning', message: t('expenses.noExpensesFound', 'לא נמצאו הוצאות במסמך זה.') });
-      }
+      setPendingExpenses(results);
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error && err.message.includes('429')
@@ -176,6 +151,37 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
     } finally {
       setIsScanning(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const confirmPendingExpenses = async (approved: { store: string; amount: number; currency: string; category: string }[]) => {
+    setPendingExpenses(null);
+    if (!currentTripId || !appUser || approved.length === 0) return;
+    
+    let addedCount = 0;
+    for (const result of approved) {
+      if (!result.amount || !result.currency) continue;
+      const converted = toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1);
+      const payload = {
+        store: result.store ?? 'Unknown',
+        amount: Number(result.amount),
+        currency: result.currency ?? 'USD',
+        category: result.category ?? 'other',
+        amountConverted: converted,
+        targetCurrency,
+        notes: '',
+      };
+      await addDoc(collection(db, 'trips', currentTripId, 'expenses'), {
+        ...payload,
+        authorEmail: appUser.email,
+        authorName: appUser.name,
+        createdAt: Date.now()
+      });
+      addedCount++;
+    }
+    
+    if (addedCount > 0) {
+      showToast({ type: 'success', message: t('expenses.addedMultiple', `נוספו ${addedCount} הוצאות בהצלחה!`).replace('{{count}}', addedCount.toString()) });
     }
   };
 
@@ -387,7 +393,14 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
           </table>
         </div>
       </div>
+
+      {pendingExpenses && (
+        <ExpenseAnalysisReviewModal
+          expenses={pendingExpenses}
+          onConfirm={confirmPendingExpenses}
+          onCancel={() => setPendingExpenses(null)}
+        />
+      )}
     </div>
   );
 }
-
