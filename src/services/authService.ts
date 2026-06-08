@@ -17,6 +17,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import type { AppUser } from '@/store/useAuthStore';
+import { showToast } from '@/components/ui/Toast';
 
 export function initFirebaseAuth() {
   onAuthStateChanged(auth, async (firebaseUser) => {
@@ -47,13 +48,20 @@ export function initFirebaseAuth() {
           email: firebaseUser.email!,
           name: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
           role: 'admin', // First user to sign in becomes admin
+          createdAt: Date.now(),
           ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
         };
         await setDoc(userRef, newUser);
         setAppUser(newUser);
       } else {
-        const data = userSnap.data();
-        setAppUser(data as AppUser);
+        const data = userSnap.data() as AppUser;
+        if (data.isBlocked) {
+          showToast({ type: 'error', message: 'Your account has been blocked by the administrator.' });
+          signOut();
+          return;
+        }
+        
+        setAppUser(data);
         if (data && data.trips) {
           useTripStore.getState().setAvailableTrips(data.trips);
         } else {

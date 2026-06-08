@@ -9,6 +9,9 @@ export interface AppUser {
   allowedTabs?: Record<string, boolean>;
   photoURL?: string;
   tosAccepted?: boolean;
+  isBlocked?: boolean;
+  createdAt?: number;
+  lastActiveAt?: number;
 }
 
 interface AuthState {

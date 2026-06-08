@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getDoc, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { getDoc, getDocs, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { deleteAllUserTrips } from '@/services/tripService';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore, type AppUser } from '@/store/useAuthStore';
 import { useTripStore, useUserRole } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
@@ -84,6 +84,12 @@ export default function SettingsView() {
   const [affiliateLinks, setAffiliateLinks] = useState('{}');
   const [savingAffiliates, setSavingAffiliates] = useState(false);
 
+  // User Management
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userSortBy, setUserSortBy] = useState<'name' | 'email' | 'date'>('date');
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   useEffect(() => {
     if (isSuperAdmin) {
       getDoc(doc(db, 'platform_settings', 'affiliates')).then((snap: any) => {
@@ -105,6 +111,43 @@ export default function SettingsView() {
       showToast({ type: 'error', message: 'Invalid JSON format' });
     }
     setSavingAffiliates(false);
+  };
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const fetchUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        setAllUsers(snap.docs.map(d => d.data() as AppUser));
+      } catch (e) {
+        console.error('Failed to fetch users:', e);
+      }
+      setLoadingUsers(false);
+    };
+    fetchUsers();
+  }, [isSuperAdmin]);
+
+  const handleBlockUser = async (email: string, currentBlocked: boolean) => {
+    if (!isSuperAdmin || !confirm(`Are you sure you want to ${currentBlocked ? 'unblock' : 'block'} this user?`)) return;
+    try {
+      await updateDoc(doc(db, 'users', email), { isBlocked: !currentBlocked });
+      setAllUsers(prev => prev.map(u => u.email === email ? { ...u, isBlocked: !currentBlocked } : u));
+      showToast({ type: 'success', message: `User ${currentBlocked ? 'unblocked' : 'blocked'} successfully.` });
+    } catch (e: any) {
+      showToast({ type: 'error', message: `Failed to update user: ${e.message}` });
+    }
+  };
+
+  const handleAdminDeleteUser = async (email: string) => {
+    if (!isSuperAdmin || !confirm('Are you ABSOLUTELY sure you want to permanently delete this user? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'users', email));
+      setAllUsers(prev => prev.filter(u => u.email !== email));
+      showToast({ type: 'success', message: 'User deleted successfully.' });
+    } catch (e: any) {
+      showToast({ type: 'error', message: `Failed to delete user: ${e.message}` });
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -489,7 +532,98 @@ export default function SettingsView() {
         </button>
       </section>
 
-      {/* ── Appearance ─────────────────────────────────────────────────── */}
+      {/* ── Super Admin: User Management ─────────────────────────────────── */}
+      {isSuperAdmin && (
+        <section className="card p-5 space-y-4 border-2 border-brand-500/50">
+          <h3 className="font-bold text-brand-700 dark:text-brand-400 flex items-center gap-2">
+            <Users size={18} />
+            User Management (Admin Only)
+          </h3>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input 
+              type="text"
+              placeholder="Search by name or email..."
+              value={userSearchTerm}
+              onChange={e => setUserSearchTerm(e.target.value)}
+              className="input-base text-sm flex-1"
+            />
+            <select 
+              value={userSortBy}
+              onChange={e => setUserSortBy(e.target.value as any)}
+              className="input-base text-sm w-full sm:w-40"
+            >
+              <option value="date">Join Date</option>
+              <option value="name">Name</option>
+              <option value="email">Email</option>
+            </select>
+          </div>
+          
+          <div className="max-h-[400px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+            <table className="w-full text-sm text-left rtl:text-right text-slate-500 dark:text-slate-400">
+              <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-400 sticky top-0 z-10">
+                <tr>
+                  <th scope="col" className="px-4 py-3">Name</th>
+                  <th scope="col" className="px-4 py-3">Email</th>
+                  <th scope="col" className="px-4 py-3">Joined</th>
+                  <th scope="col" className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loadingUsers ? (
+                  <tr><td colSpan={5} className="text-center py-8"><Loader2 className="animate-spin mx-auto text-brand-500" /></td></tr>
+                ) : (
+                  [...allUsers]
+                    .filter(u => 
+                      u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                      u.email.toLowerCase().includes(userSearchTerm.toLowerCase())
+                    )
+                    .sort((a, b) => {
+                      if (userSortBy === 'name') return a.name.localeCompare(b.name);
+                      if (userSortBy === 'email') return a.email.localeCompare(b.email);
+                      return (b.createdAt || 0) - (a.createdAt || 0); // Date desc
+                    })
+                    .map(u => (
+                      <tr key={u.email} className="bg-white border-b dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                          {u.photoURL ? <img src={u.photoURL} alt={u.name} className="w-6 h-6 rounded-full" /> : <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">{u.name.charAt(0).toUpperCase()}</div>}
+                          {u.name}
+                        </td>
+                        <td className="px-4 py-3">{u.email}</td>
+                        <td className="px-4 py-3">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-4 py-3">
+                          {u.isBlocked ? (
+                            <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">Blocked</span>
+                          ) : (
+                            <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">Active</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleBlockUser(u.email, !!u.isBlocked)}
+                            className={`p-1.5 rounded transition-colors ${u.isBlocked ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50' : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50'}`}
+                            title={u.isBlocked ? 'Unblock User' : 'Block User'}
+                          >
+                            {u.isBlocked ? <CheckCircle2 size={16} /> : <EyeOff size={16} />}
+                          </button>
+                          <button 
+                            onClick={() => handleAdminDeleteUser(u.email)}
+                            className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                            title="Delete User"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* ── App Settings ───────────────────────────────────────────────── */}
       <section className="card p-5 space-y-4">
         <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
           {isDarkMode ? <Moon size={18} className="text-brand-400" /> : <Sun size={18} className="text-amber-500" />}
