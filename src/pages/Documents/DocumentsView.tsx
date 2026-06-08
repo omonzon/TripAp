@@ -5,7 +5,6 @@ import { useTripStore, useUserRole, TripDocument } from '@/store/useTripStore';
 import { db } from '@/services/firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { showToast } from '@/components/ui/Toast';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function DocumentsView() {
   const { t } = useTranslation();
@@ -63,7 +62,7 @@ export default function DocumentsView() {
       return;
     }
 
-    const docId = editingDoc ? editingDoc.id : uuidv4();
+    const docId = editingDoc ? editingDoc.id : crypto.randomUUID();
     const now = Date.now();
     const newDoc: TripDocument = {
       id: docId,

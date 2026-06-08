@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   onSnapshot, query, collection, doc,
   updateDoc, addDoc, deleteDoc, writeBatch,
-  orderBy,
+  orderBy, setDoc,
 } from 'firebase/firestore';
 import {
   GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User
@@ -461,7 +461,7 @@ export default function ItineraryView() {
       // Save the scanned document full text to the Documents collection
       if (res.fullText && res.fullText.trim()) {
         const docId = `doc_${Date.now()}`;
-        await setDoc(doc(db, 'trips', currentTripId, 'documents', docId), {
+        await setDoc(doc(db, 'trips', tripProfile.id, 'documents', docId), {
           id: docId,
           title: t('documents.scannedDoc', 'מסמך סרוק ({{date}})', { date: new Date().toLocaleDateString() }),
           content: res.fullText.trim(),
