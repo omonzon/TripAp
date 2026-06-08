@@ -6,7 +6,9 @@ import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
-import { extractSemanticGraph, extractSemanticGraphFromFile, getConstraints } from '@/engine/semanticEngine';
+import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
+import { extractDocumentData, type DocumentExtractionResult } from '@/engine/documentAnalyzer';
+import DocumentAnalysisReviewModal from '@/components/documents/DocumentAnalysisReviewModal';
 import { generateComprehensiveTrip } from '@/engine/comprehensiveGenerator';
 import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, type AIProvider } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
@@ -21,7 +23,7 @@ export default function OnboardingView() {
   const { t, i18n } = useTranslation();
   const { appUser } = useAuthStore();
   const { setCurrentTrip, setTripProfile } = useTripStore();
-  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey, setAllGeminiModels, setProvider, isApiKeyInvalid, setApiKeyInvalid } = useAIStore();
+  const { getProviderForTask, updateTripGraph, apiKey, setApiKey, setAllGeminiModels, setProvider, isApiKeyInvalid, setApiKeyInvalid } = useAIStore();
 
   const [step, setStep] = useState(useAIStore.getState().apiKey ? 3 : 1);
   const [tempProvider, setTempProvider] = useState<AIProvider['type']>(useAIStore.getState().providerType);
@@ -46,6 +48,10 @@ export default function OnboardingView() {
     tripStyle: [] as string[],
   });
   const [constraintCount, setConstraintCount] = useState(0);
+  const [extracting, setExtracting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [scannedDocumentData, setScannedDocumentData] = useState<DocumentExtractionResult | null>(null);
+  const [currentScannedFileName, setCurrentScannedFileName] = useState<string>('');
   const [generating, setGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string>('');
   const [restoring, setRestoring] = useState(false);
@@ -86,8 +92,7 @@ export default function OnboardingView() {
 
   const next = () => {
     let nextStep = step + 1;
-    if (nextStep === 2) nextStep = 3; // Skip Step 2 (Admin User display)
-    // If skipAI is true, jump from Step 3 (Trip Details) to Step 6 (Review)
+    if (nextStep === 2) nextStep = 3;
     if (skipAI && nextStep === 4) {
       nextStep = 6;
     }
@@ -96,8 +101,7 @@ export default function OnboardingView() {
   
   const back = () => {
     let prevStep = step - 1;
-    if (prevStep === 2) prevStep = 1; // Skip Step 2
-    // If skipAI is true, jump back from Step 6 (Review) to Step 3 (Trip Details)
+    if (prevStep === 2) prevStep = 1;
     if (skipAI && prevStep === 5) {
       prevStep = 3;
     }
@@ -206,7 +210,7 @@ export default function OnboardingView() {
       
       
       const summary = constraints.length > 0 
-        ? constraints.map(c => c.type).slice(0, 3).join(', ') 
+        ? constraints.map((c: any) => c.type).slice(0, 3).join(', ') 
         : 'טקסט כללי';
 
       setAddedSegments(prev => [...prev, {
@@ -242,36 +246,65 @@ export default function OnboardingView() {
         });
       }
 
-      const graph = await extractSemanticGraphFromFile(
+      const tripProfileFake = {
+        id: 'temp',
+        name: form.name || 'Trip',
+        destinations: form.destinations.split(',').map(d => d.trim()),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        participants: [],
+        currency: form.currency || 'USD'
+      } as any;
+
+      const res = await extractDocumentData(
+        tripProfileFake,
         base64,
         file.type,
-        getProviderForTask('extraction'),
-        {
-          tripDestinations: form.destinations.split(',').map((d) => d.trim()),
-          tripDates: `${form.startDate} to ${form.endDate}`,
-        }
+        getProviderForTask('extraction')
       );
-      updateTripGraph(graph);
-      const constraints = getConstraints(graph);
-      setConstraintCount(prev => prev + constraints.length);
-      const summary = constraints.length > 0 
-        ? constraints.map(c => c.type).slice(0, 3).join(', ') 
-        : 'מסמך כללי';
-
-      setAddedSegments(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'file',
-        title: `${file.name || 'תמונה/מסמך'} (${summary})`,
-        constraintsFound: constraints.length
-      }]);
       
-      const fileContext = `\n\n--- Document: ${file.name || 'Image'} ---\nFound Constraints:\n${JSON.stringify(constraints, null, 2)}`;
-      setForm(prev => ({ ...prev, bookings: prev.bookings + fileContext }));
-      showToast({ type: 'success', message: t('onboarding.addedSuccess', `Analyzed document. Found ${constraints.length} constraints.`) });
+      setCurrentScannedFileName(file.name || 'תמונה/מסמך');
+      setScannedDocumentData(res);
     } catch (err) {
       showToast({ type: 'error', message: t('app.error', 'Failed to analyze document.') });
     } finally {
       setExtracting(false);
+    }
+  };
+
+  const handleConfirmScannedData = (approvedData: DocumentExtractionResult) => {
+    setScannedDocumentData(null);
+    
+    const approvedItems: string[] = [];
+    
+    if (approvedData.itineraryEvents.length > 0) {
+      approvedItems.push(`Events:\n` + approvedData.itineraryEvents.map(e => `- ${e.isoDate}: ${e.title} (${e.items.map(i => i.text).join(', ')})`).join('\n'));
+    }
+    
+    if (approvedData.expenses.length > 0) {
+      approvedItems.push(`Prepaid Expenses:\n` + approvedData.expenses.map(e => `- ${e.amount} ${e.currency} at ${e.store} ${e.notes ? '(' + e.notes + ')' : ''}`).join('\n'));
+    }
+    
+    if (approvedData.documents.length > 0) {
+      approvedItems.push(`References:\n` + approvedData.documents.map(d => `- ${d.title}: ${d.referenceNumber}`).join('\n'));
+    }
+
+    const finalConstraintsText = approvedItems.join('\n\n');
+    const itemsCount = approvedData.itineraryEvents.length + approvedData.expenses.length + approvedData.documents.length;
+
+    if (itemsCount > 0) {
+      setAddedSegments(prev => [...prev, {
+        id: Date.now().toString(),
+        type: 'file',
+        title: `${currentScannedFileName} (${itemsCount} items approved)`,
+        constraintsFound: itemsCount
+      }]);
+      
+      const fileContext = `\n\n--- Document: ${currentScannedFileName} ---\nFound Details:\n${finalConstraintsText}`;
+      setForm(prev => ({ ...prev, bookings: prev.bookings + fileContext }));
+      showToast({ type: 'success', message: t('onboarding.addedSuccess', `Added ${itemsCount} approved items from document.`) });
+    } else {
+      showToast({ type: 'info', message: 'לא נבחרו פריטים מהמסמך להוספה.' });
     }
   };
 
@@ -311,7 +344,6 @@ export default function OnboardingView() {
         createdBy: appUser.email,
       };
 
-      // Write trip to Firestore
       await setDoc(doc(db, 'trips', tripId, 'profile', 'main'), profile);
       await setDoc(doc(db, 'trips', tripId, 'users', appUser.email), {
         email: appUser.email,
@@ -319,21 +351,17 @@ export default function OnboardingView() {
         role: 'admin',
       });
 
-      // Save active trip ID to user settings
       await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), { activeTripId: tripId }, { merge: true });
 
-      // Save onboarding tripGraph to Firestore
       const tripGraph = useAIStore.getState().tripGraph;
       if (tripGraph && tripGraph.nodes.length > 0) {
         await setDoc(doc(db, 'trips', tripId, 'profile', 'graph'), tripGraph);
       }
 
-      // Add to user's trips list
       await setDoc(doc(db, 'users', appUser.email), {
         trips: arrayUnion({ id: tripId, name: profile.name, destinations: profile.destinations })
       }, { merge: true });
 
-      // Save original extracted text to documents if exists
       if (form.bookings.trim()) {
         const docId = `doc_${Date.now()}`;
         await setDoc(doc(db, 'trips', tripId, 'documents', docId), {
@@ -345,7 +373,6 @@ export default function OnboardingView() {
         });
       }
 
-      // Comprehensive AI Generation
       if (!skipAI && tempApiKey.trim()) {
         try {
           showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is building your comprehensive trip data...') });
@@ -361,7 +388,6 @@ export default function OnboardingView() {
         } catch (aiErr: any) {
           console.error("AI Generation failed:", aiErr);
           
-          // Revert trip creation to avoid empty trips
           await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
           await deleteDoc(doc(db, 'trips', tripId, 'users', appUser.email));
           await updateDoc(doc(db, 'users', appUser.email), {
@@ -375,7 +401,7 @@ export default function OnboardingView() {
             setKeyError(`שגיאה בתקשורת עם ה-AI: ${errorMsg}. אנא ודא שהמפתח תקין.`);
           }
           
-          setStep(1); // Go back to API key selection
+          setStep(1);
           throw new Error('AI_GENERATION_FAILED');
         }
       }
@@ -426,7 +452,6 @@ export default function OnboardingView() {
     );
   }
 
-  // Full-screen loader for comprehensive AI Generation
   if (generating) {
     return (
       <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 flex flex-col items-center justify-center">
@@ -449,7 +474,6 @@ export default function OnboardingView() {
     );
   }
 
-  // Success Screen
   if (generatedTripId) {
     return (
       <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 flex flex-col items-center justify-start p-4 pt-20 overflow-y-auto">
@@ -480,14 +504,12 @@ export default function OnboardingView() {
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
-      {/* Header */}
       <div className="text-center mb-8">
         <img src="/logo.png" alt="TripAp Logo" className="w-20 h-20 mx-auto mb-4 object-contain drop-shadow-xl" />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('onboarding.title')}</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1">{t('onboarding.stepProgress', { step, total: STEPS, defaultValue: `Step ${step} of ${STEPS}` })}</p>
       </div>
 
-      {/* Progress bar */}
       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mb-8">
         <div
           className="bg-brand-600 h-1.5 rounded-full transition-all duration-500"
@@ -495,7 +517,6 @@ export default function OnboardingView() {
         />
       </div>
 
-      {/* Steps */}
       <div className="card p-6 md:p-8">
         {step === 1 && (
           <div className="space-y-6 animate-fade-in">
@@ -529,7 +550,6 @@ export default function OnboardingView() {
               </select>
             </div>
             
-            {/* API Key Guide */}
             {tempProvider === 'gemini' && (
               <div className="card p-5 bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950/30 dark:to-indigo-950/30 border border-brand-100 dark:border-brand-800/50">
                 <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
@@ -638,29 +658,6 @@ export default function OnboardingView() {
           </div>
         )}
 
-        {/* Step 2: Participants */}
-        {step === 2 && (
-          <div className="space-y-5 animate-fade-in">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step2')}</h2>
-            <div className="card p-4 bg-brand-50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white font-bold">
-                  {appUser?.name?.[0]?.toUpperCase() || '?'}
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">{appUser?.name}</p>
-                  <p className="text-xs text-slate-500">{appUser?.email} · Admin</p>
-                </div>
-                <CheckCircle2 className="ms-auto text-green-500" size={18} />
-              </div>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {t('onboarding.step2Help')}
-            </p>
-          </div>
-        )}
-
-        {/* Step 3: Trip Details */}
         {step === 3 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step1')}</h2>
@@ -686,7 +683,6 @@ export default function OnboardingView() {
           </div>
         )}
 
-        {/* Step 4: Budget & Preferences */}
         {step === 4 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step3')}</h2>
@@ -758,7 +754,6 @@ export default function OnboardingView() {
           </div>
         )}
 
-        {/* Step 5: Import Bookings */}
         {step === 5 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step4')}</h2>
@@ -787,7 +782,18 @@ export default function OnboardingView() {
               </div>
             )}
 
-            <div className="space-y-3 relative">
+            <div 
+                className={`space-y-4 ${isDragging ? 'ring-4 ring-brand-500 rounded-2xl bg-brand-50 dark:bg-brand-900/20 p-4 -m-4 transition-all' : 'transition-all'}`}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files?.[0]) {
+                    processFile(e.dataTransfer.files[0]);
+                  }
+                }}
+            >
               <textarea
                 className="input-base h-32 resize-none font-mono text-sm w-full"
                 value={currentSegmentText}
@@ -795,22 +801,22 @@ export default function OnboardingView() {
                 onPaste={handlePaste}
                 placeholder={t('onboarding.pasteBookings', 'Paste text or images here...')}
                 dir="auto"
-                disabled={isExtracting}
+                disabled={extracting}
               />
               <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
                  <div className="flex gap-2 w-full sm:w-auto">
                     <label className="btn-secondary cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 text-sm py-2">
                       <Camera size={16} />
                       {t('itinerary.scanDoc', 'Scan Doc')}
-                      <input type="file" accept="application/pdf, image/*" className="hidden" onChange={handleAddFileSegment} disabled={isExtracting} />
+                      <input type="file" accept="application/pdf, image/*" className="hidden" onChange={handleAddFileSegment} disabled={extracting} />
                     </label>
                  </div>
                  <button 
                    onClick={handleAddTextSegment} 
-                   disabled={!currentSegmentText.trim() || isExtracting}
+                   disabled={!currentSegmentText.trim() || extracting}
                    className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 text-sm py-2"
                  >
-                   {isExtracting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                   {extracting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                    {t('app.add', 'Add')}
                  </button>
               </div>
@@ -825,7 +831,6 @@ export default function OnboardingView() {
           </div>
         )}
 
-        {/* Step 6: Review */}
         {step === 6 && (
           <div className="space-y-5 animate-fade-in">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('onboarding.step5')}</h2>
@@ -858,7 +863,6 @@ export default function OnboardingView() {
         )}
       </div>
 
-      {/* Navigation */}
       <div className="flex gap-3 mt-6">
         {step > 1 && (
           <button id="btn-back" onClick={back} className="btn-secondary flex items-center gap-2" disabled={generating}>
@@ -893,10 +897,10 @@ export default function OnboardingView() {
           <button
             id="btn-analyze"
             onClick={next}
-            disabled={isExtracting}
+            disabled={extracting}
             className="btn-primary flex items-center gap-2 ms-auto"
           >
-            {isExtracting ? (
+            {extracting ? (
               <><Loader2 size={16} className="animate-spin" /> {t('app.loading', 'Loading...')}</>
             ) : (
               <><ArrowRight size={16} /> {t('onboarding.analyzeContinue', 'Continue to Review')}</>
@@ -941,6 +945,14 @@ export default function OnboardingView() {
       )}
 
       {showTos && <TermsOfServiceModal onClose={() => setShowTos(false)} />}
+      {/* Document Scanning Review Modal */}
+      {scannedDocumentData && (
+        <DocumentAnalysisReviewModal
+          data={scannedDocumentData}
+          onConfirm={handleConfirmScannedData}
+          onCancel={() => setScannedDocumentData(null)}
+        />
+      )}
     </div>
   );
 }
