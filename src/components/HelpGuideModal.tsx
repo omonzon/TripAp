@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase, CheckSquare, Navigation, Languages, Image, Bot } from 'lucide-react';
+import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase, CheckSquare, Navigation, Languages, Image, Bot, Type } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useUserRole } from '@/store/useTripStore';
