@@ -353,6 +353,7 @@ export default function SettingsView() {
               template_id: emailjsConfig.bugTemplateId || emailjsConfig.templateId,
               user_id: emailjsConfig.publicKey,
               template_params: {
+                title: 'Bug Report',
                 message: `Bug Report from ${appUser.name} (${appUser.email}):\n\n${bugReport.trim()}\n\nTrip ID: ${currentTripId}\nUser Agent: ${navigator.userAgent}`,
                 to_email: 'omonzon@gmail.com'
               }
