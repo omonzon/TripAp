@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X, Users } from 'lucide-react';
+import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X, Users, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { translateTripContent } from '@/services/translationService';
@@ -9,6 +9,7 @@ import { signOut, syncUserSettingsToCloud } from '@/services/authService';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import type { TabId } from '@/App';
+import HelpGuideModal from '@/components/HelpGuideModal';
 
 interface AppHeaderProps {
   showTabs?: boolean;
@@ -18,6 +19,7 @@ interface AppHeaderProps {
 export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
   const { t } = useTranslation();
   const [showNotifications, setShowNotifications] = React.useState(false);
+  const [showHelpModal, setShowHelpModal] = React.useState(false);
   const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, fontSize, setFontSize } = useAuthStore();
   const { tripProfile, currentTripId, isOnline, availableTrips, setCurrentTrip } = useTripStore();
   const [showTripsDropdown, setShowTripsDropdown] = React.useState(false);
@@ -157,6 +159,16 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
             {isDarkMode ? <Sun size={iconSize} /> : <Moon size={iconSize} />}
           </button>
 
+          {/* Help Button */}
+          <button 
+            className="btn-ghost p-2" 
+            aria-label="Help Guide"
+            title="מדריך למשתמש ועזרה"
+            onClick={() => setShowHelpModal(true)}
+          >
+            <HelpCircle size={iconSize} />
+          </button>
+
           {/* Notifications */}
           <div className="relative">
             <button 
@@ -247,6 +259,8 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
           )}
         </div>
       </div>
+
+      {showHelpModal && <HelpGuideModal onClose={() => setShowHelpModal(false)} />}
     </header>
   );
 }

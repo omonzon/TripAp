@@ -594,16 +594,16 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
         {canWrite && (
           <div className="flex items-center gap-2">
-            <button onClick={handleScanReferrals} disabled={isScanningReferrals} className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
+            <button onClick={handleScanReferrals} disabled={isScanningReferrals} title="סריקה חכמה לאיתור קישורי הזמנה חסרים (טיסות, מלונות) לפריטי המסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
               {isScanningReferrals ? <Loader2 size={15} className="animate-spin" /> : <Link size={15} />} 
               <span className="hidden sm:inline">סרוק הפניות</span>
             </button>
-            <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc} className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
+            <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc} title="העלאת מסמך או צילום מסך כדי לחלץ מידע ולשבץ אותו אוטומטית במסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
               {isScanningDoc ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />} 
               <span className="hidden sm:inline">{t('itinerary.scanDoc', 'Scan Doc')}</span>
             </button>
             <input ref={fileRef} type="file" accept="application/pdf, image/*" capture="environment" className="hidden" onChange={handleScanDocument} />
-            <button onClick={handleAddDay} className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
+            <button onClick={handleAddDay} title="הוספת יום חדש וריק למסלול הטיול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
               <Plus size={15} /> <span className="hidden sm:inline">{t('itinerary.newDay')}</span>
             </button>
           </div>
