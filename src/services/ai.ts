@@ -5,6 +5,7 @@
 
 import { showToast } from '@/components/ui/Toast';
 import { useAIStore } from '@/store/useAIStore';
+import { useTripStore } from '@/store/useTripStore';
 
 export interface AIProvider {
   type: 'gemini' | 'openai' | 'anthropic' | 'ollama';
