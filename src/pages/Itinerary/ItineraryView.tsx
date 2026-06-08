@@ -271,6 +271,11 @@ export default function ItineraryView() {
   // ── Firestore listener ────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentTripId) return;
+    setLoading(true);
+    setDays([]);
+    setHasScrolled(false);
+    setShowDailyBriefing(false);
+    
     const q = query(
       collection(db, 'trips', currentTripId, 'itinerary'),
       orderBy('isoDate', 'asc'),

@@ -65,6 +65,8 @@ export default function ExpensesView() {
 
   useEffect(() => {
     if (!currentTripId) return;
+    setLoading(true);
+    setExpenses([]);
     const q = query(collection(db, 'trips', currentTripId, 'expenses'), orderBy('createdAt', 'asc'));
     const unsub = onSnapshot(q, snap => {
       setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)));

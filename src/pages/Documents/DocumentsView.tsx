@@ -40,6 +40,7 @@ export default function DocumentsView() {
   useEffect(() => {
     if (!currentTripId) return;
     setLoading(true);
+    setDocuments([]);
     const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'documents'), (snap) => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TripDocument));
       // Sort by creation date (newest first)

@@ -119,6 +119,8 @@ export default function TasksView() {
 
   useEffect(() => {
     if (!currentTripId) return;
+    setLoading(true);
+    setTasks([]);
     const q = query(collection(db, 'trips', currentTripId, 'tasks'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, snap => {
       setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() } as Task)));
