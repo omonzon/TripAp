@@ -607,7 +607,7 @@ export default function OnboardingView() {
             <div className="card p-4 bg-brand-50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white font-bold">
-                  {appUser?.name[0]?.toUpperCase()}
+                  {appUser?.name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div>
                   <p className="font-semibold text-slate-900 dark:text-white">{appUser?.name}</p>

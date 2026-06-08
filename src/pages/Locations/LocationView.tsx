@@ -167,7 +167,7 @@ export default function LocationView() {
             return (
               <div key={loc.id} className={`card p-4 flex items-center gap-4 ${isMe ? 'border-brand-300 dark:border-brand-700' : ''}`}>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0 ${isMe ? 'gradient-brand' : 'bg-slate-400 dark:bg-slate-600'}`}>
-                  {loc.name[0]?.toUpperCase()}
+                  {loc?.name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-900 dark:text-white">{loc.name} {isMe && <span className="text-xs text-brand-500">(You)</span>}</p>

@@ -187,9 +187,9 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className={`${fontSize === 'xlarge' ? 'w-8 h-8 text-sm' : 'w-7 h-7 text-xs'} rounded-full gradient-brand flex items-center justify-center text-white font-bold cursor-pointer hover:ring-2 ring-brand-300 transition-all`}
-                  title={appUser.name}
+                  title={appUser.name || 'User'}
                 >
-                  {appUser.name[0]?.toUpperCase()}
+                  {appUser?.name?.[0]?.toUpperCase() || '?'}
                 </button>
                 {showProfileMenu && (
                   <>
