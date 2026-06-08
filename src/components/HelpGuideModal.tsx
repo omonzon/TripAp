@@ -2,7 +2,7 @@ import React from 'react';
 import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole } from '@/store/useTripStore';
 
 interface HelpGuideModalProps {
   onClose: () => void;
