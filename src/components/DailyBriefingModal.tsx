@@ -65,7 +65,7 @@ Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 w
   }, [todayItems, tripName, apiKey, getProviderForTask, t]);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[200] flex justify-center items-start pt-20 sm:pt-24 p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col relative">
         <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-amber-300 to-orange-500 opacity-20"></div>
         

@@ -26,7 +26,7 @@ export function ToSModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] bg-slate-900/90 backdrop-blur-sm flex justify-center items-start pt-20 sm:pt-24 p-4 overflow-y-auto">
       <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh]">
         
         <div className="p-6 bg-brand-500 text-white flex items-center gap-3 shrink-0">

@@ -105,7 +105,7 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+    <div className="fixed inset-0 z-50 flex justify-center items-start pt-20 sm:pt-24 bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
       <div 
         ref={modalRef}
         style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
