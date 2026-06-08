@@ -134,9 +134,15 @@ export async function signInWithGoogle() {
   try {
     googleProvider.setCustomParameters({ prompt: 'select_account' });
     await signInWithPopup(auth, googleProvider);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Sign in failed';
-    setLoginError(msg);
+  } catch (err: any) {
+    console.error("Google sign in error:", err);
+    if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+      // User intentionally closed the popup, don't show an error, just reset
+      setLoginError(null);
+    } else {
+      setLoginError(err?.message || 'Sign in failed');
+    }
+  } finally {
     setAuthLoading(false);
   }
 }
@@ -147,9 +153,10 @@ export async function signInWithTestAccount() {
   setLoginError(null);
   try {
     await signInWithEmailAndPassword(auth, 'omon.test.mail@gmail.com', 'CMjWfQinNHWqwHQtN1eqPy');
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Test sign in failed';
+  } catch (err: any) {
+    const msg = err?.message || 'Test sign in failed';
     setLoginError(msg);
+  } finally {
     setAuthLoading(false);
   }
 }
