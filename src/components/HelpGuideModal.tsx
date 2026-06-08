@@ -66,7 +66,7 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Navigation size={16} className="text-indigo-500"/> מיקומים</h4>
-                <p className="text-sm leading-relaxed">מראה את המיקום בזמן אמת של המשתתפים בטיול על גבי מפה, ומאפשר לבקש המלצות לאטרקציות ומקומות מעניינים בקרבת מקום.</p>
+                <p className="text-sm leading-relaxed">מראה את המיקום בזמן אמת של המשתתפים בטיול על גבי מפה, מאפשר מעבר מהיר לניווט ב-Google Maps ע"י לחיצה על הכתובת, ומאפשר לבקש המלצות לאטרקציות ומקומות מעניינים בקרבת מקום.</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Map size={16} className="text-green-500"/> מפה</h4>
@@ -78,7 +78,7 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><MessageSquare size={16} className="text-orange-500"/> צ'אט</h4>
-                <p className="text-sm leading-relaxed">מרחב התייעצות קבוצתי בו כל השותפים לטיול יכולים לדבר ולהחליף חוויות.</p>
+                <p className="text-sm leading-relaxed">מרחב התייעצות קבוצתי. תוכלו לראות מי מחובר, לתייג חברים עם <code>@</code> כדי להקפיץ להם התראה, ולנהל שיחות על תכנון הטיול.</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Languages size={16} className="text-sky-500"/> תרגומים</h4>

@@ -1,12 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X, Users, HelpCircle } from 'lucide-react';
+import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X, Users, HelpCircle, MessageSquare } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { translateTripContent } from '@/services/translationService';
 import { showToast } from '@/components/ui/Toast';
 import { signOut, syncUserSettingsToCloud } from '@/services/authService';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, query, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import type { TabId } from '@/App';
 import HelpGuideModal from '@/components/HelpGuideModal';
@@ -24,6 +24,18 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
   const { tripProfile, currentTripId, isOnline, availableTrips, setCurrentTrip } = useTripStore();
   const [showTripsDropdown, setShowTripsDropdown] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (!appUser?.email) return;
+    const q = query(collection(db, 'users', appUser.email, 'notifications'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, snap => {
+      setNotifications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [appUser?.email]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleLanguageToggle = async () => {
     const newLang = language === 'he' ? 'en' : 'he';
@@ -178,7 +190,11 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
               onClick={() => setShowNotifications(!showNotifications)}
             >
               <Bell size={iconSize} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-900" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border border-white dark:border-slate-900 text-[9px] font-bold text-white flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
             </button>
             
             {showNotifications && (
@@ -194,14 +210,33 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                     <X size={16} />
                   </button>
                 </div>
-                <div className="max-h-64 overflow-y-auto p-2">
-                  <div className="p-2 flex gap-3 items-start hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer mb-1">
-                    <div className="mt-0.5 text-brand-500"><CheckCircle2 size={iconSize} /></div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">ברוכים הבאים ל-TravelPlatform!</p>
-                      <p className="text-xs text-slate-500 mt-0.5">המערכת מוכנה להתחיל לתכנן את הטיול הבא שלכם.</p>
-                    </div>
-                  </div>
+                <div className="max-h-64 overflow-y-auto p-2 space-y-1">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-slate-500 text-sm">אין התראות חדשות</div>
+                  ) : (
+                    notifications.map(notif => (
+                      <div 
+                        key={notif.id}
+                        onClick={async () => {
+                          if (!notif.read && appUser?.email) {
+                            await updateDoc(doc(db, 'users', appUser.email, 'notifications', notif.id), { read: true });
+                          }
+                          setShowNotifications(false);
+                          if (notif.tripId && notif.tripId !== currentTripId) {
+                            setCurrentTrip(notif.tripId);
+                          }
+                          // Note: A real app would use a router to navigate to the chat tab here.
+                        }}
+                        className={`p-2 flex gap-3 items-start rounded-lg transition-colors cursor-pointer ${notif.read ? 'opacity-60 hover:bg-slate-50 dark:hover:bg-slate-700/50' : 'bg-brand-50 dark:bg-brand-900/20 hover:bg-brand-100 dark:hover:bg-brand-900/40'}`}
+                      >
+                        <div className="mt-0.5 text-brand-500"><MessageSquare size={iconSize} /></div>
+                        <div>
+                          <p className={`text-sm ${notif.read ? 'text-slate-700 dark:text-slate-300' : 'font-bold text-brand-900 dark:text-brand-100'}`}>{notif.senderName} הזכיר/ה אותך בצ'אט!</p>
+                          <p className={`text-xs mt-0.5 ${notif.read ? 'text-slate-500' : 'font-medium text-brand-700 dark:text-brand-300'}`}>{notif.message}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
               </>

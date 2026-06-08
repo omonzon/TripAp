@@ -29,7 +29,31 @@ export default function GroupChatView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!currentTripId) return;
+    const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'users'), snap => {
+      setParticipants(snap.docs.map(d => ({ email: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [currentTripId]);
+
+  useEffect(() => {
+    if (!currentTripId) return;
+    const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'locations'), snap => {
+      setLocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [currentTripId]);
 
   useEffect(() => {
     if (!currentTripId) return;
@@ -51,6 +75,25 @@ export default function GroupChatView() {
     setSending(true);
     const msg = text;
     setText('');
+    
+    // Find mentions and send notifications
+    const mentionedNames = [...msg.matchAll(/@([a-zA-Zא-ת0-9_]+)/g)].map(m => m[1]);
+    if (mentionedNames.length > 0) {
+      participants.forEach(p => {
+        const nameToUse = p.nickname || p.name || '';
+        const noSpaceName = nameToUse.replace(/\s+/g, '');
+        if (mentionedNames.includes(noSpaceName)) {
+          addDoc(collection(db, 'users', p.email, 'notifications'), {
+            tripId: currentTripId,
+            message: msg.length > 50 ? msg.substring(0, 50) + '...' : msg,
+            senderName: appUser.name,
+            createdAt: Date.now(),
+            read: false
+          }).catch(console.error);
+        }
+      });
+    }
+
     await addDoc(collection(db, 'trips', currentTripId, 'group_chat'), {
       text: msg,
       authorName: appUser.name,
@@ -58,6 +101,39 @@ export default function GroupChatView() {
       createdAt: Date.now(),
     });
     setSending(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setText(val);
+    const cursor = e.target.selectionStart;
+    setCursorPosition(cursor);
+
+    if (cursor !== null) {
+      const textBeforeCursor = val.slice(0, cursor);
+      const match = textBeforeCursor.match(/@([a-zA-Zא-ת0-9_]*)$/);
+      if (match) {
+        setShowMentions(true);
+        setMentionFilter(match[1]);
+      } else {
+        setShowMentions(false);
+      }
+    }
+  };
+
+  const handleMentionSelect = (participant: any) => {
+    if (cursorPosition === null) return;
+    const nameToUse = participant.nickname || participant.name || '';
+    const textBeforeCursor = text.slice(0, cursorPosition);
+    const textAfterCursor = text.slice(cursorPosition);
+    
+    const lastAtIdx = textBeforeCursor.lastIndexOf('@');
+    if (lastAtIdx !== -1) {
+      const newTextBefore = textBeforeCursor.slice(0, lastAtIdx) + '@' + nameToUse.replace(/\s+/g, '') + ' ';
+      setText(newTextBefore + textAfterCursor);
+    }
+    setShowMentions(false);
+    inputRef.current?.focus();
   };
 
   const isMe = (email: string) => email === appUser?.email;
@@ -79,6 +155,33 @@ export default function GroupChatView() {
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)] max-w-2xl mx-auto animate-fade-in">
       <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">{t('chat.title')}</h2>
+
+      {/* Participant Cloud */}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1 mb-2">
+        {participants.map(p => {
+          const loc = locations.find(l => l.id === p.email);
+          const isOnline = loc && (Date.now() - loc.updatedAt < 5 * 60 * 1000);
+          const nameToUse = p.nickname || p.name || '?';
+          
+          return (
+            <div 
+              key={p.email}
+              onClick={() => {
+                const newText = text + (text && !text.endsWith(' ') ? ' ' : '') + '@' + nameToUse.replace(/\s+/g, '') + ' ';
+                setText(newText);
+                inputRef.current?.focus();
+              }}
+              className="flex flex-col items-center gap-1 cursor-pointer group"
+              title={nameToUse}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0 transition-transform group-hover:scale-105 ${isOnline ? 'ring-2 ring-green-500 ring-offset-2 dark:ring-offset-slate-900 bg-brand-500' : 'bg-slate-400 dark:bg-slate-600'}`}>
+                {nameToUse?.[0]?.toUpperCase()}
+              </div>
+              <span className="text-[10px] text-slate-500 font-medium truncate w-12 text-center">{nameToUse}</span>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-3 pb-2">
@@ -143,15 +246,50 @@ export default function GroupChatView() {
       </div>
 
       {/* Input */}
-      <form onSubmit={send} className="flex gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+      <form onSubmit={send} className="flex gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 relative">
+        
+        {/* Mentions Dropdown */}
+        {showMentions && (
+          <div className="absolute bottom-full left-4 mb-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 min-w-48 overflow-hidden animate-fade-in">
+            {participants.filter(p => {
+              const n = (p.nickname || p.name || '').replace(/\s+/g, '').toLowerCase();
+              return n.includes(mentionFilter.toLowerCase());
+            }).length === 0 ? (
+               <div className="p-3 text-xs text-slate-400 text-center">לא נמצאו משתתפים</div>
+            ) : (
+               participants.filter(p => {
+                 const n = (p.nickname || p.name || '').replace(/\s+/g, '').toLowerCase();
+                 return n.includes(mentionFilter.toLowerCase());
+               }).map(p => {
+                 const nameToUse = p.nickname || p.name || '?';
+                 return (
+                   <button
+                     key={p.email}
+                     type="button"
+                     onClick={() => handleMentionSelect(p)}
+                     className="w-full text-start px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 transition-colors"
+                   >
+                     <div className="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center text-xs">
+                       {nameToUse[0]?.toUpperCase()}
+                     </div>
+                     <span className="text-slate-700 dark:text-slate-300 font-medium">{nameToUse}</span>
+                   </button>
+                 );
+               })
+            )}
+          </div>
+        )}
+
         <div className="flex flex-1 gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 items-center shadow-sm">
           <input
+            ref={inputRef}
             id="chat-input"
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={handleInputChange}
             placeholder={t('chat.placeholder')}
             className="flex-1 py-3 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none"
             dir="auto"
+            autoComplete="off"
           />
           <DictationButton onResult={t2 => setText(p => p + (p ? ' ' : '') + t2)} />
         </div>

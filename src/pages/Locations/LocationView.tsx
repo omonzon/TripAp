@@ -171,7 +171,14 @@ export default function LocationView() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-900 dark:text-white">{loc.name} {isMe && <span className="text-xs text-brand-500">(You)</span>}</p>
-                  <p className="text-xs text-slate-500 truncate">{loc.address || `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`}</p>
+                  <a 
+                    href={`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-brand-500 hover:underline truncate block"
+                  >
+                    {loc.address || `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`}
+                  </a>
                 </div>
                 <div className="text-right shrink-0">
                   <div className={`flex items-center gap-1 text-xs font-medium ${isOnline ? 'text-green-500' : 'text-slate-400'}`}>
