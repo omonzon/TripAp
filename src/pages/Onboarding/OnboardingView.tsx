@@ -29,7 +29,7 @@ export default function OnboardingView() {
   const [showTos, setShowTos] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-pro');
   const [tempApiKey, setTempApiKey] = useState('');
   const [keyError, setKeyError] = useState<string | null>(null);
   const [keySuccess, setKeySuccess] = useState(false);
@@ -80,7 +80,9 @@ export default function OnboardingView() {
     try {
       const models = await fetchGeminiModels(tempApiKey.trim());
       setAvailableModels(models);
-      if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
+      if (models.includes('gemini-2.5-pro')) setSelectedModel('gemini-2.5-pro');
+      else if (models.includes('gemini-1.5-pro')) setSelectedModel('gemini-1.5-pro');
+      else if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
       else if (models.length > 0) setSelectedModel(models[0]);
       setKeySuccess(true);
     } catch (err) {
@@ -90,8 +92,27 @@ export default function OnboardingView() {
     }
   };
 
-  const handleAISetupNext = () => {
+  const handleAISetupNext = async () => {
     if (tempApiKey.trim()) {
+      setIsValidating(true);
+      try {
+        const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${tempApiKey.trim()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
+        });
+        if (!testRes.ok) {
+           showToast({ type: 'error', message: `המודל ${selectedModel} אינו תומך בפעולה זו (שגיאה ${testRes.status}). אנא בחר מודל אחר.` });
+           setIsValidating(false);
+           return;
+        }
+      } catch (err) {
+         showToast({ type: 'error', message: `שגיאת רשת בבדיקת המודל ${selectedModel}.` });
+         setIsValidating(false);
+         return;
+      }
+      setIsValidating(false);
+
       setApiKey(tempApiKey.trim());
       setAllGeminiModels(selectedModel);
       setSkipAI(false);

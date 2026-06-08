@@ -23,11 +23,11 @@ export interface ModelConfig {
 }
 
 const DEFAULT_GEMINI_MODELS: ModelConfig = {
-  chat: 'gemini-1.5-flash',
-  itinerary: 'gemini-1.5-flash',
-  extraction: 'gemini-1.5-flash',
-  vision: 'gemini-1.5-flash',
-  translation: 'gemini-1.5-flash',
+  chat: 'gemini-2.5-pro',
+  itinerary: 'gemini-2.5-pro',
+  extraction: 'gemini-2.5-pro',
+  vision: 'gemini-2.5-pro',
+  translation: 'gemini-2.5-pro',
 };
 
 export interface ChatSession {
@@ -182,11 +182,11 @@ export const useAIStore = create<AIState>()(
       }),
       fallbackAllModelsToFast: () => set({
         models: {
-          chat: 'gemini-1.5-flash',
-          itinerary: 'gemini-1.5-flash',
-          extraction: 'gemini-1.5-flash',
-          vision: 'gemini-1.5-flash',
-          translation: 'gemini-1.5-flash',
+          chat: 'gemini-2.5-pro',
+          itinerary: 'gemini-2.5-pro',
+          extraction: 'gemini-2.5-pro',
+          vision: 'gemini-2.5-pro',
+          translation: 'gemini-2.5-pro',
         }
       }),
     }),
