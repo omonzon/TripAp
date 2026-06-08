@@ -7,6 +7,7 @@ import {
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
+import { useAIStore } from '@/store/useAIStore';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { AuthScreen } from '@/components/auth/AuthScreen';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -145,6 +146,11 @@ export default function App() {
     });
     return () => unsub();
   }, [currentTripId, firebaseUser?.email]);
+
+  // Clear AI Semantic Graph on trip change to prevent memory leaks across trips
+  useEffect(() => {
+    useAIStore.getState().clearTripGraph();
+  }, [currentTripId]);
 
   // Auto Backup worker
   useEffect(() => {
