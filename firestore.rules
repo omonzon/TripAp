@@ -35,6 +35,8 @@ service cloud.firestore {
 
     // Multi-tenant trip data — strict isolation
     match /trips/{tripId} {
+      allow read: if isMember();
+      allow delete: if isAdmin();
 
       function isSuperAdmin() {
         return request.auth != null && request.auth.token.email.lower() == 'omonzon@gmail.com';
