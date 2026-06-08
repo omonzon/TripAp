@@ -433,7 +433,7 @@ export default function TasksView() {
       </div>
 
       {reminderTask && createPortal(
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex justify-center items-start pt-20 sm:pt-24 p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex justify-center items-start px-4 pb-4 pt-20 sm:pt-24 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 dark:border-slate-800">
             <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
               {t('tasks.setReminder', 'Set Reminder')}

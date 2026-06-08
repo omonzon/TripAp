@@ -902,7 +902,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
 
       {/* Delete Day Modal */}
       {dayToDelete && createPortal(
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex justify-center items-start pt-20 sm:pt-24 p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex justify-center items-start px-4 pb-4 pt-20 sm:pt-24 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 dark:border-slate-800 text-center relative">
             <button onClick={() => setDayToDelete(null)} className="absolute top-4 end-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
               <X size={20} />
@@ -927,7 +927,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
 
       {/* Detailed Item Modal */}
       {detailedItem && createPortal(
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex justify-center items-start pt-20 sm:pt-24 p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex justify-center items-start px-4 pb-4 pt-20 sm:pt-24 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-xl border border-slate-200 dark:border-slate-800 relative max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <button onClick={() => setDetailedItem(null)} className="absolute top-4 end-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
               <X size={20} />
