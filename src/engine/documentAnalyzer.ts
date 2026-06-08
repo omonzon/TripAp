@@ -3,7 +3,7 @@ import { db } from '@/services/firebase';
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile, ItineraryDay, ItineraryItem } from '@/store/useTripStore';
 
-interface DocumentExtractionResult {
+export interface DocumentExtractionResult {
   itineraryEvents: {
     isoDate: string; // YYYY-MM-DD
     title: string;
@@ -56,13 +56,11 @@ Return ONLY valid JSON matching this exact schema:
 
 If no events/expenses/documents are found, return empty arrays.`;
 
-export async function extractAndIntegrateDocument(
+export async function extractDocumentData(
   tripProfile: TripProfile,
-  days: ItineraryDay[],
   base64Data: string,
   mimeType: string,
-  provider: AIProvider,
-  authorEmail: string
+  provider: AIProvider
 ): Promise<DocumentExtractionResult> {
   const context = `
 Trip Dates: ${tripProfile.startDate} to ${tripProfile.endDate}
@@ -89,6 +87,15 @@ Destinations: ${tripProfile.destinations.join(', ')}
     fullText: ''
   });
 
+  return parsed;
+}
+
+export async function integrateDocumentData(
+  tripProfile: TripProfile,
+  days: ItineraryDay[],
+  parsed: DocumentExtractionResult,
+  authorEmail: string
+): Promise<void> {
   const promises: Promise<any>[] = [];
 
   // 1. Integrate Itinerary Events
@@ -162,5 +169,4 @@ Destinations: ${tripProfile.destinations.join(', ')}
   }
 
   await Promise.all(promises);
-  return parsed;
 }

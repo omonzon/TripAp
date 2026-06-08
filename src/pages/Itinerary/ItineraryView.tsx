@@ -16,7 +16,8 @@ import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
-import { extractAndIntegrateDocument } from '@/engine/documentAnalyzer';
+import { extractDocumentData, integrateDocumentData, type DocumentExtractionResult } from '@/engine/documentAnalyzer';
+import DocumentAnalysisReviewModal from '@/components/documents/DocumentAnalysisReviewModal';
 import ItineraryWizard from './ItineraryWizard';
 import LocationInfoModal from '@/components/LocationInfoModal';
 import DailyBriefingModal from '@/components/DailyBriefingModal';
@@ -249,6 +250,7 @@ export default function ItineraryView() {
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [showFlightModal, setShowFlightModal] = useState(false);
   const [detailedItem, setDetailedItem] = useState<{dayDocId: string, item: ItineraryItem} | null>(null);
+  const [scannedDocumentData, setScannedDocumentData] = useState<DocumentExtractionResult | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [editingMapForDay, setEditingMapForDay] = useState<string | null>(null);
   const [tempMapUrl, setTempMapUrl] = useState('');
@@ -446,39 +448,53 @@ export default function ItineraryView() {
         });
       }
 
-      const res = await extractAndIntegrateDocument(
+      const res = await extractDocumentData(
         tripProfile,
-        days,
         base64,
         file.type,
-        getProviderForTask('extraction'),
-        appUser.email
+        getProviderForTask('extraction')
       );
       
-      const eventsCount = res.itineraryEvents?.length || 0;
-      const expensesCount = res.expenses?.length || 0;
-
-      // Save the scanned document full text to the Documents collection
-      if (res.fullText && res.fullText.trim()) {
-        const docId = `doc_${Date.now()}`;
-        await setDoc(doc(db, 'trips', tripProfile.id, 'documents', docId), {
-          id: docId,
-          title: t('documents.scannedDoc', 'מסמך סרוק ({{date}})', { date: new Date().toLocaleDateString() }),
-          content: res.fullText.trim(),
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        });
-      }
-      
-      showToast({ 
-        type: 'success', 
-        message: t('itinerary.scanSuccess', 'Document scanned! Extracted {{events}} events and {{expenses}} expenses.', { events: eventsCount, expenses: expensesCount }) 
-      });
+      setScannedDocumentData(res);
     } catch (err) {
       showToast({ type: 'error', message: t('errors.scanFailed', 'Failed to scan document.') });
     } finally {
       setIsScanningDoc(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleConfirmScannedData = async (approvedData: DocumentExtractionResult) => {
+    if (!tripProfile || !appUser) return;
+    setScannedDocumentData(null);
+    showToast({ type: 'info', message: t('itinerary.savingScanned', 'Saving approved details...') });
+    
+    try {
+      await integrateDocumentData(
+        tripProfile,
+        days,
+        approvedData,
+        appUser.email
+      );
+
+      // Save the scanned document full text to the Documents collection if approved
+      if (approvedData.fullText && approvedData.fullText.trim()) {
+        const docId = `doc_${Date.now()}`;
+        await setDoc(doc(db, 'trips', tripProfile.id, 'documents', docId), {
+          id: docId,
+          title: t('documents.scannedDoc', 'מסמך סרוק ({{date}})', { date: new Date().toLocaleDateString() }),
+          content: approvedData.fullText.trim(),
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+      }
+
+      showToast({ 
+        type: 'success', 
+        message: t('itinerary.scanSuccess', 'Document integrated successfully!') 
+      });
+    } catch (err) {
+      showToast({ type: 'error', message: t('errors.saveFailed', 'Failed to save details.') });
     }
   };
 
@@ -991,6 +1007,14 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
         />
       )}
 
+      {/* Document Scanning Review Modal */}
+      {scannedDocumentData && (
+        <DocumentAnalysisReviewModal
+          data={scannedDocumentData}
+          onConfirm={handleConfirmScannedData}
+          onCancel={() => setScannedDocumentData(null)}
+        />
+      )}
     </div>
   );
 }

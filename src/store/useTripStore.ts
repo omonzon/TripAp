@@ -164,9 +164,6 @@ export const useTripStore = create<TripState>()(
 );
 
 export const useUserRole = () => {
-  const tripProfile = useTripStore(s => s.tripProfile);
   const appUser = useAuthStore(s => s.appUser);
-  if (!tripProfile || !appUser) return 'viewer';
-  const p = tripProfile.participants?.find(x => x.email.toLowerCase() === appUser.email.toLowerCase());
-  return p?.role || 'viewer';
+  return appUser?.role || 'viewer';
 };

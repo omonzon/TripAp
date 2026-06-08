@@ -264,7 +264,7 @@ export default function TasksView() {
   };
 
   const toggle = async (task: Task) => {
-    if (!currentTripId) return;
+    if (!currentTripId || userRole === 'viewer') return;
     await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { completed: !task.completed });
   };
 
@@ -375,7 +375,7 @@ export default function TasksView() {
         ) : (
           filtered.map(task => (
             <div key={task.id} className={`card p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
-              <button onClick={() => toggle(task)} className="shrink-0 text-brand-600 dark:text-brand-400 hover:scale-110 transition-transform">
+              <button onClick={() => toggle(task)} disabled={!canWrite} className={`shrink-0 text-brand-600 dark:text-brand-400 transition-transform ${canWrite ? 'hover:scale-110 cursor-pointer' : 'cursor-default opacity-50'}`}>
                 {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
               </button>
               

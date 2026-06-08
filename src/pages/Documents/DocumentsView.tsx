@@ -5,12 +5,21 @@ import { useTripStore, useUserRole, TripDocument } from '@/store/useTripStore';
 import { db } from '@/services/firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { showToast } from '@/components/ui/Toast';
+import { extractDocumentData, integrateDocumentData, type DocumentExtractionResult } from '@/engine/documentAnalyzer';
+import DocumentAnalysisReviewModal from '@/components/documents/DocumentAnalysisReviewModal';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useAIStore } from '@/store/useAIStore';
+import { compressImageToBase64 } from '@/utils/imageCompressor';
 
 export default function DocumentsView() {
   const { t } = useTranslation();
   const { currentTripId } = useTripStore();
   const userRole = useUserRole();
   const canWrite = userRole === 'admin' || userRole === 'editor';
+  const { appUser } = useAuthStore();
+  const { getProviderForTask, apiKey } = useAIStore();
+  const { days } = useTripStore();
+  const fileRef = React.useRef<HTMLInputElement>(null!);
 
   const [documents, setDocuments] = useState<TripDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +31,11 @@ export default function DocumentsView() {
   const [docTitle, setDocTitle] = useState('');
   const [docContent, setDocContent] = useState('');
   const [docLink, setDocLink] = useState('');
+  
+  // Scanning State
+  const [isScanningDoc, setIsScanningDoc] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [scannedDocumentData, setScannedDocumentData] = useState<DocumentExtractionResult | null>(null);
 
   useEffect(() => {
     if (!currentTripId) return;
@@ -98,6 +112,90 @@ export default function DocumentsView() {
     }
   };
 
+  const processFile = async (file: File) => {
+    if (!currentTripId || !appUser || !canWrite) return;
+    
+    if (!apiKey) {
+      showToast({ type: 'warning', message: t('itinerary.missingApiKey', 'Please set your Gemini API key in Settings first.') });
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
+
+    // Optional: Basic file type validation
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      showToast({ type: 'error', message: t('documents.unsupportedFormat', 'פורמט קובץ לא נתמך. אנא השתמש בתמונה או PDF.') });
+      return;
+    }
+
+    setIsScanningDoc(true);
+    showToast({ type: 'info', message: t('itinerary.scanningDoc', 'סורק מסמך...') });
+
+    try {
+      let base64 = '';
+      if (file.type.startsWith('image/')) {
+        base64 = await compressImageToBase64(file);
+      } else {
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Failed to read document'));
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const tripProfile = useTripStore.getState().tripProfile;
+      if (!tripProfile) throw new Error('No trip profile');
+
+      const res = await extractDocumentData(
+        tripProfile,
+        base64,
+        file.type,
+        getProviderForTask('extraction')
+      );
+      
+      setScannedDocumentData(res);
+    } catch (err) {
+      showToast({ type: 'error', message: t('errors.scanFailed', 'Failed to scan document.') });
+    } finally {
+      setIsScanningDoc(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleConfirmScannedData = async (approvedData: DocumentExtractionResult) => {
+    const tripProfile = useTripStore.getState().tripProfile;
+    if (!tripProfile || !appUser) return;
+    setScannedDocumentData(null);
+    showToast({ type: 'info', message: t('itinerary.savingScanned', 'שומר נתונים מאושרים...') });
+    
+    try {
+      await integrateDocumentData(
+        tripProfile,
+        days,
+        approvedData,
+        appUser.email
+      );
+
+      if (approvedData.fullText && approvedData.fullText.trim()) {
+        const docId = `doc_${Date.now()}`;
+        await setDoc(doc(db, 'trips', tripProfile.id, 'documents', docId), {
+          id: docId,
+          title: t('documents.scannedDoc', 'מסמך סרוק ({{date}})', { date: new Date().toLocaleDateString() }),
+          content: approvedData.fullText.trim(),
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+      }
+
+      showToast({ 
+        type: 'success', 
+        message: t('itinerary.scanSuccess', 'המסמך שולב בהצלחה!') 
+      });
+    } catch (err) {
+      showToast({ type: 'error', message: t('errors.saveFailed', 'שגיאה בשמירת הנתונים.') });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64 text-slate-500">
@@ -107,7 +205,20 @@ export default function DocumentsView() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in pb-24">
+    <div 
+      className={`space-y-4 animate-fade-in pb-24 ${isDragging ? 'ring-4 ring-brand-500 rounded-2xl bg-brand-50 dark:bg-brand-900/20' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); if (canWrite) setIsDragging(true); }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (canWrite && e.dataTransfer.files?.[0]) {
+          processFile(e.dataTransfer.files[0]);
+        }
+      }}
+    >
+      <input type="file" ref={fileRef} className="hidden" accept="image/*,application/pdf" onChange={e => e.target.files?.[0] && processFile(e.target.files[0])} />
+      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <FileText className="text-brand-500" />
@@ -126,9 +237,20 @@ export default function DocumentsView() {
             />
           </div>
           {canWrite && (
-            <button onClick={() => openDocModal()} className="btn-primary flex items-center gap-2 py-2 px-3 text-sm shrink-0">
-              <Plus size={16} /> <span className="hidden sm:inline">{t('documents.add', 'מסמך חדש')}</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button 
+                onClick={() => fileRef.current?.click()} 
+                disabled={isScanningDoc}
+                className="btn-secondary flex items-center gap-2 py-2 px-3 text-sm shrink-0"
+                title="סרוק מסמך בעזרת בינה מלאכותית"
+              >
+                {isScanningDoc ? <Loader2 size={16} className="animate-spin" /> : <FileCheck size={16} />}
+                <span className="hidden sm:inline">סרוק מסמך</span>
+              </button>
+              <button onClick={() => openDocModal()} className="btn-primary flex items-center gap-2 py-2 px-3 text-sm shrink-0">
+                <Plus size={16} /> <span className="hidden sm:inline">{t('documents.add', 'מסמך ידני')}</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -281,6 +403,15 @@ export default function DocumentsView() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Document Scanning Review Modal */}
+      {scannedDocumentData && (
+        <DocumentAnalysisReviewModal
+          data={scannedDocumentData}
+          onConfirm={handleConfirmScannedData}
+          onCancel={() => setScannedDocumentData(null)}
+        />
       )}
     </div>
   );
