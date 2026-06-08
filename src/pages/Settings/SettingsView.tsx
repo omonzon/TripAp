@@ -119,7 +119,7 @@ export default function SettingsView() {
       setLoadingUsers(true);
       try {
         const snap = await getDocs(collection(db, 'users'));
-        setAllUsers(snap.docs.map(d => d.data() as AppUser));
+        setAllUsers(snap.docs.map(d => ({ email: d.id, ...d.data() } as AppUser)));
       } catch (e) {
         console.error('Failed to fetch users:', e);
       }
