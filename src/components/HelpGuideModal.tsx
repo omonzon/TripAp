@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase } from 'lucide-react';
+import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase, CheckSquare, Navigation, Languages, Image } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useUserRole } from '@/store/useTripStore';
@@ -57,6 +57,14 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
                 <p className="text-sm leading-relaxed">כאן מרוכז כל לוח הזמנים של הטיול, מחולק לימים. ניתן לראות טיסות, מלונות, העברות ואטרקציות.</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                <h4 className="font-bold mb-1 flex items-center gap-2"><CheckSquare size={16} className="text-teal-500"/> משימות</h4>
+                <p className="text-sm leading-relaxed">רשימת ציוד ומטלות לפני הטיול (כמו ויזה, ביטוח, אריזה). ניתן לסמן V על מה שבוצע.</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                <h4 className="font-bold mb-1 flex items-center gap-2"><Navigation size={16} className="text-indigo-500"/> מיקומים</h4>
+                <p className="text-sm leading-relaxed">רשימה מרוכזת של כל המקומות שמוזכרים במסלול. שימושי לניווט מהיר למקום מסוים בטיול.</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Map size={16} className="text-green-500"/> מפה</h4>
                 <p className="text-sm leading-relaxed">תצוגה גיאוגרפית של מסלול הטיול, הכוללת את כל הנקודות שצוינו בתיאורי הימים.</p>
               </div>
@@ -67,6 +75,14 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><MessageSquare size={16} className="text-orange-500"/> צ'אט</h4>
                 <p className="text-sm leading-relaxed">מרחב התייעצות קבוצתי בו כל השותפים לטיול יכולים לדבר ולהחליף חוויות.</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                <h4 className="font-bold mb-1 flex items-center gap-2"><Languages size={16} className="text-sky-500"/> תרגומים</h4>
+                <p className="text-sm leading-relaxed">פיצ'ר שמאפשר תרגום מהיר של טקסטים או משפטים לשימוש שוטף במהלך הטיול.</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                <h4 className="font-bold mb-1 flex items-center gap-2"><Image size={16} className="text-rose-500"/> זיכרונות</h4>
+                <p className="text-sm leading-relaxed">אלבום תמונות קבוצתי לטיול. כל חברי הקבוצה יכולים להעלות ולשתף תמונות משותפות.</p>
               </div>
             </div>
           </section>
