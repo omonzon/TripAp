@@ -342,6 +342,27 @@ export default function SettingsView() {
         timestamp: Date.now(),
         date: new Date().toISOString()
       });
+
+      if (emailjsConfig?.serviceId && emailjsConfig?.templateId && emailjsConfig?.publicKey) {
+        try {
+          await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service_id: emailjsConfig.serviceId,
+              template_id: emailjsConfig.templateId,
+              user_id: emailjsConfig.publicKey,
+              template_params: {
+                message: `Bug Report from ${appUser.name} (${appUser.email}):\n\n${bugReport.trim()}\n\nTrip ID: ${currentTripId}\nUser Agent: ${navigator.userAgent}`,
+                to_email: 'omonzon@gmail.com'
+              }
+            })
+          });
+        } catch (emailErr) {
+          console.error('Failed to send bug report via EmailJS', emailErr);
+        }
+      }
+
       setBugSent(true);
       setBugReport('');
       showToast({ type: 'success', message: 'תודה! הדיווח נשלח בהצלחה.' });
