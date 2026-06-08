@@ -147,9 +147,21 @@ export default function App() {
     return () => unsub();
   }, [currentTripId, firebaseUser?.email]);
 
-  // Clear AI Semantic Graph on trip change to prevent memory leaks across trips
+  // Sync AI Semantic Graph from Firestore for the current trip
   useEffect(() => {
-    useAIStore.getState().clearTripGraph();
+    if (!currentTripId || currentTripId === 'new') {
+      if (!currentTripId) useAIStore.getState().clearTripGraph();
+      return;
+    }
+    const graphRef = doc(db, 'trips', currentTripId, 'profile', 'graph');
+    const unsub = onSnapshot(graphRef, (snap) => {
+      if (snap.exists()) {
+        useAIStore.setState({ tripGraph: snap.data() as any });
+      } else {
+        useAIStore.getState().clearTripGraph();
+      }
+    });
+    return () => unsub();
   }, [currentTripId]);
 
   // Auto Backup worker

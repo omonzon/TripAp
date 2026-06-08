@@ -208,8 +208,8 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
   if (item.type === 'flight') {
     return (
       <div className="flex flex-wrap gap-2 mt-2">
-        <a href={`https://www.skyscanner.net/transport/flights-from/anywhere/${isoDate}/?adults=${participantsCount}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
-          <Plane size={10} /> Skyscanner
+        <a href={`https://www.google.com/travel/flights?q=Flights%20to%20${encodeURIComponent(tripName)}%20on%20${isoDate}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
+          <Plane size={10} /> Google Flights
         </a>
       </div>
     );

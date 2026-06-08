@@ -322,6 +322,12 @@ export default function OnboardingView() {
       // Save active trip ID to user settings
       await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), { activeTripId: tripId }, { merge: true });
 
+      // Save onboarding tripGraph to Firestore
+      const tripGraph = useAIStore.getState().tripGraph;
+      if (tripGraph && tripGraph.nodes.length > 0) {
+        await setDoc(doc(db, 'trips', tripId, 'profile', 'graph'), tripGraph);
+      }
+
       // Add to user's trips list
       await setDoc(doc(db, 'users', appUser.email), {
         trips: arrayUnion({ id: tripId, name: profile.name, destinations: profile.destinations })
