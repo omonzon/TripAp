@@ -457,6 +457,18 @@ export default function ItineraryView() {
       
       const eventsCount = res.itineraryEvents?.length || 0;
       const expensesCount = res.expenses?.length || 0;
+
+      // Save the scanned document full text to the Documents collection
+      if (res.fullText && res.fullText.trim()) {
+        const docId = `doc_${Date.now()}`;
+        await setDoc(doc(db, 'trips', currentTripId, 'documents', docId), {
+          id: docId,
+          title: t('documents.scannedDoc', 'מסמך סרוק ({{date}})', { date: new Date().toLocaleDateString() }),
+          content: res.fullText.trim(),
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+      }
       
       showToast({ 
         type: 'success', 

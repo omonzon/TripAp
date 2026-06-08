@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Map, CheckSquare, MessageCircle, Receipt, Navigation,
-  Languages, Sparkles, Settings, Loader2, WifiOff, Globe, Camera, Briefcase
+  Languages, Sparkles, Settings, Loader2, WifiOff, Globe, Camera, Briefcase, FileText
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/useAuthStore';
@@ -31,6 +31,7 @@ const AIAssistantView = lazy(() => import('@/pages/AIAssistant/AIAssistantView')
 const MemoriesView    = lazy(() => import('@/pages/Memories/MemoriesView'));
 const SettingsView    = lazy(() => import('@/pages/Settings/SettingsView'));
 const OnboardingView  = lazy(() => import('@/pages/Onboarding/OnboardingView'));
+const DocumentsView   = lazy(() => import('@/pages/Documents/DocumentsView'));
 
 export const TAB_DEFS = [
   { id: 'itinerary',  icon: Map,            labelKey: 'tabs.itinerary',  component: ItineraryView },
@@ -41,6 +42,7 @@ export const TAB_DEFS = [
   { id: 'translate',  icon: Languages,      labelKey: 'tabs.translate',  component: TranslationView },
   { id: 'ai',         icon: Sparkles,       labelKey: 'tabs.ai',         component: AIAssistantView },
   { id: 'memories',   icon: Camera,         labelKey: 'tabs.memories',   component: MemoriesView },
+  { id: 'documents',  icon: FileText,       labelKey: 'tabs.documents',  component: DocumentsView },
   { id: 'settings',   icon: Settings,       labelKey: 'tabs.settings',   component: SettingsView },
 ] as const;
 

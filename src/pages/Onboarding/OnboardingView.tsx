@@ -333,6 +333,18 @@ export default function OnboardingView() {
         trips: arrayUnion({ id: tripId, name: profile.name, destinations: profile.destinations })
       }, { merge: true });
 
+      // Save original extracted text to documents if exists
+      if (form.bookings.trim()) {
+        const docId = `doc_${Date.now()}`;
+        await setDoc(doc(db, 'trips', tripId, 'documents', docId), {
+          id: docId,
+          title: t('onboarding.originalDocs', 'מסמכים מקוריים (סריקה ראשונית)'),
+          content: form.bookings.trim(),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+
       // Comprehensive AI Generation
       if (!skipAI && tempApiKey.trim()) {
         try {

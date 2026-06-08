@@ -25,6 +25,7 @@ interface DocumentExtractionResult {
     referenceNumber: string;
     notes?: string;
   }[];
+  fullText?: string;
 }
 
 const DOCUMENT_ANALYZER_PROMPT = `You are an expert data extraction AI.
@@ -33,6 +34,7 @@ Extract:
 1. Itinerary Events (e.g., flight times, tour dates). Map them to YYYY-MM-DD.
 2. Prepaid Expenses (e.g., the cost of the booking/receipt).
 3. Document References (e.g., Booking PNRs, ticket numbers).
+4. Full Text: Transcribe the complete text from the document.
 
 Return ONLY valid JSON matching this exact schema:
 {
@@ -48,7 +50,8 @@ Return ONLY valid JSON matching this exact schema:
   ],
   "documents": [
     { "title": "String", "referenceNumber": "String", "notes": "String" }
-  ]
+  ],
+  "fullText": "String"
 }
 
 If no events/expenses/documents are found, return empty arrays.`;
@@ -82,7 +85,8 @@ Destinations: ${tripProfile.destinations.join(', ')}
   const parsed = parseAIJson<DocumentExtractionResult>(text, {
     itineraryEvents: [],
     expenses: [],
-    documents: []
+    documents: [],
+    fullText: ''
   });
 
   const promises: Promise<any>[] = [];

@@ -61,6 +61,10 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
                 <p className="text-sm leading-relaxed">רשימת ציוד ומטלות לפני ובזמן הטיול (כמו ויזה, ביטוח, אריזה). ניתן לבקש התראות ולסמן V על מה שבוצע.</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                <h4 className="font-bold mb-1 flex items-center gap-2"><FileText size={16} className="text-amber-500"/> מסמכים</h4>
+                <p className="text-sm leading-relaxed">ארכיון של כל המסמכים שנסרקו, כרטיסי טיסה והזמנות מלון. שומר את הטקסט באופן שאינו תופס מקום וניתן לעריכה ויצירה ידנית.</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <h4 className="font-bold mb-1 flex items-center gap-2"><Navigation size={16} className="text-indigo-500"/> מיקומים</h4>
                 <p className="text-sm leading-relaxed">מראה את המיקום בזמן אמת של המשתתפים בטיול על גבי מפה, ומאפשר לבקש המלצות לאטרקציות ומקומות מעניינים בקרבת מקום.</p>
               </div>

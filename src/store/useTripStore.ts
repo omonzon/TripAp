@@ -84,6 +84,15 @@ export interface AvailableTrip {
   destinations: string[];
 }
 
+export interface TripDocument {
+  id: string;
+  title: string;
+  content: string;
+  link?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 interface TripState {
   currentTripId: string | null;
   tripProfile: TripProfile | null;
