@@ -411,21 +411,27 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
 
         {mapUrl ? (
           <div className="flex flex-col gap-3">
-            <div className="h-40 md:h-64 w-full rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden relative group">
-              <a href={mapUrl} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
-                 <span className="px-4 py-2 bg-white/90 backdrop-blur-sm text-brand-700 font-bold rounded-full shadow-lg flex items-center gap-2 transform group-hover:scale-105 transition-all">
-                   פתח מפה <ExternalLink size={14} />
+            <div className="h-40 md:h-48 w-full rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative group bg-slate-100 dark:bg-slate-800">
+              {/* Abstract Map Background CSS Pattern */}
+              <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '30px 30px' }}></div>
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-600/80 to-brand-400/70 dark:from-brand-900/80 dark:to-brand-800/70"></div>
+              
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center pointer-events-none">
+                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 shadow-lg">
+                  <MapPin size={24} className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-1">המפה מוכנה!</h3>
+                <p className="text-brand-50 text-sm max-w-lg mx-auto mb-4">
+                  נתיב המסלול חולץ בהצלחה לגוגל מפות
+                </p>
+              </div>
+
+              <a href={mapUrl} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
+                 <span className="px-5 py-2.5 mt-20 bg-white text-brand-700 font-bold rounded-full shadow-lg flex items-center gap-2 transform group-hover:scale-105 transition-all">
+                   פתח מפה <ExternalLink size={16} />
                  </span>
               </a>
-              {tripProfile?.generatedMapUrl ? (
-                <div className="w-full h-full pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity">
-                  <AlbumPreview url={tripProfile.generatedMapUrl} />
-                </div>
-              ) : (
-                <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center opacity-80" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '30px 30px' }}>
-                  <MapPin size={48} className="text-slate-300 dark:text-slate-600 drop-shadow-md" />
-                </div>
-              )}
             </div>
           </div>
         ) : (
@@ -442,7 +448,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 <PenTool size={18} className="text-brand-500" />
-                Trip Journal
+                {t('memories.tripJournal', 'יומן מסע')}
                 {isSaving && <Loader2 size={14} className="animate-spin text-slate-400 ms-2" />}
               </h2>
               <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1 text-xs font-medium">
@@ -450,19 +456,19 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                   onClick={() => setJournalMode('group')} 
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${journalMode === 'group' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
-                  <Users size={12} /> Group
+                  <Users size={12} /> {t('memories.group', 'קבוצתי')}
                 </button>
                 <button 
                   onClick={() => setJournalMode('private')} 
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${journalMode === 'private' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
-                  <Lock size={12} /> Private
+                  <Lock size={12} /> {t('memories.private', 'פרטי')}
                 </button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto mb-4 space-y-3 pe-2 max-h-[350px]">
               {entries.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">No entries yet. Write your first thought!</p>
+                <p className="text-sm text-slate-400 text-center py-4">{t('memories.noEntries', 'אין רשומות עדיין. כתבו משהו!')}</p>
               ) : (
                 entries.map(e => (
                   <div key={e.id} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-fade-in group">
@@ -500,8 +506,8 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                           dir="ltr"
                         />
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => setEditingId(null)} className="btn-secondary text-xs py-1 px-3">Cancel</button>
-                          <button onClick={saveEditEntry} className="btn-primary text-xs py-1 px-3">Save</button>
+                          <button onClick={() => setEditingId(null)} className="btn-secondary text-xs py-1 px-3">{t('app.cancel', 'ביטול')}</button>
+                          <button onClick={saveEditEntry} className="btn-primary text-xs py-1 px-3">{t('app.save', 'שמור')}</button>
                         </div>
                       </div>
                     ) : (
@@ -529,7 +535,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
               <textarea
                 value={newEntry}
                 onChange={e => setNewEntry(e.target.value)}
-                placeholder="Write down your thoughts, funny moments, or expenses..."
+                placeholder={t('memories.journalPlaceholder', 'כתבו את המחשבות שלכם, רגעים מצחיקים, הוצאות...')}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-brand-500 resize-none shadow-sm"
                 rows={3}
                 dir="auto"
@@ -538,7 +544,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                 type="url"
                 value={newImageLink}
                 onChange={e => setNewImageLink(e.target.value)}
-                placeholder="Image or album URL (optional)"
+                placeholder={t('memories.imagePlaceholder', 'קישור לתמונה או אלבום (אופציונלי)')}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-brand-500 shadow-sm"
                 dir="ltr"
               />
@@ -548,7 +554,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                 className="btn-primary py-2 px-4 self-end text-xs flex items-center gap-2 rounded-lg"
               >
                 {isSaving ? <Loader2 size={14} className="animate-spin" /> : <PenTool size={14} />}
-                Add Entry
+                {t('memories.addEntry', 'הוסף רשומה')}
               </button>
             </div>
           </div>
@@ -556,7 +562,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
           <div className="card p-5 shadow-sm shrink-0">
             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
               <ImageIcon size={18} className="text-brand-500" />
-              Photo Albums
+              {t('memories.photoAlbums', 'אלבומי תמונות')}
             </h2>
             {tripProfile?.photoAlbums && tripProfile.photoAlbums.length > 0 ? (
               <div className="grid grid-cols-2 gap-3 mb-4">
@@ -574,7 +580,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
               </div>
             ) : (
               <p className="text-sm text-slate-500 text-center py-6 bg-slate-50 dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 mb-4">
-                No albums added yet. Add Google Photos or other image links below.
+                {t('memories.noAlbums', 'לא נוספו אלבומים עדיין. הוסיפו קישורי Google Photos או תמונות אחרות.')}
               </p>
             )}
 
@@ -605,7 +611,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 <Sparkles size={18} className="text-brand-500" />
-                AI Post Generator & Summary
+                {t('memories.aiPostGenerator', 'מחולל פוסטים AI')}
               </h2>
               <div className="flex gap-2">
                 <button 
@@ -614,7 +620,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                   className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
                 >
                   {isSummarizing ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                  Summarize
+                  {t('memories.summarize', 'סכם לי')}
                 </button>
               </div>
             </div>
@@ -625,9 +631,9 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                 onChange={e => setPostLength(e.target.value as any)}
                 className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium outline-none text-slate-700 dark:text-slate-300 focus:border-brand-500 cursor-pointer"
               >
-                <option value="short">Short</option>
-                <option value="medium">Medium</option>
-                <option value="long">Long</option>
+                <option value="short">{t('memories.short', 'קצר')}</option>
+                <option value="medium">{t('memories.medium', 'בינוני')}</option>
+                <option value="long">{t('memories.long', 'ארוך')}</option>
               </select>
             </div>
             
@@ -637,7 +643,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
               className="w-full btn-primary py-3.5 flex justify-center items-center gap-2 mb-4 text-base shadow-md"
             >
               {isGenerating ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
-              {isGenerating ? 'Generating Post...' : 'Generate Social Media Post'}
+              {isGenerating ? t('memories.generatingPost', 'מייצר פוסט...') : t('memories.generateSocialPost', 'צור פוסט לרשתות חברתיות')}
             </button>
 
             {generatedPost && (
@@ -665,7 +671,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
           <div className="card p-5 shadow-sm">
             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
               <MapPin size={18} className="text-brand-500" />
-              Places Visited
+              {t('memories.placesVisited', 'מקומות בהם ביקרנו')}
             </h2>
             <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto hide-scrollbar">
               {days.flatMap(d => d.items.filter(i => i.type !== 'flight').map(i => (
@@ -674,7 +680,7 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                 </span>
               )))}
               {days.every(d => d.items.length === 0) && (
-                <span className="text-sm text-slate-400">No places added to the itinerary yet.</span>
+                <span className="text-sm text-slate-400">{t('memories.noPlaces', 'לא נוספו מקומות למסלול עדיין.')}</span>
               )}
             </div>
           </div>
