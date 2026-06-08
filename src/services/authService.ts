@@ -30,6 +30,7 @@ export function initFirebaseAuth() {
       setAuthLoading(false);
       useTripStore.getState().setCurrentTrip(null);
       useTripStore.getState().setAvailableTrips([]);
+      useAIStore.getState().setApiKey('');
       return;
     }
 
