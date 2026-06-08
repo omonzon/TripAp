@@ -64,7 +64,7 @@ export default function OnboardingView() {
   ];
 
   React.useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (generating) {
       interval = setInterval(() => {
         setLoadingPhraseIndex((prev) => (prev + 1) % loadingPhrases.length);

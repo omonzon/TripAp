@@ -46,7 +46,7 @@ export function initFirebaseAuth() {
           email: firebaseUser.email!,
           name: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
           role: 'admin', // First user to sign in becomes admin
-          photoURL: firebaseUser.photoURL ?? null,
+          ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
         };
         await setDoc(userRef, newUser);
         setAppUser(newUser);
