@@ -123,8 +123,9 @@ export default function DocumentsView() {
     }
 
     // Optional: Basic file type validation
-    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      showToast({ type: 'error', message: t('documents.unsupportedFormat', 'פורמט קובץ לא נתמך. אנא השתמש בתמונה או PDF.') });
+    const allowedTypes = ['image/', 'application/pdf', 'text/', 'application/msword', 'application/vnd.openxmlformats-officedocument'];
+    if (!allowedTypes.some(t => file.type.startsWith(t)) && file.type !== '') {
+      showToast({ type: 'error', message: t('documents.unsupportedFormat', 'פורמט קובץ לא נתמך. תומך בתמונות, מסמכי PDF, ורד וטקסט.') });
       return;
     }
 
@@ -218,7 +219,7 @@ export default function DocumentsView() {
         }
       }}
     >
-      <input type="file" ref={fileRef} className="hidden" accept="image/*,application/pdf" onChange={e => e.target.files?.[0] && processFile(e.target.files[0])} />
+      <input type="file" ref={fileRef} className="hidden" accept="image/*,application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={e => e.target.files?.[0] && processFile(e.target.files[0])} />
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
