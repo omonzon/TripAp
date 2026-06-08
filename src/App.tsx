@@ -13,6 +13,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { TabBar } from '@/components/layout/TabBar';
 import { Toast } from '@/components/ui/Toast';
 import { ToSModal } from '@/components/ToSModal';
+import { BlockedScreen } from '@/components/auth/BlockedScreen';
 import { createFullBackup } from '@/services/backupService';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/services/firebase';
@@ -180,6 +181,10 @@ export default function App() {
 
   if (!firebaseUser || !appUser) {
     return <AuthScreen />;
+  }
+
+  if (appUser.isBlocked) {
+    return <BlockedScreen />;
   }
 
   if (!appUser.tosAccepted) {

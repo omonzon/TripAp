@@ -76,8 +76,20 @@ export function initFirebaseAuth() {
     if (profileSnap.exists()) {
       const data = profileSnap.data();
       const savedTripId = data?.activeTripId as string | undefined;
+      
       if (savedTripId) {
-        useTripStore.getState().setCurrentTrip(savedTripId);
+        // Double check the user still has access to this trip
+        const userDoc = await getDoc(userRef);
+        const userTrips = userDoc.data()?.trips || [];
+        const hasAccess = userTrips.some((t: any) => t.id === savedTripId);
+        
+        if (hasAccess) {
+          useTripStore.getState().setCurrentTrip(savedTripId);
+        } else {
+          useTripStore.getState().setCurrentTrip(null);
+        }
+      } else {
+        useTripStore.getState().setCurrentTrip(null);
       }
       
       // Sync global settings from cloud
