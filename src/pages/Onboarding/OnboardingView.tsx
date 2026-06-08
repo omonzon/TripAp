@@ -382,6 +382,7 @@ export default function OnboardingView() {
 
       setTripProfile(profile);
       setGeneratedTripId(tripId);
+      setCurrentTrip(tripId);
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
       
     } catch (err: any) {
@@ -403,6 +404,7 @@ export default function OnboardingView() {
     try {
       showToast({ type: 'info', message: t('onboarding.restoringToast', 'Restoring trip...') });
       const newTripId = await restoreTripFromFile(file, appUser.email, appUser.name);
+      setCurrentTrip(newTripId);
       showToast({ type: 'success', message: t('onboarding.restoreSuccess', 'Trip restored successfully! 🎉') });
     } catch (err) {
       showToast({ type: 'error', message: t('onboarding.restoreError', 'Failed to restore trip from file.') });

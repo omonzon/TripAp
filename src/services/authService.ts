@@ -43,8 +43,8 @@ export function initFirebaseAuth() {
     if ((window as any)._userUnsub) { (window as any)._userUnsub(); }
     
     (window as any)._userUnsub = onSnapshot(userRef, async (userSnap) => {
-      if (!userSnap.exists()) {
-        // First-time user — create a basic profile
+      if (!userSnap.exists() || !(userSnap.data() as AppUser).email) {
+        // First-time user (or user who was invited and only has a 'trips' array)
         const newUser: AppUser = {
           email: firebaseUser.email!,
           name: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
@@ -52,8 +52,18 @@ export function initFirebaseAuth() {
           createdAt: Date.now(),
           ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
         };
-        await setDoc(userRef, newUser);
-        setAppUser(newUser);
+        // Merge so we don't overwrite the existing 'trips' array if they were invited
+        await setDoc(userRef, newUser, { merge: true });
+        
+        const existingData = userSnap.exists() ? userSnap.data() : {};
+        const mergedUser = { ...existingData, ...newUser } as AppUser;
+        setAppUser(mergedUser);
+        
+        if ((mergedUser as any).trips) {
+          useTripStore.getState().setAvailableTrips((mergedUser as any).trips);
+        } else {
+          useTripStore.getState().setAvailableTrips([]);
+        }
       } else {
         const data = userSnap.data() as AppUser;
         if (data.isBlocked) {
