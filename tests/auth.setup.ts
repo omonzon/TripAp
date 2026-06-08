@@ -2,7 +2,7 @@ import { test as setup } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-const authFile = path.join(__dirname, '../playwright/.auth/user.json');
+const authFile = path.resolve('playwright/.auth/user.json');
 
 setup('authenticate', async ({ page }) => {
   // If the auth file already exists, we skip logging in again
