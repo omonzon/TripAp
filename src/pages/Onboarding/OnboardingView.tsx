@@ -52,6 +52,7 @@ export default function OnboardingView() {
   const [addedSegments, setAddedSegments] = useState<{ id: string, type: 'text' | 'file', title: string, constraintsFound: number }[]>([]);
   const [currentSegmentText, setCurrentSegmentText] = useState('');
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
+  const [generatedTripId, setGeneratedTripId] = useState<string | null>(null);
 
   const loadingPhrases = [
     t('onboarding.loadingPhrase1', 'קורא מסמכים ותוהה למה אנשים מדפיסים כרטיסי טיסה...'),
@@ -307,7 +308,7 @@ export default function OnboardingView() {
       }
 
       setTripProfile(profile);
-      setCurrentTrip(tripId);
+      setGeneratedTripId(tripId);
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
       
     } catch (err: any) {
@@ -367,6 +368,35 @@ export default function OnboardingView() {
             {loadingPhrases[loadingPhraseIndex]}
           </p>
         </div>
+      </div>
+    );
+  }
+
+  // Success Screen
+  if (generatedTripId) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 flex flex-col items-center justify-center p-4">
+         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-lg w-full p-8 text-center animate-fade-in border border-slate-200 dark:border-slate-700">
+           <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+           </div>
+           <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-4">
+             המסלול שלכם מוכן! 🎉
+           </h2>
+           <p className="text-slate-600 dark:text-slate-300 mb-6 text-lg leading-relaxed text-right" dir="rtl">
+             הטיול תוכנן, המשימות ארוזות יפה והכל מחכה לכם. עכשיו זה הזמן שלכם:<br/><br/>
+             ✨ <strong>לעבור על המסלול</strong> ולשנות אותו איך שבא לכם<br/>
+             💬 <strong>לדבר עם העוזר האישי</strong> שלנו ולבקש בקשות מיוחדות<br/>
+             🏨 <strong>להתחיל להזמין</strong> טיסות, מלונות ואטרקציות<br/>
+             ✈️ והכי חשוב - <strong>להתכונן להרפתקה המדהימה</strong> שתכננתם!
+           </p>
+           <button 
+             onClick={() => setCurrentTrip(generatedTripId)}
+             className="btn-primary w-full text-lg py-4 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40 transition-shadow"
+           >
+             יאללה, בואו נראה! 🚀
+           </button>
+         </div>
       </div>
     );
   }
