@@ -102,8 +102,9 @@ export default function App() {
   // Validate currentTripId against the user's available trips
   useEffect(() => {
     if (appUser && currentTripId && currentTripId !== 'new') {
-      const hasAccess = appUser.trips?.some(t => t.id === currentTripId);
-      if (!hasAccess && appUser.trips) {
+      const trips = appUser.trips || [];
+      const hasAccess = trips.some(t => t.id === currentTripId);
+      if (!hasAccess) {
         useTripStore.getState().setCurrentTrip(null);
       }
     }
