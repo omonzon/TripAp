@@ -99,7 +99,7 @@ export default function SettingsView() {
     setSavingAffiliates(true);
     try {
       const parsed = JSON.parse(affiliateLinks);
-      await setDoc(doc(db, 'config', 'global'), { affiliateLinks: parsed }, { merge: true });
+      await setDoc(doc(db, 'platform_settings', 'global'), { affiliateLinks: parsed }, { merge: true });
       showToast({ type: 'success', message: 'Affiliate links saved!' });
     } catch (e) {
       showToast({ type: 'error', message: 'Invalid JSON format' });
@@ -729,6 +729,7 @@ export default function SettingsView() {
       </section>
 
       {/* ── Email Notification Settings ────────────────────────────────────────── */}
+      {isSuperAdmin && (
       <section className="card p-5 space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -812,6 +813,7 @@ export default function SettingsView() {
           {emailSaved ? t('settings.saved') : t('app.save')}
         </button>
       </section>
+      )}
 
 
       {/* ── Export Trip Data ───────────────────────────────────────────── */}

@@ -28,6 +28,7 @@ export function initFirebaseAuth() {
       setAppUser(null);
       setAuthLoading(false);
       useTripStore.getState().setCurrentTrip(null);
+      useTripStore.getState().setAvailableTrips([]);
       return;
     }
 
@@ -55,6 +56,8 @@ export function initFirebaseAuth() {
         setAppUser(data as AppUser);
         if (data && data.trips) {
           useTripStore.getState().setAvailableTrips(data.trips);
+        } else {
+          useTripStore.getState().setAvailableTrips([]);
         }
       }
     });
@@ -85,6 +88,18 @@ export function initFirebaseAuth() {
          if (ai.apiKey) useAIStore.getState().setApiKey(ai.apiKey);
          if (ai.models) useAIStore.setState({ models: ai.models });
       }
+    }
+
+    // Fetch global platform settings (like EmailJS configured by super admin)
+    try {
+      const platformRef = doc(db, 'platform_settings', 'global');
+      const platformSnap = await getDoc(platformRef);
+      if (platformSnap.exists()) {
+        const pData = platformSnap.data();
+        if (pData.emailjsConfig) useAuthStore.getState().setEmailjsConfig(pData.emailjsConfig);
+      }
+    } catch (e) {
+      console.error("Failed to fetch platform settings", e);
     }
 
     setAuthLoading(false);
@@ -122,6 +137,7 @@ export async function signOut() {
   await firebaseSignOut(auth);
   useTripStore.getState().setCurrentTrip(null);
   useTripStore.getState().setTripProfile(null);
+  useTripStore.getState().setAvailableTrips([]);
 }
 
 export async function syncUserSettingsToCloud() {
@@ -142,4 +158,10 @@ export async function syncUserSettingsToCloud() {
       models
     }
   }, { merge: true });
+
+  if (appUser.email === 'omonzon@gmail.com' && emailjsConfig) {
+    try {
+      await setDoc(doc(db, 'platform_settings', 'global'), { emailjsConfig }, { merge: true });
+    } catch(e) { console.error("Failed to sync global EmailJS config", e); }
+  }
 }
