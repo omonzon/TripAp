@@ -260,6 +260,24 @@ export default function SettingsView() {
     }
 
     if (successCount > 0) {
+      // Send invitation email via mailto
+      const tripName = tripProfile?.name || 'הטיול שלנו';
+      const inviterName = appUser?.name || appUser?.email?.split('@')[0] || '';
+      const appLink = window.location.origin;
+      
+      const isHebrew = t('app.direction', 'rtl') === 'rtl';
+      
+      const subject = isHebrew 
+        ? `הזמנה להצטרף לטיול "${tripName}"! ✈️` 
+        : `You're invited to join the trip "${tripName}"! ✈️`;
+        
+      const body = isHebrew
+        ? `היי!\n\n${inviterName} מזמין/ה אותך להצטרף לארגון הטיול "${tripName}" באפליקציית הטיולים שלנו.\nהגיע הזמן להתחיל לארוז (או לפחות להעמיד פנים שאנחנו מתכננים משהו)! 😉\n\nלחץ/י כאן כדי להתחבר לטיול:\n${appLink}\n\nנתראה שם!\n${inviterName}`
+        : `Hey!\n\n${inviterName} invites you to join the planning for the trip "${tripName}" on our travel app.\nIt's time to start packing (or at least pretend we're planning something)! 😉\n\nClick here to join the trip:\n${appLink}\n\nSee you there!\n${inviterName}`;
+
+      const mailtoLink = `mailto:${cleanEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoLink;
+
       setNewUserEmail('');
       showToast({ type: 'success', message: t('settings.userAdded') });
     }
