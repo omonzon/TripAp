@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, MapPin, ExternalLink, Loader2, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useAIStore } from '@/store/useAIStore';
 import { callAI } from '@/services/ai';
@@ -49,9 +50,9 @@ export default function LocationInfoModal({ locationName, onClose }: LocationInf
   const shortSearchTerm = locationName.split(/[,.\n]/)[0].trim() || locationName;
   const searchQuery = encodeURIComponent(shortSearchTerm);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex justify-center items-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex justify-center items-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in overflow-y-auto" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
           <h2 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
             <MapPin className="text-brand-500" size={20} />
@@ -115,6 +116,7 @@ export default function LocationInfoModal({ locationName, onClose }: LocationInf
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

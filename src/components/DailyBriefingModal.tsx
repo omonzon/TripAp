@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Loader2, Sun } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type ItineraryItem } from '@/store/useTripStore';
@@ -68,9 +69,9 @@ Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 w
     fetchBriefing();
   }, [todayItems, tripName, apiKey, getProviderForTask, t]);
 
-  return (
-    <div className="fixed inset-0 z-[200] flex justify-center items-start px-4 pb-4 pt-20 sm:pt-24 bg-slate-900/60 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col relative">
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex justify-center items-start px-4 pb-4 pt-20 sm:pt-24 bg-slate-900/60 backdrop-blur-md animate-fade-in overflow-y-auto" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col relative" onClick={e => e.stopPropagation()}>
         <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-amber-300 to-orange-500 opacity-20"></div>
         
         <button
@@ -118,6 +119,7 @@ Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 w
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
