@@ -1,6 +1,7 @@
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 import { useTripStore } from '@/store/useTripStore';
+import i18n from '@/i18n';
 
 export async function getTripDataForExport(tripId: string) {
   const tripProfile = useTripStore.getState().tripProfile;
@@ -182,6 +183,14 @@ async function generateHTML(tripId: string) {
             </div>
           </div>
         `).join('')}
+      </div>
+
+      <div style="margin-top: 60px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 14px;">
+        <img src="https://trip-ap.vercel.app/logo.png" alt="TripAp Logo" style="width: 32px; height: 32px; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;" />
+        <p style="margin: 0; font-weight: 500;">
+          ${i18n.language === 'he' ? 'נוצר באהבה על ידי TripAp' : 'Created with love by TripAp'}
+        </p>
+        <a href="https://trip-ap.vercel.app/" target="_blank" style="color: #2563eb; text-decoration: none; font-size: 13px;">https://trip-ap.vercel.app/</a>
       </div>
     </body>
     </html>
