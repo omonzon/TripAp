@@ -105,17 +105,17 @@ export default function GroupChatView() {
                   </div>
                 )}
 
-                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm relative ${
-                  me
-                    ? 'bg-brand-600 text-white rounded-br-sm'
-                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'
-                }`}>
-                  <p className={`text-xs font-bold mb-1 ${me ? 'text-brand-100' : 'text-brand-600 dark:text-brand-400'}`}>
-                    {msg.authorName}
-                  </p>
-                  
-                  {editingId === msg.id ? (
-                    <div className="flex items-center gap-2 mt-1">
+                <div className={`flex flex-col gap-1 w-full max-w-[75%] ${me ? 'items-end' : 'items-start'}`}>
+                  {!me && msg.authorName && (
+                    <span className="text-[10px] text-slate-500 mx-1 font-medium">{msg.authorName}</span>
+                  )}
+                  <div className={`w-full rounded-2xl px-4 py-2.5 shadow-sm relative ${
+                    me
+                      ? 'bg-brand-600 text-white rounded-br-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'
+                  }`}>
+                    {editingId === msg.id ? (
+                      <div className="flex items-center gap-2 mt-1">
                       <input 
                         value={editText} 
                         onChange={(e) => setEditText(e.target.value)} 
@@ -128,11 +128,12 @@ export default function GroupChatView() {
                     </div>
                   ) : (
                     <p className="text-sm leading-relaxed whitespace-pre-wrap" dir="auto">{msg.text}</p>
-                  )}
-                  
-                  <p className={`text-[10px] mt-1 ${me ? 'text-brand-200' : 'text-slate-400'}`}>
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                    )}
+                    
+                    <p className={`text-[10px] mt-1 ${me ? 'text-brand-200' : 'text-slate-400'}`}>
+                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
                 </div>
               </div>
             );

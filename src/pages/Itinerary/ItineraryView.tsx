@@ -147,7 +147,7 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
 }
 
 // ── Service Links Widget ───────────────────────────────────────────────────────
-function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay }: { item: ItineraryItem, isoDate: string, participantsCount: number, tripName: string, isLastDay?: boolean }) {
+function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, city }: { item: ItineraryItem, isoDate: string, participantsCount: number, tripName: string, isLastDay?: boolean, city?: string }) {
   const handleClick = (e: React.MouseEvent) => e.stopPropagation();
 
   if (isLastDay && item.type === 'flight') return null;
@@ -156,9 +156,15 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay }:
 
   let customLinks: React.ReactNode[] = [];
   if (item.type === 'food') {
-    const foodSearch = encodeURIComponent(item.text.split(/[:\.\-]/).pop()?.replace(/<[^>]*>?/gm, '').trim() || tripName);
+    const cleanHtmlText = item.text.replace(/<[^>]*>?/gm, '').trim();
+    let foodSearchText = cleanHtmlText.includes(':') 
+      ? cleanHtmlText.split(':').pop()?.trim() 
+      : cleanHtmlText.split(/[.\-]/).pop()?.trim() || cleanHtmlText;
+      
+    const query = encodeURIComponent(`${foodSearchText} ${city || tripName}`.trim());
+    
     customLinks.push(
-      <a key="food" href={`https://www.google.com/maps/search/?api=1&query=${foodSearch}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors border border-red-200 dark:border-red-800">
+      <a key="food" href={`https://www.google.com/maps/search/?api=1&query=${query}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors border border-red-200 dark:border-red-800">
         <MapPin size={10} /> Google Maps
       </a>
     );
@@ -323,9 +329,10 @@ export default function ItineraryView() {
         return;
       }
       const newItem: ItineraryItem = {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        id: Date.now().toString(),
         type: parsed.itemType || 'map',
         text: parsed.text,
+        authorName: appUser?.name || 'User',
       };
       await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', targetDay.docId), {
         items: [...(targetDay.items ?? []), newItem],
@@ -803,12 +810,10 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                         ) : (
                           <>
                             <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content" dangerouslySetInnerHTML={{ __html: item.text }} />
-                            {item.authorName && (
-                              <div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 w-max px-2 py-0.5 rounded">
-                                {item.authorName === 'AI' ? <Sparkles size={10} className="text-brand-500" /> : <User size={10} />}
-                                {item.authorName}
-                              </div>
-                            )}
+                            {<div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 w-max px-2 py-0.5 rounded">
+                              {(item.authorName || 'AI') === 'AI' ? <Sparkles size={10} className="text-brand-500" /> : <User size={10} />}
+                              {item.authorName || 'AI'}
+                            </div>}
                             {(item.type === 'location' || item.type === 'poi') && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
@@ -824,7 +829,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                               </span>
                             )}
                             <div className="mt-2">
-                              <ServiceLinks item={item} isoDate={day.isoDate || day.date} participantsCount={tripProfile?.participants?.length || 2} tripName={tripProfile?.name || ''} isLastDay={idx === days.length - 1} />
+                              <ServiceLinks item={item} isoDate={day.isoDate || day.date} participantsCount={tripProfile?.participants?.length || 2} tripName={tripProfile?.name || ''} isLastDay={idx === days.length - 1} city={tripProfile?.destinations?.[0] || ''} />
                             </div>
                             {item.type === 'flight' && (
                               <FlightWidget item={item} dayDocId={day.docId} days={days} />

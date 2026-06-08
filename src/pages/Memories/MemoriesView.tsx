@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText, Trash2, Plus, ExternalLink } from 'lucide-react';
 import { useTripStore } from '@/store/useTripStore';
+import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2, Share2, Copy, Lock, Users, FileText, Trash2, Plus, ExternalLink, User } from 'lucide-react';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAIStore } from '@/store/useAIStore';
@@ -373,6 +373,12 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
                       </div>
                     ) : (
                       <>
+                        {e.authorName && (
+                          <div className="text-[10px] text-brand-500 font-medium mb-1.5 flex items-center gap-1">
+                            {e.authorName === 'AI' ? <Sparkles size={10} /> : <User size={10} />}
+                            {e.authorName}
+                          </div>
+                        )}
                         <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{e.text}</p>
                         {e.imageLink && (
                           <div className="mt-2 w-32">

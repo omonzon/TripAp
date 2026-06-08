@@ -24,6 +24,7 @@ interface Expense {
   targetCurrency: string;
   notes: string;
   authorEmail: string;
+  authorName?: string;
   createdAt: number;
 }
 
@@ -125,13 +126,16 @@ export default function ExpensesView() {
       amountConverted: Number(form.amountConverted),
       targetCurrency,
       notes: form.notes,
-      authorEmail: appUser.email,
-      createdAt: Date.now(),
     };
     if (editingId) {
       await updateDoc(doc(db, 'trips', currentTripId, 'expenses', editingId), payload);
     } else {
-      await addDoc(collection(db, 'trips', currentTripId, 'expenses'), payload);
+      await addDoc(collection(db, 'trips', currentTripId, 'expenses'), {
+        ...payload,
+        authorEmail: appUser.email,
+        authorName: appUser.name,
+        createdAt: Date.now()
+      });
     }
     setShowForm(false); setEditingId(null);
     setForm({ store: '', amount: '', currency: 'USD', category: 'other', amountConverted: '', notes: '' });
@@ -243,7 +247,7 @@ export default function ExpensesView() {
                   <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="p-3 font-medium text-slate-800 dark:text-white">
                       <div>{ex.store || '—'}</div>
-                      {ex.authorEmail && <div className="text-[10px] text-slate-400 font-normal mt-0.5">{ex.authorEmail.split('@')[0]}</div>}
+                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">{ex.authorName || ex.authorEmail?.split('@')[0]}</div>
                     </td>
                     <td className="p-3 font-bold text-slate-900 dark:text-white">
                       {ex.amount.toLocaleString()} <span className="text-xs font-normal text-slate-400">{ex.currency}</span>
