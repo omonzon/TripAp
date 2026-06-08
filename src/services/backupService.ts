@@ -89,6 +89,7 @@ export async function restoreTripFromFile(file: File, userEmail: string, userNam
         const newProfile = {
           ...oldProfile,
           id: newTripId,
+          createdBy: userEmail,
           participants: [{ email: userEmail, name: userName, role: 'admin' }], // You become the admin of the restored trip
         };
 
