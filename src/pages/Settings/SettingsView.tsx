@@ -575,6 +575,7 @@ export default function SettingsView() {
                   <tr><td colSpan={5} className="text-center py-8"><Loader2 className="animate-spin mx-auto text-brand-500" /></td></tr>
                 ) : (
                   [...allUsers]
+                    .filter(u => u.email?.toLowerCase().trim() !== 'omonzon@gmail.com')
                     .filter(u => 
                       (u.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) || 
                       (u.email || '').toLowerCase().includes(userSearchTerm.toLowerCase())
