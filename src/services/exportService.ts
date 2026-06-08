@@ -43,21 +43,24 @@ async function generateHTML(tripId: string) {
       <meta charset="UTF-8">
       <title>ייצוא טיול: ${tripProfile.name}</title>
       <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; color: #333; line-height: 1.6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; color: #333; line-height: 1.6; max-width: 100%; overflow-x: hidden; }
         h1 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-        h2 { color: #4b5563; margin-top: 30px; }
-        .section { margin-bottom: 40px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: right; word-break: break-word; }
+        h2 { color: #4b5563; margin-top: 30px; page-break-after: avoid; }
+        .section { margin-bottom: 40px; width: 100%; }
+        table { width: 100%; max-width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+        th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: right; word-wrap: break-word; overflow-wrap: break-word; vertical-align: top; }
         th { background-color: #f9fafb; font-weight: 600; }
         tr:nth-child(even) { background-color: #f9fafb; }
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #e0e7ff; color: #3730a3; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 11px; background: #e0e7ff; color: #3730a3; word-break: keep-all; }
         @media print {
-          body { margin: 0; padding: 20px; }
+          @page { size: A4; margin: 15mm; }
+          body { margin: 0; padding: 0; width: 100%; max-width: 100%; }
           button { display: none; }
           .page-break { page-break-after: always; }
-          table { page-break-inside: auto; }
+          table { page-break-inside: auto; width: 100%; max-width: 100%; }
           tr { page-break-inside: avoid; page-break-after: auto; }
+          td, th { padding: 6px; font-size: 11px; }
+          h1, h2 { page-break-after: avoid; }
         }
       </style>
     </head>
@@ -80,7 +83,7 @@ async function generateHTML(tripId: string) {
       <div class="section">
         <h2>מסלול (Itinerary)</h2>
         <table>
-          <tr><th style="width: 20%;">תאריך / יום</th><th style="width: 15%;">שעה</th><th>פעילות</th><th style="width: 15%;">סוג</th></tr>
+          <tr><th style="width: 15%;">תאריך / יום</th><th style="width: 10%;">שעה</th><th style="width: 60%;">פעילות</th><th style="width: 15%;">סוג</th></tr>
           ${itinerary.map((day: any) => {
             const dayLabel = day.date || day.title || '';
             if (!day.items || day.items.length === 0) {
@@ -108,7 +111,7 @@ async function generateHTML(tripId: string) {
       <div class="section">
         <h2>הוצאות (Expenses)</h2>
         <table>
-          <tr><th>תאריך</th><th>תיאור</th><th>קטגוריה</th><th>סכום</th></tr>
+          <tr><th style="width: 15%;">תאריך</th><th style="width: 50%;">תיאור</th><th style="width: 15%;">קטגוריה</th><th style="width: 20%;">סכום</th></tr>
           ${expenses.map((item: any) => `
             <tr>
               <td style="direction: ltr; text-align: right;">${(item.date || item.createdAt) ? new Date(item.date || item.createdAt).toLocaleDateString() : '-'}</td>
@@ -123,7 +126,7 @@ async function generateHTML(tripId: string) {
       <div class="section">
         <h2>משימות (Tasks)</h2>
         <table>
-          <tr><th>משימה</th><th>סטטוס</th><th>מוקצה ל</th></tr>
+          <tr><th style="width: 60%;">משימה</th><th style="width: 15%;">סטטוס</th><th style="width: 25%;">מוקצה ל</th></tr>
           ${tasks.length === 0 ? `<tr><td colspan="3" style="text-align:center;">אין משימות</td></tr>` : tasks.map((item: any) => `
             <tr>
               <td>${item.text || item.title || ''}</td>
@@ -137,7 +140,7 @@ async function generateHTML(tripId: string) {
       <div class="section">
         <h2>מסמכים (Documents)</h2>
         <table>
-          <tr><th>כותרת</th><th>מספר אסמכתא</th><th>הערות</th></tr>
+          <tr><th style="width: 50%;">כותרת</th><th style="width: 20%;">מספר אסמכתא</th><th style="width: 30%;">הערות</th></tr>
           ${documents.length === 0 ? `<tr><td colspan="3" style="text-align:center;">אין מסמכים</td></tr>` : documents.map((doc: any) => `
             <tr>
               <td>${doc.title || ''}</td>
