@@ -7,20 +7,25 @@ import { db } from '@/services/firebase';
 
 export function ToSModal() {
   const { t } = useTranslation();
-  const { appUser } = useAuthStore();
+  const { appUser, firebaseUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
   const handleAgree = async () => {
-    if (!appUser?.email) return;
+    const email = appUser?.email || firebaseUser?.email;
+    if (!email) {
+      alert("Error: User email is missing. Please refresh and try again.");
+      return;
+    }
     setLoading(true);
     try {
-      const userRef = doc(db, 'users', appUser.email);
+      const userRef = doc(db, 'users', email);
       await setDoc(userRef, {
         tosAccepted: true,
         tosAcceptedAt: Date.now()
       }, { merge: true });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to accept ToS", err);
+      alert("Error saving your agreement: " + err.message);
     }
     setLoading(false);
   };
