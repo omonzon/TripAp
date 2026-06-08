@@ -20,6 +20,7 @@ export interface TripProfile {
   pace: 'relaxed' | 'moderate' | 'intense';
   preferences: string; // free text → semantic extraction
   photoAlbums?: string[];
+  generatedMapUrl?: string;
   tripStyle?: string[]; // e.g. diving, trekking, food, etc.
   phase: TripPhase;
   createdBy?: string;

@@ -6,7 +6,7 @@ import { Sparkles, MapPin, Image as ImageIcon, BookOpen, PenTool, Loader2, Link2
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAIStore } from '@/store/useAIStore';
-import { callAI } from '@/services/ai';
+import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 
 function AlbumPreview({ url }: { url: string }) {
@@ -80,8 +80,20 @@ export default function MemoriesView() {
   const [editImageLink, setEditImageLink] = useState('');
   const [newAlbumUrl, setNewAlbumUrl] = useState('');
 
-  // Use the trip profile destinations for a clean and accurate map route
-  const mapUrl = React.useMemo(() => {
+  const [mapLevel, setMapLevel] = useState<'full' | 'detailed' | 'cities' | 'countries'>('cities');
+  const [mapDateStart, setMapDateStart] = useState<string>('');
+  const [mapDateEnd, setMapDateEnd] = useState<string>('');
+  const [isGeneratingMap, setIsGeneratingMap] = useState(false);
+
+  useEffect(() => {
+    if (tripProfile && !mapDateStart && !mapDateEnd) {
+      setMapDateStart(tripProfile.startDate);
+      setMapDateEnd(tripProfile.endDate);
+    }
+  }, [tripProfile]);
+
+  // Use generated map or fallback to destinations
+  const mapUrl = tripProfile?.generatedMapUrl || React.useMemo(() => {
     const dests = tripProfile?.destinations || [];
     if (dests.length === 0) return null;
     
@@ -102,6 +114,70 @@ export default function MemoriesView() {
     }
     return url;
   }, [tripProfile?.destinations]);
+
+  const generateSmartMap = async () => {
+    if (!currentTripId || !tripProfile) return;
+    setIsGeneratingMap(true);
+    try {
+      // Filter days
+      const filteredDays = days.filter(d => {
+        if (!mapDateStart && !mapDateEnd) return true;
+        let ok = true;
+        if (mapDateStart && d.isoDate < mapDateStart) ok = false;
+        if (mapDateEnd && d.isoDate > mapDateEnd) ok = false;
+        return ok;
+      });
+
+      const itemsText = filteredDays.map(d => 
+        `Day ${d.date}: ` + d.items.filter(i => i.type !== 'flight').map(i => i.text).join(', ')
+      ).join('\n');
+
+      const system = `You are a helpful travel assistant. The user wants to generate a Google Maps route from their itinerary.
+They requested the detail level: ${mapLevel} (full = every single stop, detailed = main stops, cities = only cities/towns, countries = only countries).
+Extract a clean list of places in chronological order from the provided itinerary.
+Remove all descriptions, times, activities, and extra notes.
+Return ONLY a valid JSON array of strings representing the clean location names, e.g. ["Paris", "Lyon", "Marseille"]. Do not return anything else.`;
+
+      const prompt = `Here is the itinerary:\n${itemsText}`;
+
+      const reply = await callAI([{ role: 'user', text: prompt }], getProviderForTask('extraction'), { systemInstruction: system, isJson: true });
+      const places = parseAIJson<string[]>(reply, []);
+
+      if (!Array.isArray(places) || places.length === 0) {
+        throw new Error('No places found');
+      }
+
+      // Limit to 10 waypoints max (12 points total) due to Google Maps URL limits
+      const maxWaypoints = 10;
+      const safePlaces = places.length > maxWaypoints + 2 
+        ? [places[0], ...places.slice(1, -1).slice(0, maxWaypoints), places[places.length - 1]] 
+        : places;
+
+      let url = '';
+      if (safePlaces.length === 1) {
+        url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(safePlaces[0])}`;
+      } else {
+        const origin = encodeURIComponent(safePlaces[0]);
+        const destination = encodeURIComponent(safePlaces[safePlaces.length - 1]);
+        url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+        if (safePlaces.length > 2) {
+          const waypoints = safePlaces.slice(1, -1).map(loc => encodeURIComponent(loc)).join('|');
+          url += `&waypoints=${waypoints}`;
+        }
+      }
+
+      await updateDoc(doc(db, 'trips', currentTripId, 'profile', 'main'), {
+        generatedMapUrl: url
+      });
+      setTripProfile({ ...tripProfile, generatedMapUrl: url });
+      showToast({ type: 'success', message: t('memories.mapGenerated', 'Map generated successfully!') });
+    } catch (e) {
+      console.error(e);
+      showToast({ type: 'error', message: t('errors.mapGenerationFailed', 'Failed to generate map') });
+    } finally {
+      setIsGeneratingMap(false);
+    }
+  };
 
   // Load journal from Firestore
   useEffect(() => {
@@ -278,29 +354,86 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
         </div>
       </div>
 
-      {mapUrl && (
-        <a href={mapUrl} target="_blank" rel="noreferrer" className="block w-full mb-6 relative rounded-2xl overflow-hidden group shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700 h-48 bg-slate-100 dark:bg-slate-800">
-          {/* Abstract Map Background CSS Pattern */}
-          <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '30px 30px' }}></div>
-          
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-600/90 to-brand-400/80 dark:from-brand-900/90 dark:to-brand-800/80"></div>
-          
-          {/* Content */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg">
-              <MapPin size={24} className="text-white" />
-            </div>
-            <h3 className="text-xl font-bold mb-1">{t('memories.tripMap', 'מפת המסלול שלנו')}</h3>
-            <p className="text-brand-50 text-sm max-w-lg mx-auto">
-              צפו בפריסת כל הנקודות והתחנות של הטיול בגוגל מפות ({tripProfile?.destinations?.length || 0} מיקומים)
-            </p>
-            <span className="mt-4 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-brand-700 text-xs font-bold shadow-sm group-hover:bg-brand-50 transition-colors">
-              פתח מפה <ExternalLink size={12} />
-            </span>
+      <div className="card p-5 mb-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <MapPin size={18} className="text-brand-500" />
+            {t('memories.tripMap', 'מפת המסלול שלנו')}
+          </h2>
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-4 mb-5 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">רמת פירוט</label>
+            <select
+              value={mapLevel}
+              onChange={e => setMapLevel(e.target.value as any)}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500"
+            >
+              <option value="full">מלאה (כל העצירות)</option>
+              <option value="detailed">מפורטת (עצירות מרכזיות)</option>
+              <option value="cities">ערים בלבד (ברירת מחדל)</option>
+              <option value="countries">מדינות בלבד</option>
+            </select>
           </div>
-        </a>
-      )}
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">מתאריך</label>
+            <input 
+              type="date"
+              value={mapDateStart}
+              onChange={e => setMapDateStart(e.target.value)}
+              min={tripProfile?.startDate}
+              max={tripProfile?.endDate}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">עד תאריך</label>
+            <input 
+              type="date"
+              value={mapDateEnd}
+              onChange={e => setMapDateEnd(e.target.value)}
+              min={mapDateStart || tripProfile?.startDate}
+              max={tripProfile?.endDate}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={generateSmartMap}
+              disabled={isGeneratingMap || !tripProfile || days.length === 0}
+              className="w-full md:w-auto btn-primary py-2 px-6 shadow-md"
+            >
+              {isGeneratingMap ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'הכן מפה מותאמת'}
+            </button>
+          </div>
+        </div>
+
+        {mapUrl ? (
+          <div className="flex flex-col gap-3">
+            <div className="h-40 md:h-64 w-full rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden relative group">
+              <a href={mapUrl} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
+                 <span className="px-4 py-2 bg-white/90 backdrop-blur-sm text-brand-700 font-bold rounded-full shadow-lg flex items-center gap-2 transform group-hover:scale-105 transition-all">
+                   פתח מפה <ExternalLink size={14} />
+                 </span>
+              </a>
+              {tripProfile?.generatedMapUrl ? (
+                <div className="w-full h-full pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity">
+                  <AlbumPreview url={tripProfile.generatedMapUrl} />
+                </div>
+              ) : (
+                <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center opacity-80" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '30px 30px' }}>
+                  <MapPin size={48} className="text-slate-300 dark:text-slate-600 drop-shadow-md" />
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-center py-6 text-sm text-slate-500">
+            אין יעדים למפה עדיין. השתמש בכפתור למעלה כדי לחלץ יעדים מהמסלול.
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column: Journal & Photos */}
