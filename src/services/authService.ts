@@ -57,8 +57,7 @@ export function initFirebaseAuth() {
         const data = userSnap.data() as AppUser;
         if (data.isBlocked) {
           showToast({ type: 'error', message: 'Your account has been blocked by the administrator.' });
-          signOut();
-          return;
+          // Do NOT signOut here, let App.tsx render the BlockedScreen
         }
         
         setAppUser(data);

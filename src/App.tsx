@@ -113,7 +113,7 @@ export default function App() {
 
   // Sync trip profile from Firestore when currentTripId changes
   useEffect(() => {
-    if (!currentTripId) {
+    if (!currentTripId || appUser?.isBlocked) {
       useTripStore.getState().setTripProfile(null);
       return;
     }
@@ -128,7 +128,7 @@ export default function App() {
 
   // Sync current user's trip-specific permissions
   useEffect(() => {
-    if (!currentTripId || !firebaseUser?.email) return;
+    if (!currentTripId || !firebaseUser?.email || appUser?.isBlocked) return;
     const userRef = doc(db, 'trips', currentTripId, 'users', firebaseUser.email);
     const unsub = onSnapshot(userRef, (snap) => {
       if (snap.exists()) {
@@ -148,7 +148,7 @@ export default function App() {
 
   // Auto Backup worker
   useEffect(() => {
-    if (!currentTripId || !appUser?.email || autoBackupInterval === 0 || !isOnline) return;
+    if (!currentTripId || !appUser?.email || autoBackupInterval === 0 || !isOnline || appUser?.isBlocked) return;
 
     const checkAndBackup = async () => {
       const now = Date.now();
