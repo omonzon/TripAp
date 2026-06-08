@@ -21,7 +21,7 @@ interface AuthState {
   language: 'en' | 'he' | 'fr' | 'de' | 'es' | 'nl' | 'is';
   autoBackupInterval: number;
   lastBackupTime: number;
-  emailjsConfig?: { serviceId: string; templateId: string; publicKey: string };
+  emailjsConfig?: { serviceId: string; templateId: string; bugTemplateId?: string; publicKey: string };
 
   setFirebaseUser: (user: User | null) => void;
   setAppUser: (user: AppUser | null) => void;

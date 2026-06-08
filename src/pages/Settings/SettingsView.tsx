@@ -343,14 +343,14 @@ export default function SettingsView() {
         date: new Date().toISOString()
       });
 
-      if (emailjsConfig?.serviceId && emailjsConfig?.templateId && emailjsConfig?.publicKey) {
+      if (emailjsConfig?.serviceId && (emailjsConfig?.bugTemplateId || emailjsConfig?.templateId) && emailjsConfig?.publicKey) {
         try {
           await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               service_id: emailjsConfig.serviceId,
-              template_id: emailjsConfig.templateId,
+              template_id: emailjsConfig.bugTemplateId || emailjsConfig.templateId,
               user_id: emailjsConfig.publicKey,
               template_params: {
                 message: `Bug Report from ${appUser.name} (${appUser.email}):\n\n${bugReport.trim()}\n\nTrip ID: ${currentTripId}\nUser Agent: ${navigator.userAgent}`,
@@ -767,13 +767,23 @@ export default function SettingsView() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Template ID</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Tasks Template ID</label>
             <input 
               type="text" 
               value={emailjsConfig?.templateId || ''}
               onChange={e => setEmailjsConfig({ ...emailjsConfig, templateId: e.target.value } as any)}
               className="input-base text-sm w-full"
               placeholder="e.g., template_x7a2b"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bug Report Template ID (Optional)</label>
+            <input 
+              type="text" 
+              value={emailjsConfig?.bugTemplateId || ''}
+              onChange={e => setEmailjsConfig({ ...emailjsConfig, bugTemplateId: e.target.value } as any)}
+              className="input-base text-sm w-full"
+              placeholder="e.g., template_bug123"
             />
           </div>
           <div>
