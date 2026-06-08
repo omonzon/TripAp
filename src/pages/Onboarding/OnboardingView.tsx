@@ -8,7 +8,7 @@ import { useTripStore, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { extractSemanticGraph, extractSemanticGraphFromFile, getConstraints } from '@/engine/semanticEngine';
 import { generateComprehensiveTrip } from '@/engine/comprehensiveGenerator';
-import { fetchGeminiModels } from '@/services/ai';
+import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, type AIProvider } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { restoreTripFromFile } from '@/services/backupService';
 import { UploadCloud } from 'lucide-react';
@@ -21,9 +21,10 @@ export default function OnboardingView() {
   const { t, i18n } = useTranslation();
   const { appUser } = useAuthStore();
   const { setCurrentTrip, setTripProfile } = useTripStore();
-  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey, setAllGeminiModels } = useAIStore();
+  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey, setAllGeminiModels, setProvider } = useAIStore();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(useAIStore.getState().apiKey ? 3 : 1);
+  const [tempProvider, setTempProvider] = useState<AIProvider['type']>(useAIStore.getState().providerType);
   const [skipAI, setSkipAI] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
   const [showTos, setShowTos] = useState(false);
@@ -97,17 +98,40 @@ export default function OnboardingView() {
   };
 
   const handleValidateKey = async () => {
-    if (!tempApiKey.trim()) return;
+    if (!tempApiKey.trim() && tempProvider !== 'ollama') return;
     setIsValidating(true);
     setKeyError(null);
     setKeySuccess(false);
     try {
-      const models = await fetchGeminiModels(tempApiKey.trim());
-      setAvailableModels(models);
-      if (models.includes('gemini-2.5-pro')) setSelectedModel('gemini-2.5-pro');
-      else if (models.includes('gemini-1.5-pro')) setSelectedModel('gemini-1.5-pro');
-      else if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
-      else if (models.length > 0) setSelectedModel(models[0]);
+      if (tempProvider === 'gemini') {
+        const models = await fetchGeminiModels(tempApiKey.trim());
+        setAvailableModels(models);
+        if (models.includes('gemini-2.5-pro')) setSelectedModel('gemini-2.5-pro');
+        else if (models.includes('gemini-1.5-pro')) setSelectedModel('gemini-1.5-pro');
+        else if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
+        else if (models.length > 0) setSelectedModel(models[0]);
+      } else if (tempProvider === 'openai') {
+        let models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
+        try {
+          const dynamicModels = await fetchOpenAIModels(tempApiKey.trim());
+          if (dynamicModels.length > 0) models = dynamicModels;
+        } catch(e) { console.warn("Failed to fetch OpenAI models, using fallback", e); }
+        setAvailableModels(models);
+        if (models.includes('gpt-4o')) setSelectedModel('gpt-4o');
+        else setSelectedModel(models[0]);
+      } else if (tempProvider === 'anthropic') {
+        let models = ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'];
+        try {
+          const dynamicModels = await fetchAnthropicModels(tempApiKey.trim());
+          if (dynamicModels.length > 0) models = dynamicModels;
+        } catch(e) { console.warn("Failed to fetch Anthropic models, using fallback", e); }
+        setAvailableModels(models);
+        if (models.includes('claude-3-5-sonnet-20240620')) setSelectedModel('claude-3-5-sonnet-20240620');
+        else setSelectedModel(models[0]);
+      } else if (tempProvider === 'ollama') {
+        setAvailableModels(['llama3', 'gemma2']);
+        setSelectedModel('gemma2');
+      }
       setKeySuccess(true);
     } catch (err) {
       setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי. אנא ודא שהעתקת אותו נכון.'));
@@ -117,26 +141,29 @@ export default function OnboardingView() {
   };
 
   const handleAISetupNext = async () => {
-    if (tempApiKey.trim()) {
+    if (tempApiKey.trim() || tempProvider === 'ollama') {
       setIsValidating(true);
-      try {
-        const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${tempApiKey.trim()}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
-        });
-        if (!testRes.ok) {
-           showToast({ type: 'error', message: `המודל ${selectedModel} אינו תומך בפעולה זו (שגיאה ${testRes.status}). אנא בחר מודל אחר.` });
+      if (tempProvider === 'gemini') {
+        try {
+          const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${tempApiKey.trim()}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
+          });
+          if (!testRes.ok) {
+             showToast({ type: 'error', message: `המודל ${selectedModel} אינו תומך בפעולה זו (שגיאה ${testRes.status}). אנא בחר מודל אחר.` });
+             setIsValidating(false);
+             return;
+          }
+        } catch (err) {
+           showToast({ type: 'error', message: `שגיאת רשת בבדיקת המודל ${selectedModel}.` });
            setIsValidating(false);
            return;
         }
-      } catch (err) {
-         showToast({ type: 'error', message: `שגיאת רשת בבדיקת המודל ${selectedModel}.` });
-         setIsValidating(false);
-         return;
       }
       setIsValidating(false);
 
+      setProvider(tempProvider);
       setApiKey(tempApiKey.trim());
       setAllGeminiModels(selectedModel);
       setSkipAI(false);
@@ -427,63 +454,96 @@ export default function OnboardingView() {
                 ברוכים הבאים ל-TripAp! <img src="/logo.png" className="w-6 h-6 object-contain" alt="TripAp" />
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
-                כדי שהאפליקציה תוכל לתכנן לכם מסלול חכם, לסרוק קבלות ולתרגם תפריטים, נצטרך מפתח API חינמי של Google Gemini.
+                {t('onboarding.aiSetupDesc')}
               </p>
-            </div>
-            
-            {/* API Key Guide */}
-            <div className="card p-5 bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950/30 dark:to-indigo-950/30 border border-brand-100 dark:border-brand-800/50">
-              <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                <Sparkles className="text-brand-500 w-5 h-5" />
-                איך משיגים מפתח תוך דקה?
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="flex gap-3 items-start">
-                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
-                  <p className="text-sm text-slate-700 dark:text-slate-300">
-                    היכנסו לאתר <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline font-semibold">Google AI Studio</a> (התחברו עם חשבון גוגל).
-                  </p>
-                </div>
-                
-                <div className="flex gap-3 items-start">
-                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
-                  <p className="text-sm text-slate-700 dark:text-slate-300">
-                    לחצו על הכפתור הכחול <span className="font-semibold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">Create API key</span>.
-                  </p>
-                </div>
-                
-                <div className="flex gap-3 items-start">
-                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
-                  <p className="text-sm text-slate-700 dark:text-slate-300">
-                    העתיקו את המפתח שנוצר והדביקו אותו כאן למטה 👇
-                  </p>
-                </div>
-              </div>
             </div>
 
             <div className="mb-2">
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                המפתח שלכם (Gemini API Key)
+                {t('settings.aiProvider')}
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Key size={16} className="text-slate-400" />
+              <select 
+                className="input-base cursor-pointer"
+                value={tempProvider}
+                onChange={(e) => {
+                  setTempProvider(e.target.value as AIProvider['type']);
+                  setKeyError(null);
+                  setKeySuccess(false);
+                  setAvailableModels([]);
+                }}
+              >
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI (ChatGPT)</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="ollama">Ollama (Local/Offline)</option>
+              </select>
+            </div>
+            
+            {/* API Key Guide */}
+            {tempProvider === 'gemini' && (
+              <div className="card p-5 bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950/30 dark:to-indigo-950/30 border border-brand-100 dark:border-brand-800/50">
+                <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                  <Sparkles className="text-brand-500 w-5 h-5" />
+                  איך משיגים מפתח תוך דקה?
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      היכנסו לאתר <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline font-semibold">Google AI Studio</a> (התחברו עם חשבון גוגל).
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      לחצו על הכפתור הכחול <span className="font-semibold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">Create API key</span>.
+                    </p>
+                  </div>
                 </div>
-                <input 
-                  type="password" 
-                  className="input-base pl-10 text-left" 
-                  value={tempApiKey} 
-                  onChange={(e) => {
-                    setTempApiKey(e.target.value);
-                    setKeyError(null);
-                    setKeySuccess(false);
-                    setAvailableModels([]);
-                  }} 
-                  placeholder="AIzaSy..." 
-                  dir="ltr"
-                />
               </div>
+            )}
+
+            {(tempProvider === 'openai' || tempProvider === 'anthropic') && (
+              <p className="text-sm text-slate-500 mb-2">
+                <a href={tempProvider === 'openai' ? 'https://platform.openai.com/api-keys' : 'https://console.anthropic.com/settings/keys'} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline">
+                  {t('onboarding.getApiKeyHelp')}
+                </a>
+              </p>
+            )}
+
+            {tempProvider !== 'ollama' && (
+              <div className="mb-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('onboarding.geminiApiKey')}
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Key size={16} className="text-slate-400" />
+                  </div>
+                  <input 
+                    type="password" 
+                    className="input-base pl-10 text-left" 
+                    value={tempApiKey} 
+                    onChange={(e) => {
+                      setTempApiKey(e.target.value);
+                      setKeyError(null);
+                      setKeySuccess(false);
+                      setAvailableModels([]);
+                    }} 
+                    placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'} 
+                    dir="ltr"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-2 flex items-start gap-1">
+                  <Info size={14} className="shrink-0 mt-0.5" />
+                  {t('onboarding.apiKeyHelp')}
+                </p>
+              </div>
+            )}
+
+            <div className="mb-2">
               {keyError && (
                 <p className="text-xs text-red-500 mt-2 flex items-center gap-1 animate-fade-in">
                   <AlertTriangle size={12} />
@@ -496,16 +556,6 @@ export default function OnboardingView() {
                   המפתח אומת בהצלחה!
                 </p>
               )}
-              <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                <CheckCircle2 size={12} className="text-green-500" />
-                המפתח נשמר מקומית בדפדפן שלכם ולא עובר לשרתים שלנו.
-              </p>
-              <div className="flex flex-wrap gap-3 mt-4 mb-2 items-center bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">איך משיגים מפתח?</span>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline flex items-center gap-1"><span className="text-[10px]">🔗</span> Google AI</a>
-                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline flex items-center gap-1"><span className="text-[10px]">🔗</span> Anthropic</a>
-                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline flex items-center gap-1"><span className="text-[10px]">🔗</span> OpenAI</a>
-              </div>
             </div>
             
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -539,6 +589,9 @@ export default function OnboardingView() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   {t('onboarding.selectModel', 'Select AI Model')}
                 </label>
+                <p className="text-xs text-brand-600 dark:text-brand-400 font-medium mb-2">
+                  ✨ שימוש במודלים מתקדמים יותר יניב תוצאות טובות יותר בתכנון המסלול.
+                </p>
                 <select className="input-base" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
                   {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>

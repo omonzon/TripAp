@@ -109,6 +109,34 @@ export async function fetchGeminiModels(apiKey: string): Promise<string[]> {
     .map((m: any) => m.name.replace('models/', ''));
 }
 
+export async function fetchOpenAIModels(apiKey: string): Promise<string[]> {
+  const url = `https://api.openai.com/v1/models`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
+  if (!res.ok) throw new Error('Invalid API Key or network error');
+  const data = await res.json();
+  return (data.data || [])
+    .filter((m: any) => m.id.includes('gpt') || m.id.includes('o1'))
+    .map((m: any) => m.id)
+    .sort()
+    .reverse();
+}
+
+export async function fetchAnthropicModels(apiKey: string): Promise<string[]> {
+  const url = `https://api.anthropic.com/v1/models`;
+  const res = await fetch(url, { 
+    headers: { 
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    } 
+  });
+  if (!res.ok) throw new Error('Invalid API Key or network error');
+  const data = await res.json();
+  return (data.data || [])
+    .filter((m: any) => m.type === 'model' || m.id.includes('claude'))
+    .map((m: any) => m.id);
+}
+
 // --- OpenAI ---
 async function callOpenAI(
   messages: AIMessage[],
