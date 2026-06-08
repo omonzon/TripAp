@@ -57,13 +57,28 @@ export async function deleteAllUserTrips(userEmail: string) {
     
     if (profileSnap.exists()) {
       const profileData = profileSnap.data();
-      if (profileData.createdBy === userEmail) {
-        // User is the owner, wipe the trip completely
+      const participants = profileData.participants || [];
+      const otherParticipants = participants.filter((p: any) => p.email !== userEmail);
+      const isCreator = profileData.createdBy === userEmail;
+
+      if (otherParticipants.length === 0) {
+        // User is the sole participant, wipe the trip completely
         await deleteTripCompletely(tripId);
       } else {
-        // User is not the owner, just remove them from the trip
-        const newParticipants = (profileData.participants || []).filter((p: any) => p.email !== userEmail);
-        await updateDoc(profileRef, { participants: newParticipants });
+        // There are other participants, just remove the user and transfer ownership if needed
+        let newCreatedBy = profileData.createdBy;
+        
+        if (isCreator) {
+          // Transfer ownership to the first available participant
+          newCreatedBy = otherParticipants[0].email;
+          const newAdminRef = doc(db, 'trips', tripId, 'users', newCreatedBy);
+          await updateDoc(newAdminRef, { role: 'admin' }).catch(() => {}); // Make them admin if not already
+        }
+
+        await updateDoc(profileRef, { 
+          participants: otherParticipants,
+          createdBy: newCreatedBy
+        });
         
         // Remove from users subcollection
         await deleteDoc(doc(db, 'trips', tripId, 'users', userEmail));

@@ -142,6 +142,7 @@ export default function SettingsView() {
   const handleAdminDeleteUser = async (email: string) => {
     if (!isSuperAdmin || !confirm('Are you ABSOLUTELY sure you want to permanently delete this user? This cannot be undone.')) return;
     try {
+      await deleteAllUserTrips(email);
       await deleteDoc(doc(db, 'users', email));
       setAllUsers(prev => prev.filter(u => u.email !== email));
       showToast({ type: 'success', message: 'User deleted successfully.' });
