@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Sparkles, Shield, Moon, Sun, Languages, Type } from 'lucide-react';
-import { signInWithGoogle } from '@/services/authService';
+import { signInWithGoogle, signInWithTestAccount } from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export function AuthScreen() {
@@ -40,6 +40,16 @@ export function AuthScreen() {
         >
           {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
+        {import.meta.env.DEV && (
+          <button
+            id="e2e-test-login"
+            className="opacity-0 absolute w-0 h-0"
+            onClick={signInWithTestAccount}
+            aria-hidden="true"
+          >
+            Test Login
+          </button>
+        )}
       </div>
 
       {/* Hero */}

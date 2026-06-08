@@ -6,6 +6,7 @@
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import {
@@ -99,6 +100,19 @@ export async function signInWithGoogle() {
     await signInWithPopup(auth, googleProvider);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Sign in failed';
+    setLoginError(msg);
+    setAuthLoading(false);
+  }
+}
+
+export async function signInWithTestAccount() {
+  const { setLoginError, setAuthLoading } = useAuthStore.getState();
+  setAuthLoading(true);
+  setLoginError(null);
+  try {
+    await signInWithEmailAndPassword(auth, 'omon.test.mail@gmail.com', 'CMjWfQinNHWqwHQtN1eqPy');
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Test sign in failed';
     setLoginError(msg);
     setAuthLoading(false);
   }

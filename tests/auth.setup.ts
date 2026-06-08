@@ -15,16 +15,18 @@ setup('authenticate', async ({ page }) => {
   setup.setTimeout(120000); // 2 minutes to log in
 
   console.log('\n======================================================');
-  console.log('🔒 MANUAL LOGIN REQUIRED 🔒');
-  console.log('A browser window should open. Please log in with:');
-  console.log('Email: omon.test.mail@gmail.com');
-  console.log('Wait until you see the main dashboard ("צור טיול חדש").');
+  console.log('🔒 AUTOMATED LOGIN 🔒');
+  console.log('Logging in via Firebase Email/Password backdoor...');
   console.log('======================================================\n');
 
   await page.goto('/');
 
+  // Click the hidden developer login button
+  await page.waitForSelector('#e2e-test-login', { state: 'attached' });
+  await page.click('#e2e-test-login', { force: true });
+
   // Wait for the main dashboard element that signifies a successful login
-  await page.waitForSelector('text=צור טיול חדש', { timeout: 120000 });
+  await page.waitForSelector('text=צור טיול חדש', { timeout: 30000 });
 
   // Save the authentication state
   await page.context().storageState({ path: authFile });
