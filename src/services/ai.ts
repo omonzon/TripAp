@@ -104,7 +104,7 @@ async function callGemini(
        // Force redirect to settings tab if in main app
        const tripStore = useTripStore.getState();
        if (tripStore.currentTripId) {
-         tripStore.setActiveTab('settings');
+         window.dispatchEvent(new CustomEvent('change-tab', { detail: 'settings' }));
        }
     }
     throw new Error(`Gemini API error: ${res.status} ${errText}`);
