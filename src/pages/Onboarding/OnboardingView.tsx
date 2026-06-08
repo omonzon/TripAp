@@ -299,7 +299,7 @@ export default function OnboardingView() {
         pace: form.pace,
         preferences: form.preferences,
         tripStyle: form.tripStyle,
-        participants: [{ email: appUser.email, name: appUser.name, role: 'admin' }],
+        participants: [{ email: appUser.email, name: appUser.name || appUser.email.split('@')[0], role: 'admin' }],
         phase: 'pre',
         createdBy: appUser.email,
       };
@@ -308,7 +308,7 @@ export default function OnboardingView() {
       await setDoc(doc(db, 'trips', tripId, 'profile', 'main'), profile);
       await setDoc(doc(db, 'trips', tripId, 'users', appUser.email), {
         email: appUser.email,
-        name: appUser.name,
+        name: appUser.name || appUser.email.split('@')[0],
         role: 'admin',
       });
 
