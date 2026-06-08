@@ -576,21 +576,21 @@ export default function SettingsView() {
                 ) : (
                   [...allUsers]
                     .filter(u => 
-                      u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
-                      u.email.toLowerCase().includes(userSearchTerm.toLowerCase())
+                      (u.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                      (u.email || '').toLowerCase().includes(userSearchTerm.toLowerCase())
                     )
                     .sort((a, b) => {
-                      if (userSortBy === 'name') return a.name.localeCompare(b.name);
-                      if (userSortBy === 'email') return a.email.localeCompare(b.email);
+                      if (userSortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+                      if (userSortBy === 'email') return (a.email || '').localeCompare(b.email || '');
                       return (b.createdAt || 0) - (a.createdAt || 0); // Date desc
                     })
                     .map(u => (
-                      <tr key={u.email} className="bg-white border-b dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <tr key={u.email || Math.random().toString()} className="bg-white border-b dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                          {u.photoURL ? <img src={u.photoURL} alt={u.name} className="w-6 h-6 rounded-full" /> : <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">{u.name.charAt(0).toUpperCase()}</div>}
-                          {u.name}
+                          {u.photoURL ? <img src={u.photoURL} alt={u.name || 'User'} className="w-6 h-6 rounded-full" /> : <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">{(u.name || u.email || '?').charAt(0).toUpperCase()}</div>}
+                          {u.name || 'No Name'}
                         </td>
-                        <td className="px-4 py-3">{u.email}</td>
+                        <td className="px-4 py-3">{u.email || 'No Email'}</td>
                         <td className="px-4 py-3">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td>
                         <td className="px-4 py-3">
                           {u.isBlocked ? (
