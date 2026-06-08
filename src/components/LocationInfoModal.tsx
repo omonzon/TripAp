@@ -45,8 +45,9 @@ export default function LocationInfoModal({ locationName, onClose }: LocationInf
 
     fetchInfo();
   }, [locationName, apiKey, getProviderForTask, t]);
-
-  const searchQuery = encodeURIComponent(locationName);
+  // Extract just the first phrase (up to comma, period, or newline) for better search queries
+  const shortSearchTerm = locationName.split(/[,.\n]/)[0].trim() || locationName;
+  const searchQuery = encodeURIComponent(shortSearchTerm);
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-center items-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in overflow-y-auto">
