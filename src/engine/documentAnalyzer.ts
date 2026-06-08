@@ -2,6 +2,7 @@ import { collection, addDoc, doc, setDoc, updateDoc, getDocs } from 'firebase/fi
 import { db } from '@/services/firebase';
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile, ItineraryDay, ItineraryItem } from '@/store/useTripStore';
+import i18n from '@/i18n';
 
 export interface DocumentExtractionResult {
   itineraryEvents: {
@@ -72,13 +73,15 @@ Destinations: ${tripProfile.destinations.join(', ')}
     ? `Analyze this document text. Context: ${context}\n\nDocument Text:\n${textContent}`
     : `Analyze this document. Context: ${context}`;
 
+  const languageInstruction = `\n\nCRITICAL: You MUST translate all extracted text (titles, descriptions, categories, notes, items, etc) to this language code: ${i18n.language}. If the language code is 'he', translate everything to Hebrew. If 'en', English.`;
+
   // We add base64 image or pdf support
   const text = await callAI(
     [{ role: 'user', text: promptText }],
     provider,
     { 
       isJson: true, 
-      systemInstruction: DOCUMENT_ANALYZER_PROMPT, 
+      systemInstruction: DOCUMENT_ANALYZER_PROMPT + languageInstruction, 
       maxRetries: 2,
       base64Image: textContent ? undefined : base64Data,
       mimeType: textContent ? undefined : mimeType
