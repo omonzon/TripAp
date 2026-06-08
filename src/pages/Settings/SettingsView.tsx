@@ -473,9 +473,9 @@ export default function SettingsView() {
             </div>
             <p className="text-xs text-slate-400 mt-1">{t('settings.apiKeyHelp')}</p>
             <div className="text-xs text-brand-600 dark:text-brand-400 mt-2 flex gap-3">
-              {providerType === 'gemini' && <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="hover:underline">Get a free Google Gemini API Key</a>}
-              {providerType === 'openai' && <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="hover:underline">Get OpenAI API Key</a>}
-              {providerType === 'anthropic' && <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="hover:underline">Get Anthropic API Key</a>}
+              {providerType === 'gemini' && <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="hover:underline">{t('settings.getGeminiKey', 'Get Google Gemini API Key')}</a>}
+              {providerType === 'openai' && <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="hover:underline">{t('settings.getOpenAIKey', 'Get OpenAI API Key')}</a>}
+              {providerType === 'anthropic' && <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="hover:underline">{t('settings.getAnthropicKey', 'Get Anthropic API Key')}</a>}
             </div>
           </div>
         )}

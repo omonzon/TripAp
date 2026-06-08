@@ -154,12 +154,22 @@
     "thinking": "Thinking...",
     "clearChat": "Clear chat"
   },
+  "dailyBriefing": {
+    "title": "Good Morning! ☀️",
+    "subtitle": "Your daily briefing for {{tripName}}",
+    "freeDay": "Free day! No specific plans.",
+    "generating": "Generating your briefing...",
+    "letsGo": "Let's Go! 🚀"
+  },
   "settings": {
     "title": "Settings",
     "aiProvider": "AI Provider",
     "apiKey": "API Key",
     "model": "Model",
     "modelPerTask": "Model per task type",
+    "getGeminiKey": "Get Google Gemini API Key",
+    "getOpenAIKey": "Get OpenAI API Key",
+    "getAnthropicKey": "Get Anthropic API Key",
     "localLLM": "Local LLM (Ollama)",
     "localUrl": "Local API URL",
     "localModel": "Local model name",

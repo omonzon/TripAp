@@ -16,6 +16,7 @@ export default function DailyBriefingModal({ todayItems, tripName, onClose }: Da
   const { t } = useTranslation();
   const { appUser } = useAuthStore();
   const { providerType, apiKey, getProviderForTask } = useAIStore();
+  const { tripProfile } = useTripStore();
   const [briefing, setBriefing] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,10 +33,13 @@ export default function DailyBriefingModal({ todayItems, tripName, onClose }: Da
 
         const itemsText = todayItems.length > 0 
           ? todayItems.map(i => `- ${i.text.replace(/<[^>]*>?/gm, '')}`).join('\n')
-          : 'Free day! No specific plans.';
+          : t('dailyBriefing.freeDay', 'Free day! No specific plans.');
+
+        const destinations = tripProfile?.destinations?.join(', ') || '';
 
         const prompt = `Write a short, fun, and energetic morning briefing for today's trip! 
 Trip name: ${tripName}
+Destinations/Location: ${destinations}
 Today's plan:
 ${itemsText}
 
@@ -81,10 +85,10 @@ Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 w
             <Sun className="text-white" size={32} />
           </div>
           <h2 className="font-extrabold text-2xl text-slate-800 dark:text-white mb-2">
-            Good Morning! ☀️
+            {t('dailyBriefing.title', 'Good Morning! ☀️')}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-6">
-            Your daily briefing for {tripName}
+            {t('dailyBriefing.subtitle', 'Your daily briefing for {{tripName}}', { tripName })}
           </p>
 
           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-5 text-start border border-slate-100 dark:border-slate-700">
@@ -93,7 +97,7 @@ Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 w
                 <Loader2 className="animate-spin text-orange-500" size={28} />
                 <p className="text-sm text-slate-500 font-medium animate-pulse flex items-center gap-2">
                   <Sparkles size={14} className="text-orange-400" />
-                  Generating your briefing...
+                  {t('dailyBriefing.generating', 'Generating your briefing...')}
                 </p>
               </div>
             ) : error ? (
@@ -110,7 +114,7 @@ Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 w
             onClick={onClose}
             className="w-full mt-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-95"
           >
-            Let's Go! 🚀
+            {t('dailyBriefing.letsGo', 'Let\\'s Go! 🚀')}
           </button>
         </div>
       </div>

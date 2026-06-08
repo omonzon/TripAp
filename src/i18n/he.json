@@ -154,12 +154,22 @@
     "thinking": "חושב...",
     "clearChat": "נקה שיחה"
   },
+  "dailyBriefing": {
+    "title": "בוקר טוב! ☀️",
+    "subtitle": "התדריך היומי שלך עבור {{tripName}}",
+    "freeDay": "יום חופשי! אין תכנון ספציפי.",
+    "generating": "מכין לך את התדריך...",
+    "letsGo": "יאללה בואו נצא! 🚀"
+  },
   "settings": {
     "title": "הגדרות",
     "aiProvider": "ספק AI",
     "apiKey": "מפתח API",
     "model": "מודל",
     "modelPerTask": "מודל לפי סוג משימה",
+    "getGeminiKey": "קבל מפתח API של Google Gemini",
+    "getOpenAIKey": "קבל מפתח API של OpenAI",
+    "getAnthropicKey": "קבל מפתח API של Anthropic",
     "localLLM": "LLM מקומי (Ollama)",
     "localUrl": "כתובת API מקומית",
     "localModel": "שם מודל מקומי",
