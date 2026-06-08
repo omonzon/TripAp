@@ -1,4 +1,4 @@
-import { collection, addDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile, ItineraryDay, ItineraryItem } from '@/store/useTripStore';
@@ -124,7 +124,7 @@ export async function integrateDocumentData(
         // Create new day
         const dObj = new Date(event.isoDate);
         promises.push(
-          addDoc(collection(db, 'trips', tripProfile.id, 'itinerary'), {
+          setDoc(doc(db, 'trips', tripProfile.id, 'itinerary', `day_${event.isoDate}`), {
             id: `day_${event.isoDate}`,
             title: event.title || 'New Day',
             date: !isNaN(dObj.getTime()) ? dObj.toLocaleDateString() : event.isoDate,

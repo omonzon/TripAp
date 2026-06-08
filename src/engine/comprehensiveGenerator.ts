@@ -1,4 +1,4 @@
-import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { callAI, parseAIJson, type AIProvider } from '@/services/ai';
 import type { TripProfile } from '@/store/useTripStore';
@@ -105,7 +105,7 @@ export async function generateComprehensiveTrip(
   authorEmail: string,
   onProgress?: (msg: string) => void
 ): Promise<void> {
-  const context = `
+  let context = `
 Trip Name: ${tripProfile.name}
 Destinations: ${tripProfile.destinations.join(', ')}
 Dates: ${tripProfile.startDate} to ${tripProfile.endDate}
@@ -121,6 +121,21 @@ ${documentsText}
 
   try {
     if (onProgress) onProgress(language === 'he' ? 'קורא נתונים ומסמכים...' : 'Reading data and documents...');
+    
+    // Fetch existing days (e.g. from early document scanning)
+    const existingDaysSnap = await getDocs(collection(db, 'trips', tripProfile.id, 'itinerary'));
+    const existingDays = new Map<string, any>();
+    existingDaysSnap.forEach(d => existingDays.set(d.data().isoDate, d.data()));
+    
+    let existingItemsText = '';
+    if (existingDays.size > 0) {
+      existingItemsText = Array.from(existingDays.values()).map(d => {
+        return `${d.isoDate}:\n` + (d.items || []).map((i: any) => `- ${i.text}`).join('\n');
+      }).join('\n\n');
+      
+      context += `\nExisting Pre-booked Itinerary Items (ALREADY IN DATABASE):\n${existingItemsText}\n\nCRITICAL: DO NOT include these existing items in your output JSON. Only generate NEW recommendations and fill in the gaps!\n`;
+    }
+
     let affiliateLinks = '';
     try {
       const snap = await getDoc(doc(db, 'platform_settings', 'affiliates'));
@@ -160,23 +175,26 @@ ${documentsText}
       parsed.itinerary.forEach(day => {
         const dObj = new Date(day.isoDate);
         if (isNaN(dObj.getTime())) return;
+        const existingDay = existingDays.get(day.isoDate);
+        const mergedItems = existingDay ? [...(existingDay.items || [])] : [];
+        const newItems = (day.items || []).map(item => ({
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          type: item.type || 'note',
+          text: item.text || '',
+          fixed: item.fixed || false,
+          referrals: item.referrals || []
+        }));
         
+        mergedItems.push(...newItems);
+
         const dayPayload = {
-          id: `day_${day.isoDate}`,
-          title: day.title,
+          id: existingDay?.id || `day_${day.isoDate}`,
+          title: day.title || existingDay?.title || 'New Day',
           date: dObj.toLocaleDateString(),
           isoDate: day.isoDate,
-          items: (day.items || []).map(item => ({
-            id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-            type: item.type || 'note',
-            text: item.text || '',
-            fixed: item.fixed || false,
-            referrals: item.referrals || []
-          }))
+          items: mergedItems
         };
-        // Use setDoc to use the isoDate as docId for predictable sorting if we want,
-        // but addDoc is safer to avoid overwriting. Wait, the current app uses addDoc with auto ID.
-        promises.push(addDoc(itRef, dayPayload));
+        promises.push(setDoc(doc(itRef, dayPayload.id), dayPayload));
       });
     }
 

@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
-import { extractDocumentData, type DocumentExtractionResult } from '@/engine/documentAnalyzer';
+import { extractDocumentData, integrateDocumentData, type DocumentExtractionResult } from '@/engine/documentAnalyzer';
 import DocumentAnalysisReviewModal from '@/components/documents/DocumentAnalysisReviewModal';
 import { generateComprehensiveTrip } from '@/engine/comprehensiveGenerator';
 import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, type AIProvider } from '@/services/ai';
@@ -50,6 +50,7 @@ export default function OnboardingView() {
   const [constraintCount, setConstraintCount] = useState(0);
   const [extracting, setExtracting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [tempTripId, setTempTripId] = useState<string | null>(null);
   const [scannedDocumentData, setScannedDocumentData] = useState<DocumentExtractionResult | null>(null);
   const [currentScannedFileName, setCurrentScannedFileName] = useState<string>('');
   const [generating, setGenerating] = useState(false);
@@ -90,12 +91,57 @@ export default function OnboardingView() {
     return () => clearInterval(interval);
   }, [generating, loadingPhrases.length]);
 
-  const next = () => {
+  const next = async () => {
     let nextStep = step + 1;
     if (nextStep === 2) nextStep = 3;
     if (skipAI && nextStep === 4) {
       nextStep = 6;
     }
+
+    // CREATE OR UPDATE THE TRIP AT STEP 3
+    if (step === 3 && appUser) {
+      setGenerating(true);
+      try {
+        const tId = tempTripId || `trip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const profile: TripProfile = {
+          id: tId,
+          name: form.name || 'My Trip',
+          destinations: form.destinations.split(',').map((d) => d.trim()).filter(Boolean),
+          startDate: form.startDate,
+          endDate: form.endDate,
+          budget: Number(form.budget) || 0,
+          currency: form.currency,
+          pace: form.pace,
+          preferences: form.preferences,
+          tripStyle: form.tripStyle,
+          participants: [{ email: appUser.email, name: appUser.name || appUser.email.split('@')[0], role: 'admin' }],
+          phase: 'pre',
+          createdBy: appUser.email,
+        };
+
+        if (!tempTripId) {
+          await setDoc(doc(db, 'trips', tId, 'profile', 'main'), profile);
+          await setDoc(doc(db, 'trips', tId, 'users', appUser.email), {
+            email: appUser.email,
+            name: appUser.name || appUser.email.split('@')[0],
+            role: 'admin',
+          });
+          await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), { activeTripId: tId }, { merge: true });
+          await setDoc(doc(db, 'users', appUser.email), {
+            trips: arrayUnion({ id: tId, name: profile.name, destinations: profile.destinations })
+          }, { merge: true });
+          setTempTripId(tId);
+        } else {
+          await setDoc(doc(db, 'trips', tId, 'profile', 'main'), profile, { merge: true });
+        }
+      } catch (e) {
+        showToast({ type: 'error', message: 'Failed to save trip details.' });
+        setGenerating(false);
+        return; // Halt progression
+      }
+      setGenerating(false);
+    }
+
     setStep(Math.min(nextStep, STEPS));
   };
   
@@ -106,6 +152,26 @@ export default function OnboardingView() {
       prevStep = 3;
     }
     setStep(Math.max(prevStep, 1));
+  };
+
+  const handleCancel = async () => {
+    if (tempTripId && appUser) {
+      setGenerating(true);
+      try {
+        await deleteDoc(doc(db, 'trips', tempTripId, 'profile', 'main'));
+        await deleteDoc(doc(db, 'trips', tempTripId, 'users', appUser.email));
+        await updateDoc(doc(db, 'users', appUser.email), {
+          trips: arrayRemove({ id: tempTripId, name: form.name || 'My Trip', destinations: form.destinations.split(',').map((d) => d.trim()).filter(Boolean) })
+        });
+      } catch (e) {
+        console.error("Failed to cleanup trip", e);
+      } finally {
+        setGenerating(false);
+      }
+    }
+    // Reset and return
+    setTempTripId(null);
+    setStep(1);
   };
 
   const handleValidateKey = async () => {
@@ -247,7 +313,7 @@ export default function OnboardingView() {
       }
 
       const tripProfileFake = {
-        id: 'temp',
+        id: tempTripId || 'temp',
         name: form.name || 'Trip',
         destinations: form.destinations.split(',').map(d => d.trim()),
         startDate: form.startDate,
@@ -272,39 +338,47 @@ export default function OnboardingView() {
     }
   };
 
-  const handleConfirmScannedData = (approvedData: DocumentExtractionResult) => {
+  const handleConfirmScannedData = async (approvedData: DocumentExtractionResult) => {
     setScannedDocumentData(null);
-    
-    const approvedItems: string[] = [];
-    
-    if (approvedData.itineraryEvents.length > 0) {
-      approvedItems.push(`Events:\n` + approvedData.itineraryEvents.map(e => `- ${e.isoDate}: ${e.title} (${e.items.map(i => i.text).join(', ')})`).join('\n'));
+    if (!tempTripId || !appUser) {
+      showToast({ type: 'error', message: 'Trip was not initialized properly.' });
+      return;
     }
     
-    if (approvedData.expenses.length > 0) {
-      approvedItems.push(`Prepaid Expenses:\n` + approvedData.expenses.map(e => `- ${e.amount} ${e.currency} at ${e.store} ${e.notes ? '(' + e.notes + ')' : ''}`).join('\n'));
-    }
-    
-    if (approvedData.documents.length > 0) {
-      approvedItems.push(`References:\n` + approvedData.documents.map(d => `- ${d.title}: ${d.referenceNumber}`).join('\n'));
-    }
+    setExtracting(true);
+    try {
+      const tripProfileFake = {
+        id: tempTripId,
+        name: form.name || 'Trip',
+        destinations: form.destinations.split(',').map(d => d.trim()),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        participants: [],
+        currency: form.currency || 'USD'
+      } as any;
 
-    const finalConstraintsText = approvedItems.join('\n\n');
-    const itemsCount = approvedData.itineraryEvents.length + approvedData.expenses.length + approvedData.documents.length;
-
-    if (itemsCount > 0) {
-      setAddedSegments(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'file',
-        title: `${currentScannedFileName} (${itemsCount} items approved)`,
-        constraintsFound: itemsCount
-      }]);
+      // Integrate directly to the newly created DB trip!
+      await integrateDocumentData(tripProfileFake, [], approvedData, appUser.email);
       
-      const fileContext = `\n\n--- Document: ${currentScannedFileName} ---\nFound Details:\n${finalConstraintsText}`;
-      setForm(prev => ({ ...prev, bookings: prev.bookings + fileContext }));
-      showToast({ type: 'success', message: t('onboarding.addedSuccess', `Added ${itemsCount} approved items from document.`) });
-    } else {
-      showToast({ type: 'info', message: 'לא נבחרו פריטים מהמסמך להוספה.' });
+      const itemsCount = approvedData.itineraryEvents.length + approvedData.expenses.length + approvedData.documents.length;
+
+      if (itemsCount > 0) {
+        setAddedSegments(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'file',
+          title: `${currentScannedFileName} (${itemsCount} items integrated)`,
+          constraintsFound: itemsCount
+        }]);
+        
+        showToast({ type: 'success', message: t('onboarding.addedSuccess', `Added ${itemsCount} approved items from document directly to the trip!`) });
+      } else {
+        showToast({ type: 'info', message: 'לא נבחרו פריטים מהמסמך להוספה.' });
+      }
+    } catch (e) {
+      console.error(e);
+      showToast({ type: 'error', message: 'Failed to integrate document data.' });
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -324,10 +398,10 @@ export default function OnboardingView() {
   };
 
   const createTrip = async () => {
-    if (!appUser) return;
+    if (!appUser || !tempTripId) return;
     setGenerating(true);
     try {
-      const tripId = `trip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const tripId = tempTripId;
       const profile: TripProfile = {
         id: tripId,
         name: form.name || 'My Trip',
@@ -344,23 +418,14 @@ export default function OnboardingView() {
         createdBy: appUser.email,
       };
 
-      await setDoc(doc(db, 'trips', tripId, 'profile', 'main'), profile);
-      await setDoc(doc(db, 'trips', tripId, 'users', appUser.email), {
-        email: appUser.email,
-        name: appUser.name || appUser.email.split('@')[0],
-        role: 'admin',
-      });
-
-      await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), { activeTripId: tripId }, { merge: true });
+      // Ensure profile is fully updated
+      await setDoc(doc(db, 'trips', tripId, 'profile', 'main'), profile, { merge: true });
 
       const tripGraph = useAIStore.getState().tripGraph;
       if (tripGraph && tripGraph.nodes.length > 0) {
         await setDoc(doc(db, 'trips', tripId, 'profile', 'graph'), tripGraph);
       }
 
-      await setDoc(doc(db, 'users', appUser.email), {
-        trips: arrayUnion({ id: tripId, name: profile.name, destinations: profile.destinations })
-      }, { merge: true });
 
       if (form.bookings.trim()) {
         const docId = `doc_${Date.now()}`;
@@ -503,7 +568,19 @@ export default function OnboardingView() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in">
+    <div className="max-w-2xl mx-auto animate-fade-in relative pt-12">
+      {/* Top Bar with Cancel Setup */}
+      {tempTripId && (
+        <div className="absolute top-0 right-0 z-50">
+          <button
+            onClick={handleCancel}
+            className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-sm font-bold shadow-sm flex items-center gap-2"
+          >
+            {t('common.cancel', 'ביטול יצירת טיול')}
+          </button>
+        </div>
+      )}
+
       <div className="text-center mb-8">
         <img src="/logo.png" alt="TripAp Logo" className="w-20 h-20 mx-auto mb-4 object-contain drop-shadow-xl" />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('onboarding.title')}</h1>
@@ -808,7 +885,7 @@ export default function OnboardingView() {
                     <label className="btn-secondary cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 text-sm py-2">
                       <Camera size={16} />
                       {t('itinerary.scanDoc', 'Scan Doc')}
-                      <input type="file" accept="application/pdf, image/*" className="hidden" onChange={handleAddFileSegment} disabled={extracting} />
+                      <input type="file" accept="application/pdf, image/*, text/plain, text/csv, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleAddFileSegment} disabled={extracting} />
                     </label>
                  </div>
                  <button 
