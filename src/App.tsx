@@ -103,13 +103,13 @@ export default function App() {
   // Validate currentTripId against the user's available trips
   useEffect(() => {
     if (appUser && currentTripId && currentTripId !== 'new') {
-      const trips = appUser.trips || [];
-      const hasAccess = trips.some(t => t.id === currentTripId);
+      const trips = (appUser as any).trips || [];
+      const hasAccess = trips.some((t: any) => t.id === currentTripId);
       if (!hasAccess) {
         useTripStore.getState().setCurrentTrip(null);
       }
     }
-  }, [appUser?.trips, currentTripId]);
+  }, [(appUser as any)?.trips, currentTripId]);
 
   // Sync trip profile from Firestore when currentTripId changes
   useEffect(() => {
