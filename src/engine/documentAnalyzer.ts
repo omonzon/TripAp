@@ -60,23 +60,28 @@ export async function extractDocumentData(
   tripProfile: TripProfile,
   base64Data: string,
   mimeType: string,
-  provider: AIProvider
+  provider: AIProvider,
+  textContent?: string
 ): Promise<DocumentExtractionResult> {
   const context = `
 Trip Dates: ${tripProfile.startDate} to ${tripProfile.endDate}
 Destinations: ${tripProfile.destinations.join(', ')}
   `;
 
+  const promptText = textContent 
+    ? `Analyze this document text. Context: ${context}\n\nDocument Text:\n${textContent}`
+    : `Analyze this document. Context: ${context}`;
+
   // We add base64 image or pdf support
   const text = await callAI(
-    [{ role: 'user', text: `Analyze this document. Context: ${context}` }],
+    [{ role: 'user', text: promptText }],
     provider,
     { 
       isJson: true, 
       systemInstruction: DOCUMENT_ANALYZER_PROMPT, 
       maxRetries: 2,
-      base64Image: base64Data,
-      mimeType: mimeType
+      base64Image: textContent ? undefined : base64Data,
+      mimeType: textContent ? undefined : mimeType
     }
   );
 

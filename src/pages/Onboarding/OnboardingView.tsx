@@ -301,7 +301,33 @@ export default function OnboardingView() {
     setExtracting(true);
     try {
       let base64 = '';
-      if (file.type.startsWith('image/')) {
+      let textContent: string | undefined = undefined;
+
+      if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+        try {
+          const mammoth = await import('mammoth');
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          textContent = result.value;
+        } catch (e) {
+          console.error("Failed to parse docx", e);
+          throw new Error("Failed to parse DOCX");
+        }
+      } else if (file.type.startsWith('text/') || file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+        textContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      } else if (file.type === 'application/msword' || file.name.endsWith('.doc')) {
+        textContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      } else if (file.type.startsWith('image/')) {
         base64 = await compressImageToBase64(file);
       } else {
         base64 = await new Promise<string>((resolve, reject) => {
@@ -326,7 +352,8 @@ export default function OnboardingView() {
         tripProfileFake,
         base64,
         file.type,
-        getProviderForTask('extraction')
+        getProviderForTask('extraction'),
+        textContent
       );
       
       setCurrentScannedFileName(file.name || 'תמונה/מסמך');
