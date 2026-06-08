@@ -94,7 +94,7 @@ IMPORTANT: Do NOT include the entire activity text in the search queries! Use co
 - Car rental: https://www.expedia.com/carsearch?locn=CITY_NAME&d1=YYYY-MM-DD&d2=YYYY-MM-DD
 - Hotel: https://www.booking.com/searchresults.html?ss=CITY_NAME&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&group_adults=N
 - Expedia: https://www.expedia.com/Hotel-Search?destination=CITY_NAME&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&adults=N
-- Flights: https://www.google.com/travel/flights?q=Flights%20to%20DESTINATION_CITY
+- Flights: https://www.google.com/travel/flights?q=Flights%20CITY_NAME%20ACTIVITY
 - Tours/Activities/Ski/Diving: https://www.viator.com/searchResults/all?text=CITY_NAME+ACTIVITY`;
 
 export async function generateComprehensiveTrip(

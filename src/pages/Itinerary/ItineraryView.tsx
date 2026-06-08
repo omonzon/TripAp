@@ -205,10 +205,12 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
 
   const nextIsoDate = getNextDay(isoDate);
   
+  const shortSearchTerm = item.text.replace(/<[^>]*>?/gm, '').split(/[,.\n-]/)[0].trim() || tripName;
+
   if (item.type === 'flight') {
     return (
       <div className="flex flex-wrap gap-2 mt-2">
-        <a href={`https://www.google.com/travel/flights?q=Flights%20to%20${encodeURIComponent(tripName)}%20on%20${isoDate}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
+        <a href={`https://www.google.com/travel/flights?q=${encodeURIComponent('Flights ' + shortSearchTerm)}%20on%20${isoDate}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
           <Plane size={10} /> Google Flights
         </a>
       </div>
@@ -219,10 +221,10 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
   return (
     <div className="flex flex-wrap gap-2 mt-2">
       {customLinks}
-      <a href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(item.text.replace(/<[^>]*>?/gm, '').trim() || tripName)}&checkin=${isoDate}&checkout=${nextIsoDate}&group_adults=${participantsCount}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-800">
+      <a href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(shortSearchTerm)}&checkin=${isoDate}&checkout=${nextIsoDate}&group_adults=${participantsCount}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-800">
         <Hotel size={10} /> Booking.com
       </a>
-      <a href={`https://www.expedia.com/Hotel-Search?destination=${encodeURIComponent(item.text.replace(/<[^>]*>?/gm, '').trim() || tripName)}&startDate=${isoDate}&endDate=${nextIsoDate}&adults=${participantsCount}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors border border-yellow-200 dark:border-yellow-800">
+      <a href={`https://www.expedia.com/Hotel-Search?destination=${encodeURIComponent(shortSearchTerm)}&startDate=${isoDate}&endDate=${nextIsoDate}&adults=${participantsCount}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors border border-yellow-200 dark:border-yellow-800">
         <Hotel size={10} /> Expedia
       </a>
     </div>
@@ -535,7 +537,7 @@ Guidelines for URLs:
 - Car rental: https://www.expedia.com/carsearch?locn=CITY_NAME&d1=${tripProfile.startDate}&d2=${tripProfile.endDate}
 - Hotel/Accommodation: https://www.booking.com/searchresults.html?ss=CITY_NAME&checkin=${tripProfile.startDate}&checkout=${tripProfile.endDate}&group_adults=${tripProfile.participants.length}
 - Expedia: https://www.expedia.com/Hotel-Search?destination=CITY_NAME&startDate=${tripProfile.startDate}&endDate=${tripProfile.endDate}&adults=${tripProfile.participants.length}
-- Flights: https://www.google.com/travel/flights?q=Flights%20to%20DESTINATION_CITY
+- Flights: https://www.google.com/travel/flights?q=Flights%20CITY_NAME%20ACTIVITY
 - Tours/Attractions/Cruises/Ski: https://www.viator.com/searchResults/all?text=CITY_NAME+ACTIVITY
 
 Items to process:
