@@ -92,6 +92,20 @@ async function callGemini(
       throw new Error(`Gemini model ${modelName} not found (404)`);
     }
     const errText = await res.text();
+    if (res.status === 403 || res.status === 400 || errText.includes('API key not valid') || errText.includes('API_KEY_INVALID')) {
+       showToast({
+         type: 'error',
+         message: 'Invalid or missing API Key. Please update your AI settings.',
+         duration: 10000,
+       });
+       useAIStore.getState().setApiKeyInvalid(true);
+       
+       // Force redirect to settings tab if in main app
+       const tripStore = useTripStore.getState();
+       if (tripStore.currentTripId) {
+         tripStore.setActiveTab('settings');
+       }
+    }
     throw new Error(`Gemini API error: ${res.status} ${errText}`);
   }
 

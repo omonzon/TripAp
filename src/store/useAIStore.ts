@@ -52,10 +52,12 @@ interface AIState {
   privateChatSessions: Record<string, ChatSession>;
   
   isExtracting: boolean;
+  isApiKeyInvalid: boolean;
   lastError: string | null;
 
   setProvider: (type: AIProvider['type']) => void;
   setApiKey: (key: string) => void;
+  setApiKeyInvalid: (invalid: boolean) => void;
   setModel: (task: TaskType, model: string) => void;
   setLocalConfig: (url: string, modelName: string) => void;
   getProviderForTask: (task: TaskType) => AIProvider;
@@ -89,13 +91,15 @@ export const useAIStore = create<AIState>()(
       models: DEFAULT_GEMINI_MODELS,
       localUrl: 'http://127.0.0.1:11434/api/generate',
       localModelName: 'gemma2',
+      isExtracting: false,
+      isApiKeyInvalid: false,
       tripGraph: null,
       privateChatSessions: {},
-      isExtracting: false,
       lastError: null,
 
       setProvider: (type) => set({ providerType: type }),
-      setApiKey: (key) => set({ apiKey: key }),
+      setApiKey: (key) => set({ apiKey: key, isApiKeyInvalid: false }),
+      setApiKeyInvalid: (val) => set({ isApiKeyInvalid: val }),
       setModel: (task, model) =>
         set((s) => ({ models: { ...s.models, [task]: model } })),
       setLocalConfig: (url, modelName) =>

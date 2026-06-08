@@ -21,7 +21,7 @@ export default function OnboardingView() {
   const { t, i18n } = useTranslation();
   const { appUser } = useAuthStore();
   const { setCurrentTrip, setTripProfile } = useTripStore();
-  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey, setAllGeminiModels, setProvider } = useAIStore();
+  const { getProviderForTask, updateTripGraph, setExtracting, isExtracting, apiKey, setApiKey, setAllGeminiModels, setProvider, isApiKeyInvalid, setApiKeyInvalid } = useAIStore();
 
   const [step, setStep] = useState(useAIStore.getState().apiKey ? 3 : 1);
   const [tempProvider, setTempProvider] = useState<AIProvider['type']>(useAIStore.getState().providerType);
@@ -63,6 +63,14 @@ export default function OnboardingView() {
     t('onboarding.loadingPhrase6', 'מתמקח עם נהגי מוניות וירטואליים...'),
     t('onboarding.loadingPhrase7', 'זה לוקח קצת זמן כי הטיול הזה פשוט גדול עלינו! סתם, עוד רגע מסיימים...')
   ];
+
+  React.useEffect(() => {
+    if (isApiKeyInvalid) {
+      setStep(1);
+      setGenerating(false);
+      setApiKeyInvalid(false);
+    }
+  }, [isApiKeyInvalid, setApiKeyInvalid]);
 
   React.useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
