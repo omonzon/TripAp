@@ -6,6 +6,8 @@ import { useTripStore } from '@/store/useTripStore';
 import { translateTripContent } from '@/services/translationService';
 import { showToast } from '@/components/ui/Toast';
 import { signOut, syncUserSettingsToCloud } from '@/services/authService';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 import type { TabId } from '@/App';
 
 interface AppHeaderProps {
@@ -68,6 +70,9 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                       className={`w-full text-start px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm transition-colors ${trip.id === tripProfile?.id ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
                       onClick={() => {
                         setCurrentTrip(trip.id);
+                        if (appUser?.email) {
+                          setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), { activeTripId: trip.id }, { merge: true }).catch(console.error);
+                        }
                         setShowTripsDropdown(false);
                       }}
                     >
