@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info, Camera } from 'lucide-react';
-import { doc, setDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, arrayUnion, deleteDoc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type TripProfile } from '@/store/useTripStore';
@@ -329,16 +329,37 @@ export default function OnboardingView() {
 
       // Comprehensive AI Generation
       if (!skipAI && tempApiKey.trim()) {
-        showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is building your comprehensive trip data...') });
-        setGenerationProgress(t('onboarding.startingGeneration', 'מתחיל ניתוח...'));
-        await generateComprehensiveTrip(
-          profile, 
-          form.bookings, 
-          getProviderForTask('itinerary'), 
-          i18n.language, 
-          appUser.email,
-          setGenerationProgress
-        );
+        try {
+          showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is building your comprehensive trip data...') });
+          setGenerationProgress(t('onboarding.startingGeneration', 'מתחיל ניתוח...'));
+          await generateComprehensiveTrip(
+            profile, 
+            form.bookings, 
+            getProviderForTask('itinerary'), 
+            i18n.language, 
+            appUser.email,
+            setGenerationProgress
+          );
+        } catch (aiErr: any) {
+          console.error("AI Generation failed:", aiErr);
+          
+          // Revert trip creation to avoid empty trips
+          await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
+          await deleteDoc(doc(db, 'trips', tripId, 'users', appUser.email));
+          await updateDoc(doc(db, 'users', appUser.email), {
+            trips: arrayRemove({ id: tripId, name: profile.name, destinations: profile.destinations })
+          });
+          
+          const errorMsg = aiErr?.message || String(aiErr);
+          if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota') || errorMsg.includes('Too Many Requests')) {
+            setKeyError('המפתח תקין אך חרגת ממכסת הבקשות (Rate Limit) למודל זה. אנא נסה מודל אחר או בדוק את מצב החשבון שלך.');
+          } else {
+            setKeyError(`שגיאה בתקשורת עם ה-AI: ${errorMsg}. אנא ודא שהמפתח תקין.`);
+          }
+          
+          setStep(1); // Go back to API key selection
+          throw new Error('AI_GENERATION_FAILED');
+        }
       }
 
       setTripProfile(profile);
@@ -347,7 +368,9 @@ export default function OnboardingView() {
       
     } catch (err: any) {
       console.error(err);
-      showToast({ type: 'error', message: err.message || t('app.error') });
+      if (err.message !== 'AI_GENERATION_FAILED') {
+        showToast({ type: 'error', message: err.message || t('app.error') });
+      }
     } finally {
       setGenerating(false);
       setGenerationProgress('');
