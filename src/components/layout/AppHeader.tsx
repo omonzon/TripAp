@@ -261,6 +261,9 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                       <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
                         <div className="font-bold text-slate-900 dark:text-white truncate">{appUser.name}</div>
                         <div className="text-xs text-slate-500 truncate" dir="ltr">{appUser.email}</div>
+                        <div className="text-xs text-brand-600 dark:text-brand-400 font-medium mt-1">
+                          {appUser.role === 'admin' ? 'מנהל טיול' : appUser.role === 'editor' ? 'עורך' : 'צופה'}
+                        </div>
                       </div>
                       <button 
                         className="w-full text-start px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-300 transition-colors"
