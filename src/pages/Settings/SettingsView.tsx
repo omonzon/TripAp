@@ -80,7 +80,7 @@ export default function SettingsView() {
   const [emailSaved, setEmailSaved] = useState(false);
 
   // Super Admin specific state
-  const isSuperAdmin = appUser?.email === 'omonzon@gmail.com';
+  const isSuperAdmin = appUser?.email?.toLowerCase().trim() === 'omonzon@gmail.com';
   const [affiliateLinks, setAffiliateLinks] = useState('{}');
   const [savingAffiliates, setSavingAffiliates] = useState(false);
 
