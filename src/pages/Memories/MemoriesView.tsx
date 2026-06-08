@@ -416,21 +416,17 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
               <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '30px 30px' }}></div>
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-r from-brand-600/80 to-brand-400/70 dark:from-brand-900/80 dark:to-brand-800/70"></div>
-              
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center pointer-events-none">
-                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 shadow-lg">
+              <a href={mapUrl} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center flex-col text-white p-6 text-center bg-black/0 hover:bg-black/10 transition-colors group-hover:cursor-pointer">
+                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 shadow-lg transform transition-transform group-hover:-translate-y-1">
                   <MapPin size={24} className="text-white" />
                 </div>
                 <h3 className="text-xl font-bold mb-1">המפה מוכנה!</h3>
                 <p className="text-brand-50 text-sm max-w-lg mx-auto mb-4">
                   נתיב המסלול חולץ בהצלחה לגוגל מפות
                 </p>
-              </div>
-
-              <a href={mapUrl} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
-                 <span className="px-5 py-2.5 mt-20 bg-white text-brand-700 font-bold rounded-full shadow-lg flex items-center gap-2 transform group-hover:scale-105 transition-all">
-                   פתח מפה <ExternalLink size={16} />
-                 </span>
+                <span className="px-5 py-2 bg-white text-brand-700 font-bold rounded-full shadow-lg flex items-center gap-2 transform transition-all group-hover:scale-105">
+                  פתח מפה <ExternalLink size={16} />
+                </span>
               </a>
             </div>
           </div>
