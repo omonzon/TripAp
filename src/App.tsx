@@ -153,7 +153,7 @@ export default function App() {
   // Sync AI Semantic Graph from Firestore for the current trip
   useEffect(() => {
     if (!currentTripId || currentTripId === 'new') {
-      if (!currentTripId) useAIStore.getState().clearTripGraph();
+      useAIStore.getState().clearTripGraph();
       return;
     }
     const graphRef = doc(db, 'trips', currentTripId, 'profile', 'graph');
