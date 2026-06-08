@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, ArrowRight, ArrowLeft, Loader2, Key, Info, AlertTriangle } from 'lucide-react';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useTripStore } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, type AIProvider } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
@@ -11,6 +12,7 @@ import { showToast } from '@/components/ui/Toast';
 export default function WelcomeSetupScreen() {
   const { t } = useTranslation();
   const { appUser, setAppUser, setAiSetupDismissed } = useAuthStore();
+  const { currentTripId } = useTripStore();
   const { providerType, setProvider, setApiKey, setAllGeminiModels } = useAIStore();
   
   const isEditorOrAdmin = appUser?.role === 'admin' || appUser?.role === 'editor';
@@ -18,6 +20,8 @@ export default function WelcomeSetupScreen() {
 
   const [step, setStep] = useState(1);
   const [name, setName] = useState(appUser?.name || '');
+  const [age, setAge] = useState('');
+  const [personalPreferences, setPersonalPreferences] = useState('');
   const [tempProvider, setTempProvider] = useState<AIProvider['type']>(providerType || 'gemini');
   const [tempApiKey, setTempApiKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
@@ -28,11 +32,28 @@ export default function WelcomeSetupScreen() {
     setIsSaving(true);
     try {
       // 1. Update user's name
-      if (name.trim() !== appUser?.name) {
-        const newName = name.trim() || appUser?.email.split('@')[0] || 'User';
+      let newName = name.trim();
+      if (newName !== appUser?.name) {
+        newName = newName || appUser?.email.split('@')[0] || 'User';
         if (appUser?.email) {
           await updateDoc(doc(db, 'users', appUser.email), { name: newName });
           setAppUser({ ...appUser, name: newName });
+        }
+      }
+
+      // 1.5 Update trip preferences
+      if (currentTripId && (age.trim() || personalPreferences.trim())) {
+        const tripRef = doc(db, 'trips', currentTripId, 'profile', 'main');
+        const tripSnap = await getDoc(tripRef);
+        if (tripSnap.exists()) {
+          const existingPrefs = tripSnap.data().preferences || '';
+          let appendedPrefs = `\\n- Participant: ${newName}`;
+          if (age.trim()) appendedPrefs += ` (Age ${age.trim()})`;
+          if (personalPreferences.trim()) appendedPrefs += ` - Preferences: ${personalPreferences.trim()}`;
+          
+          await updateDoc(tripRef, {
+            preferences: (existingPrefs + appendedPrefs).trim()
+          });
         }
       }
 
@@ -115,6 +136,41 @@ export default function WelcomeSetupScreen() {
                 dir="auto"
               />
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  גיל (אופציונלי)
+                </label>
+                <input
+                  type="number"
+                  className="input-base"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="גיל (למשל 30, 4.5)"
+                  dir="auto"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  העדפות אישיות (אופציונלי)
+                </label>
+                <input
+                  type="text"
+                  className="input-base"
+                  value={personalPreferences}
+                  onChange={(e) => setPersonalPreferences(e.target.value)}
+                  placeholder="אלרגיות, נגישות, סגנון..."
+                  dir="auto"
+                />
+              </div>
+            </div>
+            
+            <p className="text-xs text-slate-500 mt-1 flex items-start gap-1">
+              <Info size={14} className="shrink-0 mt-0.5" />
+              הפרטים האישיים יתווספו להעדפות הטיול הכלליות כך שה-AI יוכל להתחשב בהם בתכנון (העדפות מזון, נגישות וכדומה).
+            </p>
 
             <button
               onClick={() => needsApiKey ? setStep(2) : handleValidateAndSave(true)}
