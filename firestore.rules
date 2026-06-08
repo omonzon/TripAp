@@ -65,7 +65,8 @@ service cloud.firestore {
       match /profile/{doc} {
         allow read: if isMember();
         allow create: if request.auth != null && doc == 'main' && request.resource.data.createdBy == request.auth.token.email;
-        allow update, delete: if isAdmin();
+        allow update: if isAdmin() || (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['preferences']));
+        allow delete: if isAdmin();
       }
 
       // Helper: check if user is the verifiable creator of the trip
