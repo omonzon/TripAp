@@ -36,22 +36,26 @@ service cloud.firestore {
     // Multi-tenant trip data — strict isolation
     match /trips/{tripId} {
 
+      function isSuperAdmin() {
+        return request.auth != null && request.auth.token.email.lower() == 'omonzon@gmail.com';
+      }
+
       // Helper: check membership
       function isMember() {
         return request.auth != null &&
-          exists(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email));
+          (exists(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)) || isSuperAdmin());
       }
 
       // Helper: check admin role
       function isAdmin() {
-        return isMember() &&
-          get(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)).data.get('role', '') == 'admin';
+        return isSuperAdmin() || (request.auth != null && exists(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)) &&
+          get(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)).data.get('role', '') == 'admin');
       }
 
       // Helper: check editor or admin
       function canWrite() {
-        return isMember() &&
-          get(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)).data.get('role', '') in ['admin', 'editor'];
+        return isSuperAdmin() || (request.auth != null && exists(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)) &&
+          get(/databases/$(database)/documents/trips/$(tripId)/users/$(request.auth.token.email)).data.get('role', '') in ['admin', 'editor']);
       }
 
       // Trip profile — only members can read, only admins can update/delete
