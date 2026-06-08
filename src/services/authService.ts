@@ -62,8 +62,9 @@ export function initFirebaseAuth() {
         }
         
         setAppUser(data);
-        if (data && data.trips) {
-          useTripStore.getState().setAvailableTrips(data.trips);
+        const dataWithTrips = data as any;
+        if (dataWithTrips && dataWithTrips.trips) {
+          useTripStore.getState().setAvailableTrips(dataWithTrips.trips);
         } else {
           useTripStore.getState().setAvailableTrips([]);
         }
