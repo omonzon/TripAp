@@ -78,6 +78,17 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                     </button>
                   ))}
                   {availableTrips.length > 0 && <div className="h-px bg-slate-200 dark:bg-slate-700 my-1" />}
+                  {appUser?.email?.toLowerCase().trim() === 'omonzon@gmail.com' && (
+                    <button 
+                      className="w-full text-start px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors"
+                      onClick={() => {
+                        setCurrentTrip(null);
+                        setShowTripsDropdown(false);
+                      }}
+                    >
+                      ⚙️ {t('settings.title', 'ניהול מתקדם')}
+                    </button>
+                  )}
                   <button 
                     className="w-full text-start px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-brand-600 dark:text-brand-400 transition-colors"
                     onClick={() => {
