@@ -99,6 +99,16 @@ export default function App() {
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
   }, [setOnline]);
 
+  // Validate currentTripId against the user's available trips
+  useEffect(() => {
+    if (appUser && currentTripId && currentTripId !== 'new') {
+      const hasAccess = appUser.trips?.some(t => t.id === currentTripId);
+      if (!hasAccess && appUser.trips) {
+        useTripStore.getState().setCurrentTrip(null);
+      }
+    }
+  }, [appUser?.trips, currentTripId]);
+
   // Sync trip profile from Firestore when currentTripId changes
   useEffect(() => {
     if (!currentTripId) {
