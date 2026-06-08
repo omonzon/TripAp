@@ -375,7 +375,7 @@ export default function OnboardingView() {
   // Success Screen
   if (generatedTripId) {
     return (
-      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 flex flex-col items-center justify-center p-4">
+      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 flex flex-col items-center justify-start p-4 pt-20 overflow-y-auto">
          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-lg w-full p-8 text-center animate-fade-in border border-slate-200 dark:border-slate-700">
            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
