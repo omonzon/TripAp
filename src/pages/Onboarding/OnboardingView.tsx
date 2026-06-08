@@ -825,7 +825,7 @@ export default function OnboardingView() {
             <button 
               onClick={skipAI ? handleSkipAI : handleAISetupNext} 
               className="btn-primary flex items-center gap-2 ms-auto" 
-              disabled={!tosAccepted || (!skipAI && availableModels.length === 0)}
+              disabled={(!skipAI && availableModels.length === 0)}
             >
               {t('app.continue', 'המשך')} <ArrowRight size={16} />
             </button>
@@ -884,7 +884,7 @@ export default function OnboardingView() {
           <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700">
             <UploadCloud size={16} />
             {t('onboarding.restoreBtn', 'Restore Trip from File')}
-            <input type="file" accept=".json" className="hidden" onChange={handleRestore} disabled={!tosAccepted} />
+            <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
           </label>
         </div>
       )}
