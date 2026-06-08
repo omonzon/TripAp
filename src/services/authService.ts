@@ -83,21 +83,24 @@ export function initFirebaseAuth() {
 
     const profileRef = doc(db, 'users', firebaseUser.email!, 'settings', 'app');
     const profileSnap = await getDoc(profileRef);
+    const userDoc = await getDoc(userRef);
+    const userTrips = userDoc.data()?.trips || [];
+
     if (profileSnap.exists()) {
       const data = profileSnap.data();
       const savedTripId = data?.activeTripId as string | undefined;
       
       if (savedTripId) {
-        // Double check the user still has access to this trip
-        const userDoc = await getDoc(userRef);
-        const userTrips = userDoc.data()?.trips || [];
         const hasAccess = userTrips.some((t: any) => t.id === savedTripId);
-        
         if (hasAccess) {
           useTripStore.getState().setCurrentTrip(savedTripId);
+        } else if (userTrips.length > 0) {
+          useTripStore.getState().setCurrentTrip(userTrips[0].id);
         } else {
           useTripStore.getState().setCurrentTrip(null);
         }
+      } else if (userTrips.length > 0) {
+        useTripStore.getState().setCurrentTrip(userTrips[0].id);
       } else {
         useTripStore.getState().setCurrentTrip(null);
       }
@@ -118,6 +121,15 @@ export function initFirebaseAuth() {
          if (ai.providerType) useAIStore.getState().setProvider(ai.providerType);
          if (ai.apiKey) useAIStore.getState().setApiKey(ai.apiKey);
          if (ai.models) useAIStore.setState({ models: ai.models });
+      }
+      if (data.aiSetupDismissed !== undefined) {
+         useAuthStore.getState().setAiSetupDismissed(data.aiSetupDismissed);
+      }
+    } else {
+      if (userTrips.length > 0) {
+        useTripStore.getState().setCurrentTrip(userTrips[0].id);
+      } else {
+        useTripStore.getState().setCurrentTrip(null);
       }
     }
 

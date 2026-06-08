@@ -31,6 +31,7 @@ const AIAssistantView = lazy(() => import('@/pages/AIAssistant/AIAssistantView')
 const MemoriesView    = lazy(() => import('@/pages/Memories/MemoriesView'));
 const SettingsView    = lazy(() => import('@/pages/Settings/SettingsView'));
 const OnboardingView  = lazy(() => import('@/pages/Onboarding/OnboardingView'));
+const WelcomeSetupScreen = lazy(() => import('@/pages/Onboarding/WelcomeSetupScreen'));
 const DocumentsView   = lazy(() => import('@/pages/Documents/DocumentsView'));
 
 export const TAB_DEFS = [
@@ -58,7 +59,7 @@ function PageLoader() {
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const { firebaseUser, appUser, authLoading, isDarkMode, language, fontSize, autoBackupInterval, lastBackupTime, setLastBackupTime } = useAuthStore();
+  const { firebaseUser, appUser, authLoading, isDarkMode, language, fontSize, autoBackupInterval, lastBackupTime, setLastBackupTime, aiSetupDismissed } = useAuthStore();
   const { currentTripId, isOnline, setOnline } = useTripStore();
   const [activeTab, setActiveTab] = React.useState<TabId>('itinerary');
   
@@ -232,9 +233,23 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col">
         <AppHeader showTabs={false} />
-        <main className="max-w-2xl mx-auto px-4 py-8">
+        <main className="max-w-2xl mx-auto px-4 py-8 w-full">
           <Suspense fallback={<PageLoader />}>
             <OnboardingView />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
+  // Show Welcome Setup Screen for invited users who haven't completed it
+  if (currentTripId && currentTripId !== 'new' && !aiSetupDismissed) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppHeader showTabs={false} />
+        <main className="max-w-2xl mx-auto px-4 py-8 w-full">
+          <Suspense fallback={<PageLoader />}>
+            <WelcomeSetupScreen />
           </Suspense>
         </main>
       </div>

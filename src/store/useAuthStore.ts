@@ -25,6 +25,7 @@ interface AuthState {
   autoBackupInterval: number;
   lastBackupTime: number;
   emailjsConfig?: { serviceId: string; templateId: string; bugTemplateId?: string; publicKey: string };
+  aiSetupDismissed: boolean;
 
   setFirebaseUser: (user: User | null) => void;
   setAppUser: (user: AppUser | null) => void;
@@ -36,6 +37,7 @@ interface AuthState {
   setAutoBackupInterval: (hours: number) => void;
   setLastBackupTime: (time: number) => void;
   setEmailjsConfig: (config: AuthState['emailjsConfig']) => void;
+  setAiSetupDismissed: (val: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -51,11 +53,13 @@ export const useAuthStore = create<AuthState>()(
       autoBackupInterval: 0,
       lastBackupTime: 0,
       emailjsConfig: undefined,
+      aiSetupDismissed: false,
 
       setFirebaseUser: (user) => set({ firebaseUser: user }),
       setAppUser: (user) => set({ appUser: user }),
       setAuthLoading: (val) => set({ authLoading: val }),
       setLoginError: (err) => set({ loginError: err }),
+      setAiSetupDismissed: (val) => set({ aiSetupDismissed: val }),
 
       toggleDarkMode: () => {
         const next = !get().isDarkMode;
