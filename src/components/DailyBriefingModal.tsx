@@ -114,7 +114,7 @@ Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 w
             onClick={onClose}
             className="w-full mt-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-95"
           >
-            {t('dailyBriefing.letsGo', 'Let\\'s Go! 🚀')}
+            {t('dailyBriefing.letsGo', "Let's Go! 🚀")}
           </button>
         </div>
       </div>
