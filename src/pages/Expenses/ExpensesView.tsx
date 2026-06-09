@@ -70,7 +70,10 @@ export default function ExpensesView() {
   }, []);
 
   const toUSD = (amount: number, currency: string): number => {
-    return amount / (exchangeRates[currency] ?? 1);
+    const cur = currency?.trim().toUpperCase() || 'USD';
+    const map: Record<string, string> = { '₪': 'ILS', '$': 'USD', '€': 'EUR', '£': 'GBP' };
+    const cleanCur = map[cur] || cur;
+    return amount / (exchangeRates[cleanCur] ?? 1);
   };
   const fileRef = useRef<HTMLInputElement>(null!);
 
@@ -116,8 +119,15 @@ export default function ExpensesView() {
           reader.onerror = (e) => reject(e);
           reader.readAsText(file);
         });
+      } else if (file.type === 'application/pdf') {
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       } else {
-        // Assume image/pdf and use vision
+        // Assume image and use vision
         base64 = await compressImageToBase64(file);
       }
 
