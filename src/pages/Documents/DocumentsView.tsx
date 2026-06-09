@@ -85,10 +85,12 @@ export default function DocumentsView() {
       id: docId,
       title: docTitle.trim(),
       content: docContent.trim(),
-      link: docLink.trim() || undefined,
       createdAt: editingDoc ? editingDoc.createdAt : now,
       updatedAt: now,
     };
+    if (docLink.trim()) {
+      newDoc.link = docLink.trim();
+    }
 
     try {
       await setDoc(doc(db, 'trips', currentTripId, 'documents', docId), newDoc);
