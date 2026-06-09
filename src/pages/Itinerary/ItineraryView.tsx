@@ -951,6 +951,9 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                         }
                         if (editingItemId !== item.id) {
                           setDetailedItem({ dayDocId: day.docId, item });
+                          if (currentTripId) {
+                            localStorage.setItem(`lastViewedDay_${currentTripId}`, day.docId);
+                          }
                         }
                       }}
                       onTouchStart={() => {

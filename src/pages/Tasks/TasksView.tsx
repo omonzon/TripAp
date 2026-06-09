@@ -109,6 +109,7 @@ export default function TasksView() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskText, setEditTaskText] = useState('');
   const [editTaskCategory, setEditTaskCategory] = useState('general');
+  const [editTaskPriority, setEditTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [enableLocation, setEnableLocation] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
   const [reminderTask, setReminderTask] = useState<Task | null>(null);
@@ -403,11 +404,20 @@ export default function TasksView() {
                             autoFocus
                             onKeyDown={async (e) => {
                               if (e.key === 'Enter') {
-                                if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText, category: editTaskCategory });
+                                if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText, category: editTaskCategory, priority: editTaskPriority });
                                 setEditingTaskId(null);
                               }
                             }}
                           />
+                          <select 
+                            value={editTaskPriority}
+                            onChange={(e) => setEditTaskPriority(e.target.value as any)}
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none"
+                          >
+                            <option value="low">{t('tasks.low', 'Low')}</option>
+                            <option value="medium">{t('tasks.medium', 'Medium')}</option>
+                            <option value="high">{t('tasks.high', 'High')}</option>
+                          </select>
                           <select 
                             value={editTaskCategory}
                             onChange={(e) => setEditTaskCategory(e.target.value)}
@@ -419,7 +429,7 @@ export default function TasksView() {
                             <option value="general">{t('tasks.catGeneral', 'כללי')}</option>
                           </select>
                           <button onClick={async () => {
-                            if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText, category: editTaskCategory });
+                            if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText, category: editTaskCategory, priority: editTaskPriority });
                             setEditingTaskId(null);
                           }} className="text-brand-500 hover:text-brand-600 p-1"><Check size={16} /></button>
                           <button onClick={() => setEditingTaskId(null)} className="text-slate-400 hover:text-slate-500 p-1"><X size={16} /></button>
@@ -441,6 +451,7 @@ export default function TasksView() {
                             setEditingTaskId(task.id);
                             setEditTaskText(task.text);
                             setEditTaskCategory(task.category || 'general');
+                            setEditTaskPriority(task.priority || 'medium');
                           }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
                             <Edit2 size={14} />
                           </button>
