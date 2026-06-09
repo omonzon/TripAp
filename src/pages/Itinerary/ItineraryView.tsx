@@ -308,25 +308,33 @@ export default function ItineraryView() {
 
   // Track Last Viewed Day via IntersectionObserver
   useEffect(() => {
-    if (!currentTripId || days.length === 0) return;
-    const observer = new IntersectionObserver((entries) => {
-      // Find the most visible day
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-          const dayId = entry.target.getAttribute('data-day-id');
-          if (dayId) {
-            localStorage.setItem(`lastViewedDay_${currentTripId}`, dayId);
+    if (!currentTripId || days.length === 0 || !hasScrolled) return;
+    
+    let observer: IntersectionObserver | null = null;
+
+    // Delay observer creation to allow initial scroll to complete
+    const timeoutId = setTimeout(() => {
+      observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            const dayId = entry.target.getAttribute('data-day-id');
+            if (dayId) {
+              localStorage.setItem(`lastViewedDay_${currentTripId}`, dayId);
+            }
           }
         }
-      }
-    }, { threshold: 0.5 });
+      }, { threshold: 0.5 });
 
-    Object.values(dayRefs.current).forEach(ref => {
-      if (ref) observer.observe(ref);
-    });
+      Object.values(dayRefs.current).forEach(ref => {
+        if (ref) observer?.observe(ref);
+      });
+    }, 1500); // 1.5s covers the 500ms initial delay + 1s of smooth scrolling
 
-    return () => observer.disconnect();
-  }, [days, currentTripId]);
+    return () => {
+      clearTimeout(timeoutId);
+      observer?.disconnect();
+    };
+  }, [days, currentTripId, hasScrolled]);
 
   // ── Fetch Weather ────────────────────────────────────────────────────────
   useEffect(() => {
