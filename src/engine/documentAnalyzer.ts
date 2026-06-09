@@ -162,18 +162,31 @@ export async function integrateDocumentData(
     });
   }
 
-  // 3. Documents
+  // 3. Documents (References and Details)
   if (parsed.documents && parsed.documents.length > 0) {
     const docsRef = collection(db, 'trips', tripProfile.id, 'documents');
-    parsed.documents.forEach(docItem => {
+    
+    if (parsed.documents.length === 1) {
+      const docItem = parsed.documents[0];
       promises.push(addDoc(docsRef, {
         title: docItem.title,
-        referenceNumber: docItem.referenceNumber,
-        notes: docItem.notes || '',
+        content: `${docItem.referenceNumber || ''}\n${docItem.notes || ''}`.trim() || docItem.title,
         authorEmail,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       }));
-    });
+    } else {
+      const contentLines = parsed.documents.map(d => {
+        return `**${d.title}**: ${d.referenceNumber || ''} ${d.notes ? `(${d.notes})` : ''}`.trim();
+      });
+      promises.push(addDoc(docsRef, {
+        title: i18n.language === 'he' ? 'פרטי מסמך סרוק' : 'Scanned Document Details',
+        content: contentLines.join('\n\n'),
+        authorEmail,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }));
+    }
   }
 
   await Promise.all(promises);
