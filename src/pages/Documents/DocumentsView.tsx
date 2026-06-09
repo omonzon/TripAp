@@ -262,17 +262,29 @@ export default function DocumentsView() {
 
   return (
     <div 
-      className={`space-y-4 animate-fade-in pb-24 ${isDragging ? 'ring-4 ring-brand-500 rounded-2xl bg-brand-50 dark:bg-brand-900/20' : ''}`}
-      onDragOver={(e) => { e.preventDefault(); if (canWrite) setIsDragging(true); }}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDragging(false);
-        if (canWrite && e.dataTransfer.files?.[0]) {
-          processFile(e.dataTransfer.files[0]);
-        }
-      }}
+      className="space-y-4 animate-fade-in pb-24 relative"
+      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (canWrite) setIsDragging(true); }}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (canWrite) setIsDragging(true); }}
     >
+      {isDragging && (
+        <div 
+          className="absolute inset-0 z-50 bg-brand-50/90 dark:bg-brand-900/40 backdrop-blur-sm border-2 border-dashed border-brand-500 rounded-2xl flex flex-col items-center justify-center"
+          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+            if (canWrite && e.dataTransfer.files?.[0]) {
+              processFile(e.dataTransfer.files[0]);
+            }
+          }}
+        >
+          <div className="w-20 h-20 rounded-full bg-brand-100 dark:bg-brand-800 flex items-center justify-center text-brand-600 animate-bounce shadow-lg">
+            <Plus size={40} />
+          </div>
+        </div>
+      )}
       <input type="file" ref={fileRef} className="hidden" accept="image/*,application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={e => e.target.files?.[0] && processFile(e.target.files[0])} />
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

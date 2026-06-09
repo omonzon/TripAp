@@ -206,13 +206,24 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (canWrite) setIsDragging(true);
   };
-  const handleDragLeave = () => setIsDragging(false);
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (canWrite) setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
     if (!canWrite) return;
     const file = e.dataTransfer.files?.[0];
@@ -263,12 +274,16 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
   return (
     <div 
       className="space-y-5 animate-fade-in max-w-3xl mx-auto relative min-h-[60vh]"
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       {isDragging && (
-        <div className="absolute inset-0 bg-brand-50/90 dark:bg-brand-900/40 backdrop-blur-sm z-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-brand-500 animate-in fade-in">
+        <div 
+          className="absolute inset-0 bg-brand-50/90 dark:bg-brand-900/40 backdrop-blur-sm z-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-brand-500 animate-in fade-in"
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+        >
           <div className="w-20 h-20 rounded-full bg-brand-100 dark:bg-brand-800 flex items-center justify-center mb-4 text-brand-600 animate-bounce shadow-lg">
             <Plus size={40} />
           </div>

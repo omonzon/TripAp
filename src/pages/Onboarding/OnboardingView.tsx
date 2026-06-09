@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info, Camera } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info, Camera, Plus } from 'lucide-react';
 import { doc, setDoc, arrayUnion, deleteDoc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -896,17 +896,29 @@ export default function OnboardingView() {
             )}
 
             <div 
-                className={`space-y-4 ${isDragging ? 'ring-4 ring-brand-500 rounded-2xl bg-brand-50 dark:bg-brand-900/20 p-4 -m-4 transition-all' : 'transition-all'}`}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  if (e.dataTransfer.files?.[0]) {
-                    processFile(e.dataTransfer.files[0]);
-                  }
-                }}
+                className="space-y-4 relative p-4 -m-4 transition-all"
+                onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
             >
+              {isDragging && (
+                <div 
+                  className="absolute inset-0 z-50 bg-brand-50/90 dark:bg-brand-900/40 backdrop-blur-sm border-2 border-dashed border-brand-500 rounded-2xl flex items-center justify-center"
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files?.[0]) {
+                      processFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                >
+                  <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-800 flex items-center justify-center text-brand-600 animate-bounce shadow-lg">
+                    <Plus size={32} />
+                  </div>
+                </div>
+              )}
               <textarea
                 className="input-base h-32 resize-none font-mono text-sm w-full"
                 value={currentSegmentText}
