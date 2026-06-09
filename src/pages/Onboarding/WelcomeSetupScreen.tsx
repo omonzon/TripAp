@@ -348,7 +348,7 @@ export default function WelcomeSetupScreen() {
                   בחר מודל
                 </label>
                 <p className="text-xs text-brand-600 dark:text-brand-400 font-medium mb-2">
-                  ✨ שימוש במודלים מתקדמים יותר יניב תוצאות טובות יותר בתכנון המסלול.
+                  ✨ שימוש במודלים מתקדמים (כמו מודל ה-Pro) יניב תוצאות טובות בהרבה בתכנון המסלול, אך לרוב דורש הגדרת אמצעי תשלום (Billing) בחשבון גוגל.
                 </p>
                 <select className="input-base" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
                   {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
