@@ -304,7 +304,7 @@ export default function ItineraryView() {
       setLoading(false);
     });
     return () => unsub();
-  }, [days, hasScrolled, currentTripId, tripProfile, todayIso]);
+  }, [currentTripId]);
 
   // Track Last Viewed Day via IntersectionObserver
   useEffect(() => {
