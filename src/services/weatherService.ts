@@ -52,7 +52,7 @@ export const getWeatherMeta = (code: number) => {
 };
 
 export const getTripWeather = async (
-  days: { isoDate: string; title: string }[],
+  days: { isoDate: string; title: string; locationNameEn?: string }[],
   destinations: string[], 
   startDate: string, 
   endDate: string
@@ -70,11 +70,15 @@ export const getTripWeather = async (
 
   for (const day of sortedDays) {
     // 1. Determine location for this day
-    let dayLocation = lastKnownLocation;
-    for (const dest of destinations) {
-      if (day.title.toLowerCase().includes(dest.toLowerCase())) {
-        dayLocation = dest;
-        break;
+    let dayLocation = day.locationNameEn || lastKnownLocation;
+    
+    // If no specific English name is stored, try to match destination names as a fallback
+    if (!day.locationNameEn) {
+      for (const dest of destinations) {
+        if (day.title.toLowerCase().includes(dest.toLowerCase())) {
+          dayLocation = dest;
+          break;
+        }
       }
     }
     lastKnownLocation = dayLocation;

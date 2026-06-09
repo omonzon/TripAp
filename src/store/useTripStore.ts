@@ -43,6 +43,7 @@ export interface ItineraryDay {
   mapUrl?: string;
   mapImgUrl?: string;
   mapImage?: string;
+  locationNameEn?: string;
   items: ItineraryItem[];
 }
 

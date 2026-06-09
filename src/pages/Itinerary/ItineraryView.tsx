@@ -344,7 +344,7 @@ export default function ItineraryView() {
   useEffect(() => {
     if (!tripProfile || !tripProfile.destinations || tripProfile.destinations.length === 0 || days.length === 0) return;
     const fetchWeather = async () => {
-      const daysInput = days.map(d => ({ isoDate: d.isoDate, title: d.title }));
+      const daysInput = days.map(d => ({ isoDate: d.isoDate, title: d.title, locationNameEn: d.locationNameEn }));
       const wMap = await getTripWeather(daysInput, tripProfile.destinations, tripProfile.startDate, tripProfile.endDate);
       setWeatherMap(wMap);
       
@@ -362,7 +362,43 @@ export default function ItineraryView() {
       setWeatherAlerts(alerts);
     };
     fetchWeather();
-  }, [tripProfile]);
+  }, [tripProfile, days]); // added days to dependency array to update weather if locationNameEn changes
+
+  // ── Extract missing English location names for accurate weather ──────────
+  useEffect(() => {
+    if (!currentTripId || days.length === 0 || !canWrite) return;
+    const daysWithoutLoc = days.filter(d => !d.locationNameEn);
+    if (daysWithoutLoc.length === 0) return;
+
+    const extractLocations = async () => {
+      const daysStr = daysWithoutLoc.map(d => `${d.docId}: ${d.title}`).join('\n');
+      const prompt = `Extract the main city or town name in English for each of the following days from a travel itinerary. 
+For each line, identify the primary city where the person will be. Return ONLY a JSON object mapping the ID to the exact English city name. For example: {"day123": "Amsterdam", "day456": "Groningen"}.
+If a day title has no city, do your best to infer from context or return the most logical location.
+Here are the days:
+${daysStr}`;
+
+      try {
+        const text = await callAI(prompt, getProviderForTask('extraction'), { isJson: true });
+        const result = parseAIJson<Record<string, string>>(text, {});
+        
+        // Update Firestore for each missing day
+        for (const [docId, locName] of Object.entries(result)) {
+           if (locName && typeof locName === 'string' && locName.trim()) {
+             await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', docId), {
+               locationNameEn: locName.trim()
+             });
+           }
+        }
+      } catch (err) {
+        console.error("Failed to extract locations", err);
+      }
+    };
+
+    // Delay extraction to not block UI/weather loading
+    const t = setTimeout(extractLocations, 3000);
+    return () => clearTimeout(t);
+  }, [days, currentTripId, canWrite]);
 
   // ── Scroll to today & Check Briefing ──────────────────────────────────────
   useEffect(() => {
