@@ -858,9 +858,16 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                    {weatherMeta.desc}
-                    {weather.isExtreme && <span className="ms-2 text-red-600 dark:text-red-400 font-bold">⚠️ מזג אוויר קיצוני</span>}
+                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-1 flex flex-wrap items-center gap-2">
+                    <span>{weatherMeta.desc}</span>
+                    {weather.windSpeed > 0 && <span className="text-[10px] bg-white/50 dark:bg-black/20 px-1.5 py-0.5 rounded text-slate-500">💨 {weather.windSpeed} km/h</span>}
+                    {weather.precipitation > 0 && <span className="text-[10px] bg-white/50 dark:bg-black/20 px-1.5 py-0.5 rounded text-slate-500">🌧️ {weather.precipitation} mm</span>}
+                    
+                    {weather.warnings && weather.warnings.length > 0 && (
+                      <span className="ms-1 text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 font-bold px-1.5 py-0.5 rounded">
+                        ⚠️ {weather.warnings.join(', ')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

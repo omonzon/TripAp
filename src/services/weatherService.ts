@@ -3,9 +3,12 @@ export interface WeatherInfo {
   maxTemp: number;
   minTemp: number;
   code: number;
+  windSpeed: number;
+  precipitation: number;
   isForecast: boolean;
   isExtreme: boolean;
   locationName?: string;
+  warnings?: string[];
 }
 
 // Map WMO Weather Codes to Emojis and descriptions
@@ -98,7 +101,7 @@ export const getTripWeather = async (
     const coordKey = `${coords.lat},${coords.lng}`;
     if (!weatherCache[coordKey]) {
       try {
-        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16`);
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=16`);
         weatherCache[coordKey] = await weatherRes.json();
       } catch (err) {
         weatherCache[coordKey] = null;
@@ -109,44 +112,48 @@ export const getTripWeather = async (
     if (!weatherData || !weatherData.daily || !weatherData.daily.time) continue;
 
     // 4. Find weather for this specific day's date
-    const { time, weather_code, temperature_2m_max, temperature_2m_min } = weatherData.daily;
+    const { time, weather_code, temperature_2m_max, temperature_2m_min, precipitation_sum, wind_speed_10m_max } = weatherData.daily;
     const dateIdx = time.indexOf(day.isoDate);
 
-    if (dateIdx !== -1) {
-      const code = weather_code[dateIdx];
-      const maxTemp = Math.round(temperature_2m_max[dateIdx]);
-      const minTemp = Math.round(temperature_2m_min[dateIdx]);
+    const processDayWeather = (idx: number, isForecast: boolean) => {
+      const code = weather_code[idx];
+      const maxTemp = Math.round(temperature_2m_max[idx]);
+      const minTemp = Math.round(temperature_2m_min[idx]);
+      const precipitation = precipitation_sum?.[idx] || 0;
+      const windSpeed = Math.round(wind_speed_10m_max?.[idx] || 0);
 
       const isExtremeCode = [65, 66, 67, 75, 82, 86, 95, 96, 99].includes(code);
       const isExtremeTemp = maxTemp > 40 || minTemp < -10;
+      const isExtremeWind = windSpeed > 50;
+      const isExtremeRain = precipitation > 20;
 
-      weatherMap[day.isoDate] = {
+      const warnings: string[] = [];
+      if (maxTemp > 40) warnings.push('חום קיצוני');
+      if (minTemp < -5) warnings.push('קור קיצוני');
+      if (isExtremeWind) warnings.push('רוחות חזקות');
+      if (isExtremeRain) warnings.push('גשם כבד');
+      if ([95, 96, 99].includes(code)) warnings.push('סופות רעמים');
+      if ([75, 86].includes(code)) warnings.push('שלג כבד');
+
+      return {
         date: day.isoDate,
         maxTemp,
         minTemp,
         code,
-        isForecast: true,
-        isExtreme: isExtremeCode || isExtremeTemp,
-        locationName: dayLocation
+        windSpeed,
+        precipitation,
+        isForecast,
+        isExtreme: isExtremeCode || isExtremeTemp || isExtremeWind || isExtremeRain,
+        locationName: dayLocation,
+        warnings
       };
+    };
+
+    if (dateIdx !== -1) {
+      weatherMap[day.isoDate] = processDayWeather(dateIdx, true);
     } else {
       // Date is out of 16-day range, use "today's" weather (index 0) as fallback
-      const code = weather_code[0];
-      const maxTemp = Math.round(temperature_2m_max[0]);
-      const minTemp = Math.round(temperature_2m_min[0]);
-      
-      const isExtremeCode = [65, 66, 67, 75, 82, 86, 95, 96, 99].includes(code);
-      const isExtremeTemp = maxTemp > 40 || minTemp < -10;
-
-      weatherMap[day.isoDate] = {
-        date: day.isoDate,
-        maxTemp,
-        minTemp,
-        code,
-        isForecast: false,
-        isExtreme: isExtremeCode || isExtremeTemp,
-        locationName: dayLocation
-      };
+      weatherMap[day.isoDate] = processDayWeather(0, false);
     }
   }
 
