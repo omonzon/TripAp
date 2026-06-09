@@ -228,7 +228,13 @@ export default function OnboardingView() {
             body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
           });
           if (!testRes.ok) {
-             showToast({ type: 'error', message: `המודל ${selectedModel} אינו תומך בפעולה זו (שגיאה ${testRes.status}). אנא בחר מודל אחר.` });
+             let errorMsg = `המודל ${selectedModel} החזיר שגיאה ${testRes.status}. `;
+             if (testRes.status === 403 || testRes.status === 400 || testRes.status === 429) {
+               errorMsg += `ייתכן שהחשבון שלך (ללא חיוב) אינו מורשה להשתמש במודל ה-Pro, או שחרגת ממכסת הבקשות החינמית (שגיאה 429). אנא בחר מודל ממשפחת ה-Flash (כמו gemini-2.5-flash) ונסה שוב.`;
+             } else {
+               errorMsg += `אנא בחר מודל אחר.`;
+             }
+             showToast({ type: 'error', message: errorMsg });
              setIsValidating(false);
              return;
           }
