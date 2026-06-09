@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Plus, Search, Loader2, Edit3, Trash2, X, ExternalLink, Link as LinkIcon, FileCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTripStore, useUserRole, TripDocument } from '@/store/useTripStore';
@@ -365,6 +365,7 @@ export default function DocumentsView() {
                     <LinkIcon size={12} /> {t('documents.openLink', 'קישור מצורף')}
                   </a>
                 )}
+              </div>
               </div>
             </div>
           ))}

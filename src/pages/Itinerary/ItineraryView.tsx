@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   onSnapshot, query, collection, doc,
   updateDoc, addDoc, deleteDoc, writeBatch,
-  orderBy, setDoc,
+  orderBy, setDoc, where, getDocs,
 } from 'firebase/firestore';
 import {
   GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User
@@ -252,7 +252,7 @@ export default function ItineraryView() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
-  const touchTimer = useRef<NodeJS.Timeout | null>(null);
+  const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [editItemText, setEditItemText] = useState('');
   const [editItemType, setEditItemType] = useState('map');
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
@@ -323,9 +323,9 @@ export default function ItineraryView() {
           if (todayIso < tripProfile.startDate) {
             // Pre-trip: fetch remaining tasks
             const q = query(collection(db, 'trips', currentTripId, 'tasks'), where('completed', '==', false));
-            getDocs(q).then(snap => {
-              const pendingTasks = snap.docs.map(d => d.data())
-                .filter(t => t.category === 'planning' || t.category === 'pre_trip');
+            getDocs(q).then((snap: any) => {
+              const pendingTasks = snap.docs.map((d: any) => d.data())
+                .filter((t: any) => t.category === 'planning' || t.category === 'pre_trip');
               if (pendingTasks.length > 0) {
                 setTodayItems([]);
                 setBriefingTasks(pendingTasks);

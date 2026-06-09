@@ -80,6 +80,13 @@ export default function MemoriesView() {
   const [editImageLink, setEditImageLink] = useState('');
   const [newAlbumUrl, setNewAlbumUrl] = useState('');
 
+  const MAP_LOADING_PHRASES = [
+    'רק לחיצה קטנה ואני מכין לך את המפה המדהימה...',
+    'מחשב מסלול מחדש (סתם, מצייר מפה)...',
+    'אוסף נקודות עניין...',
+    'מחבר את כל הימים למסלול אחד...'
+  ];
+
   const [mapLevel, setMapLevel] = useState<'full' | 'detailed' | 'cities' | 'countries'>('cities');
   const [mapDateStart, setMapDateStart] = useState<string>('');
   const [mapDateEnd, setMapDateEnd] = useState<string>('');
