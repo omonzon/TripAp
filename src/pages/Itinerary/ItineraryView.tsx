@@ -22,6 +22,7 @@ import ItineraryWizard from './ItineraryWizard';
 import LocationInfoModal from '@/components/LocationInfoModal';
 import DailyBriefingModal from '@/components/DailyBriefingModal';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
+import { getTripWeather, getWeatherMeta, type WeatherInfo } from '@/services/weatherService';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, { color: string; emoji: string }> = {
@@ -273,6 +274,8 @@ export default function ItineraryView() {
   const [briefingTasks, setBriefingTasks] = useState<any[]>([]);
   const [isScanningReferrals, setIsScanningReferrals] = useState(false);
   const [todayItems, setTodayItems] = useState<ItineraryItem[]>([]);
+  const [weatherMap, setWeatherMap] = useState<Record<string, WeatherInfo>>({});
+  const [weatherAlerts, setWeatherAlerts] = useState<WeatherInfo[]>([]);
   const fileRef = useRef<HTMLInputElement>(null!);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -302,6 +305,29 @@ export default function ItineraryView() {
     });
     return () => unsub();
   }, [currentTripId, setDays, t]);
+
+  // ── Fetch Weather ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!tripProfile || !tripProfile.destinations || tripProfile.destinations.length === 0) return;
+    const fetchWeather = async () => {
+      const wMap = await getTripWeather(tripProfile.destinations, tripProfile.startDate, tripProfile.endDate);
+      setWeatherMap(wMap);
+      
+      // Calculate extreme weather alerts within 4 days
+      const today = new Date();
+      const alerts: WeatherInfo[] = [];
+      for (let i = 0; i <= 4; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(checkDate.getDate() + i);
+        const iso = checkDate.toISOString().split('T')[0];
+        if (wMap[iso] && wMap[iso].isExtreme) {
+          alerts.push(wMap[iso]);
+        }
+      }
+      setWeatherAlerts(alerts);
+    };
+    fetchWeather();
+  }, [tripProfile]);
 
   // ── Scroll to today & Check Briefing ──────────────────────────────────────
   useEffect(() => {
@@ -705,10 +731,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
         )}
       </div>
 
-      {/* Weather */}
-      {tripProfile?.destinations?.[0] && (
-        <WeatherBanner lat={64.1466} lng={-21.9426} locationName={tripProfile.destinations[0]} />
-      )}
+      {/* Weather removed from here, moving to day cards */}
 
       {/* AI add bar */}
       {canWrite && (
@@ -770,6 +793,9 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
       ) : (
         days.map(day => {
           const isToday = day.isoDate === todayIso;
+          const weather = weatherMap[day.isoDate];
+          const weatherMeta = weather ? getWeatherMeta(weather.code) : null;
+          
           return (
           <div
             key={day.id}
@@ -806,9 +832,30 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
               </div>
             </div>
 
+            {/* Weather Bubble */}
+            {weather && weatherMeta && (
+              <div className={`mx-4 mb-2 p-2 rounded-xl bg-gradient-to-r ${weatherMeta.bgClass} flex items-center gap-3 shadow-sm ${weather.isExtreme ? 'border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse-slight' : 'border border-white/50 dark:border-slate-700'}`}>
+                <div className="text-2xl drop-shadow-sm">{weatherMeta.emoji}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800 dark:text-white text-sm">
+                      {weather.maxTemp}°C <span className="text-slate-500 font-normal">/ {weather.minTemp}°C</span>
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${weather.isForecast ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}>
+                      {weather.isForecast ? t('itinerary.forecast', 'תחזית') : t('itinerary.currentWeather', 'עכשווי')}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                    {weatherMeta.desc}
+                    {weather.isExtreme && <span className="ms-2 text-red-600 dark:text-red-400 font-bold">⚠️ מזג אוויר קיצוני</span>}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Map Section */}
             {(day.mapUrl || editingMapForDay === day.docId || canWrite) && (
-              <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
+              <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800/50 border-y border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
                 {editingMapForDay === day.docId ? (
                   <div className="flex w-full items-center gap-2">
                     <input
@@ -1091,6 +1138,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
         <DailyBriefingModal 
           todayItems={todayItems}
           pendingTasks={briefingTasks}
+          weatherAlerts={weatherAlerts}
           tripName={tripProfile?.name || ''} 
           onClose={() => {
             setShowDailyBriefing(false);

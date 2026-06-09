@@ -6,15 +6,17 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, type ItineraryItem } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { callAI } from '@/services/ai';
+import { getWeatherMeta, type WeatherInfo } from '@/services/weatherService';
 
 interface DailyBriefingModalProps {
   todayItems: ItineraryItem[];
   pendingTasks?: any[];
+  weatherAlerts?: WeatherInfo[];
   tripName: string;
   onClose: () => void;
 }
 
-export default function DailyBriefingModal({ todayItems, pendingTasks = [], tripName, onClose }: DailyBriefingModalProps) {
+export default function DailyBriefingModal({ todayItems, pendingTasks = [], weatherAlerts = [], tripName, onClose }: DailyBriefingModalProps) {
   const { t } = useTranslation();
   const { appUser } = useAuthStore();
   const { providerType, apiKey, getProviderForTask } = useAIStore();
@@ -64,6 +66,19 @@ Include:
 2. 2-3 bullet points of important reminders (e.g. bring sunscreen, water, tickets, etc.) based on the activities.
 3. A strong, funny group encouragement sentence at the end!
 Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 words). Use emojis!`;
+        }
+
+        let weatherWarningText = '';
+        if (weatherAlerts && weatherAlerts.length > 0) {
+          const alertsList = weatherAlerts.map(w => {
+            const meta = getWeatherMeta(w.code);
+            return `- Date: ${w.date}, Temp: ${w.maxTemp}°C / ${w.minTemp}°C, Forecast: ${meta.desc}`;
+          }).join('\n');
+          weatherWarningText = `
+IMPORTANT WEATHER ALERTS FOR THE UPCOMING DAYS (within next 4 days):
+${alertsList}
+Please add a strong warning or helpful advice about this extreme weather to the briefing!`;
+          prompt += '\n' + weatherWarningText;
         }
 
         const system = `You are an energetic, fun tour guide giving a morning briefing to a group of friends/family.`;
