@@ -5,6 +5,7 @@ export interface WeatherInfo {
   code: number;
   isForecast: boolean;
   isExtreme: boolean;
+  locationName?: string;
 }
 
 // Map WMO Weather Codes to Emojis and descriptions
@@ -48,83 +49,106 @@ export const getWeatherMeta = (code: number) => {
 };
 
 export const getTripWeather = async (
+  days: { isoDate: string; title: string }[],
   destinations: string[], 
   startDate: string, 
   endDate: string
 ): Promise<Record<string, WeatherInfo>> => {
-  if (!destinations || destinations.length === 0) return {};
+  if (!destinations || destinations.length === 0 || days.length === 0) return {};
 
-  const targetDest = destinations[0]; // Fetch for the first destination
+  const weatherMap: Record<string, WeatherInfo> = {};
+  const geoCache: Record<string, { lat: number, lng: number } | null> = {};
+  const weatherCache: Record<string, any> = {};
+
+  // Sort days by date just in case
+  const sortedDays = [...days].sort((a, b) => a.isoDate.localeCompare(b.isoDate));
   
-  try {
-    // 1. Geocode Destination
-    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(targetDest)}&count=1&language=en&format=json`);
-    const geoData = await geoRes.json();
-    
-    if (!geoData.results || geoData.results.length === 0) {
-      return {};
+  let lastKnownLocation = destinations[0];
+
+  for (const day of sortedDays) {
+    // 1. Determine location for this day
+    let dayLocation = lastKnownLocation;
+    for (const dest of destinations) {
+      if (day.title.toLowerCase().includes(dest.toLowerCase())) {
+        dayLocation = dest;
+        break;
+      }
+    }
+    lastKnownLocation = dayLocation;
+
+    // 2. Geocode if not cached
+    if (geoCache[dayLocation] === undefined) {
+      try {
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(dayLocation)}&count=1&language=en&format=json`);
+        const geoData = await geoRes.json();
+        if (geoData.results && geoData.results.length > 0) {
+          geoCache[dayLocation] = { lat: geoData.results[0].latitude, lng: geoData.results[0].longitude };
+        } else {
+          geoCache[dayLocation] = null;
+        }
+      } catch (err) {
+        geoCache[dayLocation] = null;
+      }
     }
 
-    const { latitude, longitude } = geoData.results[0];
+    const coords = geoCache[dayLocation];
+    if (!coords) continue;
 
-    // 2. Fetch 16 days forecast
-    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16`);
-    const weatherData = await weatherRes.json();
-
-    if (!weatherData.daily || !weatherData.daily.time) {
-      return {};
+    // 3. Fetch weather for coords if not cached
+    const coordKey = `${coords.lat},${coords.lng}`;
+    if (!weatherCache[coordKey]) {
+      try {
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16`);
+        weatherCache[coordKey] = await weatherRes.json();
+      } catch (err) {
+        weatherCache[coordKey] = null;
+      }
     }
 
+    const weatherData = weatherCache[coordKey];
+    if (!weatherData || !weatherData.daily || !weatherData.daily.time) continue;
+
+    // 4. Find weather for this specific day's date
     const { time, weather_code, temperature_2m_max, temperature_2m_min } = weatherData.daily;
-    const weatherMap: Record<string, WeatherInfo> = {};
+    const dateIdx = time.indexOf(day.isoDate);
 
-    for (let i = 0; i < time.length; i++) {
-      const dateIso = time[i]; // e.g. "2024-06-15"
-      const code = weather_code[i];
-      const maxTemp = Math.round(temperature_2m_max[i]);
-      const minTemp = Math.round(temperature_2m_min[i]);
+    if (dateIdx !== -1) {
+      const code = weather_code[dateIdx];
+      const maxTemp = Math.round(temperature_2m_max[dateIdx]);
+      const minTemp = Math.round(temperature_2m_min[dateIdx]);
 
-      // Check extreme conditions
-      // Thunderstorms (95, 96, 99), Heavy Rain (65, 82), Heavy Snow (75, 86), Freezing Rain (66, 67), Extreme Temps
       const isExtremeCode = [65, 66, 67, 75, 82, 86, 95, 96, 99].includes(code);
       const isExtremeTemp = maxTemp > 40 || minTemp < -10;
 
-      weatherMap[dateIso] = {
-        date: dateIso,
+      weatherMap[day.isoDate] = {
+        date: day.isoDate,
         maxTemp,
         minTemp,
         code,
         isForecast: true,
-        isExtreme: isExtremeCode || isExtremeTemp
+        isExtreme: isExtremeCode || isExtremeTemp,
+        locationName: dayLocation
+      };
+    } else {
+      // Date is out of 16-day range, use "today's" weather (index 0) as fallback
+      const code = weather_code[0];
+      const maxTemp = Math.round(temperature_2m_max[0]);
+      const minTemp = Math.round(temperature_2m_min[0]);
+      
+      const isExtremeCode = [65, 66, 67, 75, 82, 86, 95, 96, 99].includes(code);
+      const isExtremeTemp = maxTemp > 40 || minTemp < -10;
+
+      weatherMap[day.isoDate] = {
+        date: day.isoDate,
+        maxTemp,
+        minTemp,
+        code,
+        isForecast: false,
+        isExtreme: isExtremeCode || isExtremeTemp,
+        locationName: dayLocation
       };
     }
-
-    // 3. Fallback logic: If trip is completely out of range, we might just return the current weather 
-    // mapped to the trip dates.
-    // The user requested: "if within 10 days forecast, else current weather".
-    // We fetched 16 days. If the trip dates aren't in this map, we'll map the FIRST day of the forecast 
-    // (which is "today") to the trip dates to show "Current" weather.
-    const todayWeather = weatherMap[time[0]];
-    if (todayWeather) {
-      let currentCheckDate = new Date(startDate);
-      const endCheckDate = new Date(endDate);
-      
-      while (currentCheckDate <= endCheckDate) {
-        const iso = currentCheckDate.toISOString().split('T')[0];
-        if (!weatherMap[iso]) {
-          weatherMap[iso] = {
-            ...todayWeather,
-            date: iso,
-            isForecast: false // meaning "Current" placeholder
-          };
-        }
-        currentCheckDate.setDate(currentCheckDate.getDate() + 1);
-      }
-    }
-
-    return weatherMap;
-  } catch (error) {
-    console.error('Failed to fetch weather:', error);
-    return {};
   }
+
+  return weatherMap;
 };

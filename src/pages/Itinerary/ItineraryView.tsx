@@ -304,13 +304,36 @@ export default function ItineraryView() {
       setLoading(false);
     });
     return () => unsub();
-  }, [currentTripId, setDays, t]);
+  }, [days, hasScrolled, currentTripId, tripProfile, todayIso]);
+
+  // Track Last Viewed Day via IntersectionObserver
+  useEffect(() => {
+    if (!currentTripId || days.length === 0) return;
+    const observer = new IntersectionObserver((entries) => {
+      // Find the most visible day
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+          const dayId = entry.target.getAttribute('data-day-id');
+          if (dayId) {
+            localStorage.setItem(`lastViewedDay_${currentTripId}`, dayId);
+          }
+        }
+      }
+    }, { threshold: 0.5 });
+
+    Object.values(dayRefs.current).forEach(ref => {
+      if (ref) observer.observe(ref);
+    });
+
+    return () => observer.disconnect();
+  }, [days, currentTripId]);
 
   // ── Fetch Weather ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!tripProfile || !tripProfile.destinations || tripProfile.destinations.length === 0) return;
+    if (!tripProfile || !tripProfile.destinations || tripProfile.destinations.length === 0 || days.length === 0) return;
     const fetchWeather = async () => {
-      const wMap = await getTripWeather(tripProfile.destinations, tripProfile.startDate, tripProfile.endDate);
+      const daysInput = days.map(d => ({ isoDate: d.isoDate, title: d.title }));
+      const wMap = await getTripWeather(daysInput, tripProfile.destinations, tripProfile.startDate, tripProfile.endDate);
       setWeatherMap(wMap);
       
       // Calculate extreme weather alerts within 4 days
@@ -334,11 +357,14 @@ export default function ItineraryView() {
     if (days.length > 0 && !hasScrolled) {
       const todayDay = days.find(d => d.isoDate === todayIso);
       const lastViewedDayId = currentTripId ? localStorage.getItem(`lastViewedDay_${currentTripId}`) : null;
-      const lastViewedDay = lastViewedDayId ? days.find(d => d.id === lastViewedDayId) : null;
-      const targetId = todayDay?.id || lastViewedDay?.id || days[0].id;
+      
+      // If today is in the trip, prioritize today, else use last viewed, else use first day
+      const targetId = todayDay?.id || lastViewedDayId || days[0].id;
       
       setTimeout(() => {
-        dayRefs.current[targetId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (dayRefs.current[targetId]) {
+          dayRefs.current[targetId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }, 500);
       setHasScrolled(true);
 
@@ -371,24 +397,6 @@ export default function ItineraryView() {
       }
     }
   }, [days, hasScrolled, todayIso, currentTripId, tripProfile]);
-
-  // Track the last viewed day
-  useEffect(() => {
-    if (!currentTripId || days.length === 0) return;
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const dayId = entry.target.getAttribute('data-dayid');
-          if (dayId) localStorage.setItem(`lastViewedDay_${currentTripId}`, dayId);
-        }
-      });
-    }, { threshold: 0.5 });
-
-    Object.values(dayRefs.current).forEach(el => {
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [days, currentTripId]);
 
   useEffect(() => {
     if (isScanningDoc) {
@@ -799,8 +807,8 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
           return (
           <div
             key={day.id}
+            data-day-id={day.id}
             ref={el => { dayRefs.current[day.id] = el; }}
-            data-dayid={day.id}
             className={`card overflow-hidden scroll-mt-24 ${isToday ? 'ring-2 ring-brand-500 shadow-brand-500/20 dark:shadow-brand-500/10' : ''}`}
           >
             {/* Day header */}
@@ -844,6 +852,11 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${weather.isForecast ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}>
                       {weather.isForecast ? t('itinerary.forecast', 'תחזית') : t('itinerary.currentWeather', 'עכשווי')}
                     </span>
+                    {weather.locationName && (
+                      <span className="text-[10px] font-medium text-slate-500 flex items-center gap-0.5 ms-1">
+                        <MapPin size={10} /> {weather.locationName}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
                     {weatherMeta.desc}
