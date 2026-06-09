@@ -265,7 +265,7 @@ export default function App() {
   const ActiveComponent = TAB_DEFS.find(t => t.id === activeTab)?.component ?? ItineraryView;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-[100dvh] md:h-[100dvh] flex flex-col md:overflow-hidden">
       <AppHeader showTabs activeTab={activeTab} />
 
       {/* Offline banner */}
