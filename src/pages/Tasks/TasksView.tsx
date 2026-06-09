@@ -108,6 +108,7 @@ export default function TasksView() {
   const [visibility, setVisibility] = useState<'private' | 'shared'>('shared');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskText, setEditTaskText] = useState('');
+  const [editTaskCategory, setEditTaskCategory] = useState('general');
   const [enableLocation, setEnableLocation] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
   const [reminderTask, setReminderTask] = useState<Task | null>(null);
@@ -218,7 +219,8 @@ export default function TasksView() {
     if (!currentTripId || !appUser || !tripProfile) return;
     setGeneratingTasks(true);
     try {
-      await generateTripTasks(tripProfile, getProviderForTask('chat'), language, appUser.email);
+      const existingTaskTexts = tasks.map(t => t.text);
+      await generateTripTasks(tripProfile, getProviderForTask('chat'), language, appUser.email, existingTaskTexts);
       showToast({ type: 'success', message: t('tasks.smartTasksGenerated', 'Smart tasks generated!') });
     } catch {
       showToast({ type: 'error', message: t('app.error') });
@@ -401,13 +403,23 @@ export default function TasksView() {
                             autoFocus
                             onKeyDown={async (e) => {
                               if (e.key === 'Enter') {
-                                if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText });
+                                if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText, category: editTaskCategory });
                                 setEditingTaskId(null);
                               }
                             }}
                           />
+                          <select 
+                            value={editTaskCategory}
+                            onChange={(e) => setEditTaskCategory(e.target.value)}
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none"
+                          >
+                            <option value="planning">{t('tasks.catPlanning', 'תכנון')}</option>
+                            <option value="pre_trip">{t('tasks.catPreTrip', 'הכנות לנסיעה')}</option>
+                            <option value="during_trip">{t('tasks.catDuringTrip', 'בזמן הטיול')}</option>
+                            <option value="general">{t('tasks.catGeneral', 'כללי')}</option>
+                          </select>
                           <button onClick={async () => {
-                            if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText });
+                            if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText, category: editTaskCategory });
                             setEditingTaskId(null);
                           }} className="text-brand-500 hover:text-brand-600 p-1"><Check size={16} /></button>
                           <button onClick={() => setEditingTaskId(null)} className="text-slate-400 hover:text-slate-500 p-1"><X size={16} /></button>
@@ -428,6 +440,7 @@ export default function TasksView() {
                           <button onClick={() => {
                             setEditingTaskId(task.id);
                             setEditTaskText(task.text);
+                            setEditTaskCategory(task.category || 'general');
                           }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
                             <Edit2 size={14} />
                           </button>

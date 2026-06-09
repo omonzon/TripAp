@@ -19,6 +19,8 @@ Specifically include items for:
 2. Pre-trip: Bookings, documents, packaging, tailored to this destination and climate.
 3. During Trip: Things to do, logistical reminders, location-based tasks.
 
+IMPORTANT: Do NOT generate tasks that are already in the existing tasks list provided below.
+
 Group them into these specific categories (use exactly these strings for the category field):
 - "planning"
 - "pre_trip"
@@ -38,7 +40,8 @@ export async function generateTripTasks(
   tripProfile: TripProfile,
   provider: AIProvider,
   language: string = 'he',
-  authorEmail: string
+  authorEmail: string,
+  existingTasks: string[] = []
 ): Promise<void> {
   try {
     const context = `
@@ -47,6 +50,7 @@ Destinations: ${tripProfile.destinations.join(', ')}
 Dates: ${tripProfile.startDate} to ${tripProfile.endDate}
 Pace: ${tripProfile.pace}
 Language: ${language === 'he' ? 'Hebrew' : 'English'}
+Existing Tasks: ${existingTasks.length > 0 ? existingTasks.join(', ') : 'None'}
 ${useAIStore.getState().getUnifiedContext()}
 `;
 
