@@ -116,7 +116,9 @@ export default function WelcomeSetupScreen() {
             if (!testRes.ok) {
              let errorMsg = `המודל ${selectedModel} החזיר שגיאה ${testRes.status}. `;
              if (testRes.status === 403 || testRes.status === 400 || testRes.status === 429) {
-               errorMsg += `ייתכן שהחשבון שלך (ללא חיוב) אינו מורשה להשתמש במודל ה-Pro, או שחרגת ממכסת הבקשות החינמית (שגיאה 429). אנא בחר מודל ממשפחת ה-Flash (כמו gemini-2.5-flash) ונסה שוב.`;
+               errorMsg += `ייתכן שחרגת מהמכסה למודל זה או שהוא חסום לחשבון חינמי. המערכת בחרה אוטומטית במודל Flash - אנא לחץ שוב 'המשך'.`;
+               if (availableModels.includes('gemini-2.5-flash')) setSelectedModel('gemini-2.5-flash');
+               else if (availableModels.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
              } else {
                errorMsg += `אנא בחר מודל אחר.`;
              }
