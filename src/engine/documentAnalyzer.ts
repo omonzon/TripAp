@@ -5,6 +5,7 @@ import type { TripProfile, ItineraryDay, ItineraryItem } from '@/store/useTripSt
 import i18n from '@/i18n';
 
 export interface DocumentExtractionResult {
+  documentTitle?: string;
   itineraryEvents: {
     isoDate: string; // YYYY-MM-DD
     title: string;
@@ -39,6 +40,7 @@ Extract:
 
 Return ONLY valid JSON matching this exact schema:
 {
+  "documentTitle": "String (Generate a smart, descriptive title like '2026-07-15 ALAMO Car Rental' or 'Flight to London')",
   "itineraryEvents": [
     {
       "isoDate": "YYYY-MM-DD",
@@ -162,31 +164,25 @@ export async function integrateDocumentData(
     });
   }
 
-  // 3. Documents (References and Details)
+  // 3. Documents (References and Full Text)
+  let finalContent = parsed.fullText ? parsed.fullText.trim() : '';
+  
   if (parsed.documents && parsed.documents.length > 0) {
+    const refs = parsed.documents.map(d => `**${d.title}**: ${d.referenceNumber || ''} ${d.notes ? `(${d.notes})` : ''}`).join('\n');
+    finalContent = finalContent ? `${refs}\n\n---\n\n${finalContent}` : refs;
+  }
+
+  if (finalContent) {
     const docsRef = collection(db, 'trips', tripProfile.id, 'documents');
+    const title = parsed.documentTitle || (i18n.language === 'he' ? 'מסמך סרוק' : 'Scanned Document');
     
-    if (parsed.documents.length === 1) {
-      const docItem = parsed.documents[0];
-      promises.push(addDoc(docsRef, {
-        title: docItem.title,
-        content: `${docItem.referenceNumber || ''}\n${docItem.notes || ''}`.trim() || docItem.title,
-        authorEmail,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }));
-    } else {
-      const contentLines = parsed.documents.map(d => {
-        return `**${d.title}**: ${d.referenceNumber || ''} ${d.notes ? `(${d.notes})` : ''}`.trim();
-      });
-      promises.push(addDoc(docsRef, {
-        title: i18n.language === 'he' ? 'פרטי מסמך סרוק' : 'Scanned Document Details',
-        content: contentLines.join('\n\n'),
-        authorEmail,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }));
-    }
+    promises.push(addDoc(docsRef, {
+      title,
+      content: finalContent,
+      authorEmail,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }));
   }
 
   await Promise.all(promises);

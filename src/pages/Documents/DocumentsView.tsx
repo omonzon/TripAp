@@ -232,16 +232,7 @@ export default function DocumentsView() {
         appUser.email
       );
 
-      if (approvedData.fullText && approvedData.fullText.trim()) {
-        const docId = `doc_${Date.now()}`;
-        await setDoc(doc(db, 'trips', tripProfile.id, 'documents', docId), {
-          id: docId,
-          title: t('documents.scannedDoc', 'מסמך סרוק ({{date}})', { date: new Date().toLocaleDateString() }),
-          content: approvedData.fullText.trim(),
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        });
-      }
+
 
       showToast({ 
         type: 'success', 
