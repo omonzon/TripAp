@@ -178,7 +178,7 @@ async function generateHTML(tripId: string) {
             <h3 style="margin-top:0; color: #4338ca;">${chat.title || 'שיחה ללא כותרת'}</h3>
             <div style="font-size: 0.95em; color: #4b5563;">
               ${(chat.messages || []).map((msg: any) => `
-                <p style="margin-bottom: 10px;"><strong>${msg.role === 'user' ? 'משתמש' : 'AI'}:</strong> <span style="white-space: pre-wrap;">${msg.content || ''}</span></p>
+                <p style="margin-bottom: 10px;"><strong>${msg.role === 'user' ? 'משתמש' : 'AI'}:</strong> <span style="white-space: pre-wrap;">${msg.text || msg.content || ''}</span></p>
               `).join('')}
             </div>
           </div>
