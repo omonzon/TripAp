@@ -61,7 +61,13 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const { firebaseUser, appUser, authLoading, isDarkMode, language, fontSize, autoBackupInterval, lastBackupTime, setLastBackupTime, aiSetupDismissed } = useAuthStore();
   const { currentTripId, isOnline, setOnline } = useTripStore();
-  const [activeTab, setActiveTab] = React.useState<TabId>('itinerary');
+  const [activeTab, setActiveTab] = React.useState<TabId>(() => {
+    return (localStorage.getItem('tripap_activeTab') as TabId) || 'itinerary';
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('tripap_activeTab', activeTab);
+  }, [activeTab]);
   
   const mainRef = useRef<HTMLElement>(null);
   usePullToRefresh(mainRef);
