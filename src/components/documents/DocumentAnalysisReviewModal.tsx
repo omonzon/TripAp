@@ -41,6 +41,7 @@ export default function DocumentAnalysisReviewModal({ data, onConfirm, onCancel 
 
   const handleConfirm = () => {
     const approvedData: DocumentExtractionResult = {
+      documentTitle: data.documentTitle,
       itineraryEvents: data.itineraryEvents.filter((_, i) => selectedEvents.has(i)),
       expenses: data.expenses.filter((_, i) => selectedExpenses.has(i)),
       documents: data.documents.filter((_, i) => selectedDocs.has(i)),
