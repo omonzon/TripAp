@@ -12,6 +12,14 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useAIStore } from '@/store/useAIStore';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
 
+const DOC_LOADING_PHRASES = [
+  'קורא את האותיות הקטנות...',
+  'מפענח כתב חרטומים...',
+  'מחפש את התאריכים החשובים...',
+  'מסדר את כל המידע למסלול...',
+  'מכין לך תקציר מושלם...'
+];
+
 export default function DocumentsView() {
   const { t } = useTranslation();
   const { currentTripId } = useTripStore();
@@ -32,11 +40,25 @@ export default function DocumentsView() {
   const [docTitle, setDocTitle] = useState('');
   const [docContent, setDocContent] = useState('');
   const [docLink, setDocLink] = useState('');
-  
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
   // Scanning State
   const [isScanningDoc, setIsScanningDoc] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [scannedDocumentData, setScannedDocumentData] = useState<DocumentExtractionResult | null>(null);
+
+  useEffect(() => {
+    let interval: any;
+    if (isScanningDoc) {
+      interval = setInterval(() => {
+        setPhraseIndex(p => (p + 1) % DOC_LOADING_PHRASES.length);
+      }, 2000);
+    } else {
+      setPhraseIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [isScanningDoc]);
+  
+  const [isDragging, setIsDragging] = useState(false);
   const [swipedDocId, setSwipedDocId] = useState<string | null>(null);
   const touchStartX = useRef<number>(0);
 
@@ -458,12 +480,29 @@ export default function DocumentsView() {
       )}
 
       {/* Document Scanning Review Modal */}
-      {scannedDocumentData && (
+      {scannedDocumentData && createPortal(
         <DocumentAnalysisReviewModal
           data={scannedDocumentData}
           onConfirm={handleConfirmScannedData}
           onCancel={() => setScannedDocumentData(null)}
-        />
+        />,
+        document.body
+      )}
+
+      {/* Fun Scanning Loading Overlay */}
+      {isScanningDoc && createPortal(
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in" dir="rtl">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
+            <Loader2 size={48} className="animate-spin text-brand-500 mb-6" />
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 transition-opacity duration-300">
+              {DOC_LOADING_PHRASES[phraseIndex]}
+            </h3>
+            <p className="text-sm text-slate-500">
+              {t('app.loading', 'זה יכול לקחת כמה שניות...')}
+            </p>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
