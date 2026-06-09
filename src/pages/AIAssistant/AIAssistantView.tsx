@@ -39,7 +39,7 @@ export default function AIAssistantView() {
     if (!currentTripId) return;
     const chatsRef = collection(db, 'trips', currentTripId, 'aiChats');
     const unsub = onSnapshot(chatsRef, (snap) => {
-      const loaded = snap.docs.map(d => ({ ...d.data(), isPrivate: false } as ChatSession));
+      const loaded = snap.docs.map(d => ({ id: d.id, ...d.data(), isPrivate: false } as ChatSession));
       setSharedChatSessions(loaded);
     });
     return () => unsub();

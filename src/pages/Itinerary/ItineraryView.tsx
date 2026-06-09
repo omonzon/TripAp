@@ -306,33 +306,37 @@ export default function ItineraryView() {
     return () => unsub();
   }, [currentTripId]);
 
-  // Track Last Viewed Day via IntersectionObserver
+  // Track Last Viewed Day via getBoundingClientRect (Bulletproof)
   useEffect(() => {
     if (!currentTripId || days.length === 0 || !hasScrolled) return;
     
-    let observer: IntersectionObserver | null = null;
-
-    // Delay observer creation to allow initial scroll to complete
-    const timeoutId = setTimeout(() => {
-      observer = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const dayId = entry.target.getAttribute('data-day-id');
-            if (dayId) {
-              localStorage.setItem(`lastViewedDay_${currentTripId}`, dayId);
+    let timeout: any;
+    const handleScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        let closestDayId = null;
+        Object.entries(dayRefs.current).forEach(([dayId, el]) => {
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            // If the element crosses the 150px mark from top of viewport, it is the active one
+            if (rect.top <= 150 && rect.bottom >= 150) {
+              closestDayId = dayId;
             }
           }
-        }
-      }, { rootMargin: "-30% 0px -50% 0px", threshold: 0 });
+        });
 
-      Object.values(dayRefs.current).forEach(ref => {
-        if (ref) observer?.observe(ref);
-      });
-    }, 1500); // 1.5s covers the 500ms initial delay + 1s of smooth scrolling
+        if (closestDayId) {
+          localStorage.setItem(`lastViewedDay_${currentTripId}`, closestDayId);
+        }
+      }, 300);
+    };
+
+    // Use capture phase to ensure we catch scroll events from any nested scrollable container
+    window.addEventListener('scroll', handleScroll, true);
 
     return () => {
-      clearTimeout(timeoutId);
-      observer?.disconnect();
+      window.removeEventListener('scroll', handleScroll, true);
+      clearTimeout(timeout);
     };
   }, [days, currentTripId, hasScrolled]);
 
