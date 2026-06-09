@@ -15,6 +15,7 @@ import { useAIStore } from '@/store/useAIStore';
 import { generateTripTasks } from '@/engine/taskGenerator';
 import { DictationButton } from '@/components/features/DictationButton';
 import { showToast } from '@/components/ui/Toast';
+import { sendLocalNotification } from '@/utils/notifications';
 
 interface Task {
   id: string;
@@ -132,16 +133,8 @@ export default function TasksView() {
   const triggerReminder = async (task: Task) => {
     showToast({ type: 'success', message: `⏰ Reminder: ${task.text}` });
     
-    // Desktop/Mobile Push Notification
-    if (Notification && Notification.permission === 'granted') {
-      try { new Notification('TravelPlatform Reminder', { body: task.text }); } catch (e) {}
-    } else if (Notification && Notification.permission !== 'denied') {
-      try {
-        Notification.requestPermission().then(p => {
-          if (p === 'granted') new Notification('TravelPlatform Reminder', { body: task.text });
-        }).catch(() => {});
-      } catch (e) {}
-    }
+    // Desktop/Mobile Push Notification with Sound
+    sendLocalNotification('TravelPlatform Reminder', { body: task.text });
 
     // EmailJS (if configured)
     if (emailjsConfig?.serviceId && emailjsConfig?.templateId && emailjsConfig?.publicKey) {
@@ -367,70 +360,97 @@ export default function TasksView() {
         ))}
       </div>
 
-      {/* Task list */}
-      <div className="space-y-2">
+      {/* Task list grouped by category */}
+      <div className="space-y-6">
         {filtered.length === 0 ? (
           <div className="card p-8 text-center text-slate-400">
             <CheckSquare size={32} className="mx-auto mb-2 opacity-30" />
             <p>{t('tasks.noTasks')}</p>
           </div>
         ) : (
-          filtered.map(task => (
-            <div key={task.id} className={`card p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
-              <button onClick={() => toggle(task)} disabled={!canWrite} className={`shrink-0 text-brand-600 dark:text-brand-400 transition-transform ${canWrite ? 'hover:scale-110 cursor-pointer' : 'cursor-default opacity-50'}`}>
-                {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
-              </button>
+          <>
+            {[
+              { id: 'planning', label: t('tasks.catPlanning', 'תכנון') },
+              { id: 'pre_trip', label: t('tasks.catPreTrip', 'הכנות לנסיעה') },
+              { id: 'during_trip', label: t('tasks.catDuringTrip', 'בזמן הטיול') },
+              { id: 'general', label: t('tasks.catGeneral', 'כללי') }
+            ].map(group => {
+              const groupTasks = filtered.filter(t => {
+                if (group.id === 'general') return !['planning', 'pre_trip', 'during_trip'].includes(t.category || '');
+                return t.category === group.id;
+              });
               
-              {editingTaskId === task.id ? (
-                <div className="flex-1 flex gap-2">
-                  <input
-                    value={editTaskText}
-                    onChange={e => setEditTaskText(e.target.value)}
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none"
-                    dir="auto"
-                    autoFocus
-                  />
-                  <button onClick={async () => {
-                    if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText });
-                    setEditingTaskId(null);
-                  }} className="text-brand-500 hover:text-brand-600 p-1"><Check size={16} /></button>
-                  <button onClick={() => setEditingTaskId(null)} className="text-slate-400 hover:text-slate-500 p-1"><X size={16} /></button>
-                </div>
-              ) : (
-                <p className={`flex-1 text-sm ${task.priority === 'high' ? 'font-bold text-red-900 dark:text-red-100' : 'text-slate-800 dark:text-white'} ${task.completed ? 'line-through !text-slate-400 !font-normal' : ''}`} dir="auto">
-                  {task.text}
-                  <span className="ms-2 opacity-50">
-                    {task.priority === 'high' ? '🔥' : task.priority === 'medium' ? '⭐' : '📝'}
-                    {task.visibility === 'private' && <Lock size={10} className="inline ms-1 text-red-500" />}
-                  </span>
-                </p>
-              )}
+              if (groupTasks.length === 0) return null;
               
-              <span className={`badge text-[10px] ${PRIORITIES[task.priority || 'medium']?.color}`}>{t(`tasks.${task.priority || 'medium'}`)}</span>
-              {canWrite && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => {
-                    setEditingTaskId(task.id);
-                    setEditTaskText(task.text);
-                  }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <Edit2 size={14} />
-                  </button>
-                  <button onClick={() => {
-                    setReminderDateStr(task.reminderDate || '');
-                    setReminderLat(task.reminderLocation?.lat.toString() || '');
-                    setReminderLng(task.reminderLocation?.lng.toString() || '');
-                    setEnableLocation(!!task.reminderLocation);
-                    setReminderTask(task);
-                  }} className={`p-1.5 rounded-lg transition-all ${task.reminderDate || task.reminderLocation ? 'text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-                    <Bell size={14} />
-                  </button>
-                  <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <Trash2 size={14} />
-                  </button>
+              return (
+                <div key={group.id} className="space-y-2">
+                  <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 ms-2">{group.label}</h4>
+                  {groupTasks.map(task => (
+                    <div key={task.id} className={`card p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
+                      <button onClick={() => toggle(task)} disabled={!canWrite} className={`shrink-0 text-brand-600 dark:text-brand-400 transition-transform ${canWrite ? 'hover:scale-110 cursor-pointer' : 'cursor-default opacity-50'}`}>
+                        {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
+                      </button>
+                      
+                      {editingTaskId === task.id ? (
+                        <div className="flex-1 flex gap-2">
+                          <input
+                            value={editTaskText}
+                            onChange={e => setEditTaskText(e.target.value)}
+                            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none"
+                            dir="auto"
+                            autoFocus
+                            onKeyDown={async (e) => {
+                              if (e.key === 'Enter') {
+                                if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText });
+                                setEditingTaskId(null);
+                              }
+                            }}
+                          />
+                          <button onClick={async () => {
+                            if (currentTripId) await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { text: editTaskText });
+                            setEditingTaskId(null);
+                          }} className="text-brand-500 hover:text-brand-600 p-1"><Check size={16} /></button>
+                          <button onClick={() => setEditingTaskId(null)} className="text-slate-400 hover:text-slate-500 p-1"><X size={16} /></button>
+                        </div>
+                      ) : (
+                        <p className={`flex-1 text-sm ${task.priority === 'high' ? 'font-bold text-red-900 dark:text-red-100' : 'text-slate-800 dark:text-white'} ${task.completed ? 'line-through !text-slate-400 !font-normal' : ''}`} dir="auto">
+                          {task.text}
+                          <span className="ms-2 opacity-50">
+                            {task.priority === 'high' ? '🔥' : task.priority === 'medium' ? '⭐' : '📝'}
+                            {task.visibility === 'private' && <Lock size={10} className="inline ms-1 text-red-500" />}
+                          </span>
+                        </p>
+                      )}
+                      
+                      <span className={`badge text-[10px] ${PRIORITIES[task.priority || 'medium']?.color}`}>{t(`tasks.${task.priority || 'medium'}`)}</span>
+                      {canWrite && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button onClick={() => {
+                            setEditingTaskId(task.id);
+                            setEditTaskText(task.text);
+                          }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <Edit2 size={14} />
+                          </button>
+                          <button onClick={() => {
+                            setReminderDateStr(task.reminderDate || '');
+                            setReminderLat(task.reminderLocation?.lat.toString() || '');
+                            setReminderLng(task.reminderLocation?.lng.toString() || '');
+                            setEnableLocation(!!task.reminderLocation);
+                            setReminderTask(task);
+                          }} className={`p-1.5 rounded-lg transition-all ${task.reminderDate || task.reminderLocation ? 'text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                            <Bell size={14} />
+                          </button>
+                          <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'tasks', task.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          ))
+              );
+            })}
+          </>
         )}
       </div>
 

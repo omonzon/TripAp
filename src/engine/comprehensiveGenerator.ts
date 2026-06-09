@@ -39,7 +39,7 @@ You will be given a trip profile, user preferences, and potentially raw bookings
 
 Your job is to generate a MASSIVE comprehensive trip JSON with 4 sections:
 1. "itinerary": An array of days. Each day MUST have an "isoDate" (YYYY-MM-DD), a "title" (e.g. "Day 1: Arrival"), and "items". Each item must have a "type" (flight|hotel|food|map|note|car|train|ship|ticket|home) and "text" (description). If it's a pre-booked flight or hotel from the text, set "fixed": true.
-2. "tasks": A list of 10-15 smart tasks (Pre-trip, Packaging, Bookings, Documents, During Trip, Post-trip). Use these EXACT categories.
+2. "tasks": A list of 10-15 smart tasks. Use ONLY these EXACT categories for the category field: "planning", "pre_trip", "during_trip".
 3. "expenses": Extract any prepaid expenses from the documents (e.g., flight cost, hotel cost). Provide "store", "amount" (number), "currency" (USD, EUR, ILS, etc.), and "category" (transportation|hotel|food|other).
 4. "documents": Extract any booking reference numbers, PNRs, or confirmation codes.
 
@@ -67,7 +67,7 @@ Return ONLY valid JSON matching this exact schema:
   "tasks": [
     {
       "text": "String",
-      "category": "String",
+      "category": "planning|pre_trip|during_trip",
       "priority": "low|medium|high"
     }
   ],

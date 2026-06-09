@@ -36,6 +36,8 @@ export default function DocumentsView() {
   const [isScanningDoc, setIsScanningDoc] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [scannedDocumentData, setScannedDocumentData] = useState<DocumentExtractionResult | null>(null);
+  const [swipedDocId, setSwipedDocId] = useState<string | null>(null);
+  const touchStartX = useRef<number>(0);
 
   useEffect(() => {
     if (!currentTripId) return;
@@ -308,25 +310,41 @@ export default function DocumentsView() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDocs.map(doc => (
-            <div 
-              key={doc.id}
-              onClick={() => openDocModal(doc)}
-              className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-all cursor-pointer group flex flex-col h-48"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="font-bold text-slate-900 dark:text-white line-clamp-2 text-base leading-tight">
-                  {doc.title}
-                </h3>
-                {canWrite && (
-                  <button 
-                    onClick={(e) => deleteDocument(doc.id, e)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                    title={t('common.delete', 'מחק')}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
+            <div key={doc.id} className="relative overflow-hidden rounded-2xl">
+              {/* Swipe Action Background */}
+              <div className="absolute inset-y-0 right-0 flex items-center justify-end w-full pr-4 bg-red-500 rounded-2xl">
+                <button
+                  onClick={(e) => deleteDocument(doc.id, e)}
+                  className="text-white p-2"
+                >
+                  <Trash2 size={24} />
+                </button>
               </div>
+              
+              <div 
+                onClick={() => openDocModal(doc)}
+                onTouchStart={(e) => { touchStartX.current = e.changedTouches[0].screenX; }}
+                onTouchEnd={(e) => {
+                  const touchEndX = e.changedTouches[0].screenX;
+                  if (touchStartX.current - touchEndX > 50) setSwipedDocId(doc.id);
+                  else if (touchEndX - touchStartX.current > 50) setSwipedDocId(null);
+                }}
+                className={`bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-transform duration-300 cursor-pointer group flex flex-col h-48 relative z-10 ${swipedDocId === doc.id ? '-translate-x-20' : 'translate-x-0'}`}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-bold text-slate-900 dark:text-white line-clamp-2 text-base leading-tight">
+                    {doc.title}
+                  </h3>
+                  {canWrite && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); deleteDocument(doc.id, e); }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors opacity-0 sm:group-hover:opacity-100 shrink-0 hidden sm:block"
+                      title={t('common.delete', 'מחק')}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               
               <div className="flex-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-3 whitespace-pre-wrap leading-relaxed">
                 {doc.content}

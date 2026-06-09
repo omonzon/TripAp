@@ -24,7 +24,7 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement | null>) {
       // If user pulls down more than 150px while at the top
       if (pullDistance > 150) {
         isPulling = false;
-        window.location.reload();
+        // window.location.reload(); // Disabled to prevent accidental app reload when switching tabs/scrolling
       }
     };
 

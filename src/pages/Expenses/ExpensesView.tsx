@@ -32,15 +32,11 @@ interface Expense {
 const CATEGORIES = ['food', 'supermarket', 'transportation', 'gifts', 'clothing', 'other'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'ISK', 'JPY', 'AUD', 'CAD', 'DKK', 'NOK', 'SEK'];
 
-// Simple hardcoded rates relative to USD (real app would use an exchange API)
-const RATES: Record<string, number> = {
-  USD: 1, EUR: 1.08, GBP: 1.27, ILS: 0.27, ISK: 0.0072,
-  JPY: 0.0067, AUD: 0.65, CAD: 0.73, DKK: 0.145, NOK: 0.093, SEK: 0.096,
+// Fallback rates if API fails
+const FALLBACK_RATES: Record<string, number> = {
+  USD: 1, EUR: 0.92, GBP: 0.79, ILS: 3.75, ISK: 139,
+  JPY: 150, AUD: 1.5, CAD: 1.37, DKK: 6.9, NOK: 10.7, SEK: 10.4,
 };
-
-function toUSD(amount: number, currency: string): number {
-  return amount * (RATES[currency] ?? 1);
-}
 
 export default function ExpensesView() {
   const { t } = useTranslation();
@@ -57,10 +53,25 @@ export default function ExpensesView() {
   const [isScanning, setIsScanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [pendingExpenses, setPendingExpenses] = useState<{ store: string; amount: number; currency: string; category: string }[] | null>(null);
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>(FALLBACK_RATES);
   const [form, setForm] = useState({
-    store: '', amount: '', currency: 'USD',
-    category: 'other', amountConverted: '', notes: '',
+    store: '', amount: '', currency: 'USD', category: 'other', amountConverted: '', notes: ''
   });
+
+  useEffect(() => {
+    fetch('https://api.exchangerate-api.com/v4/latest/USD')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.rates) {
+          setExchangeRates(data.rates);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const toUSD = (amount: number, currency: string): number => {
+    return amount / (exchangeRates[currency] ?? 1);
+  };
   const fileRef = useRef<HTMLInputElement>(null!);
 
   const userRole = useUserRole();
@@ -161,7 +172,7 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
     let addedCount = 0;
     for (const result of approved) {
       if (!result.amount || !result.currency) continue;
-      const converted = toUSD(result.amount, result.currency) / (RATES[targetCurrency] ?? 1);
+      const converted = toUSD(result.amount, result.currency) * (exchangeRates[targetCurrency] ?? 1);
       const payload = {
         store: result.store ?? 'Unknown',
         amount: Number(result.amount),
@@ -201,7 +212,7 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
   const updateConverted = (amount: string, currency: string) => {
     const num = parseFloat(amount);
     if (isNaN(num)) { setForm(f => ({ ...f, amountConverted: '' })); return; }
-    const converted = (toUSD(num, currency) / (RATES[targetCurrency] ?? 1)).toFixed(2);
+    const converted = (toUSD(num, currency) * (exchangeRates[targetCurrency] ?? 1)).toFixed(2);
     setForm(f => ({ ...f, amountConverted: converted }));
   };
 

@@ -128,6 +128,39 @@ body::after {
   background-color: rgba(30, 41, 59, 0.95);
 }
 
+@utility bubble {
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border-radius: 1.25rem;
+  box-shadow: 
+    4px 4px 10px rgba(0, 0, 0, 0.03),
+    -2px -2px 10px rgba(255, 255, 255, 0.8),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      6px 6px 15px rgba(0, 0, 0, 0.05),
+      -4px -4px 12px rgba(255, 255, 255, 0.9),
+      inset 1px 1px 2px rgba(255, 255, 255, 1);
+  }
+}
+
+.dark .bubble {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border-color: rgba(51, 65, 85, 0.5);
+  box-shadow: 
+    4px 4px 12px rgba(0, 0, 0, 0.4),
+    -2px -2px 10px rgba(255, 255, 255, 0.02),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+  &:hover {
+    box-shadow: 
+      6px 6px 16px rgba(0, 0, 0, 0.5),
+      -2px -2px 12px rgba(255, 255, 255, 0.03),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.08);
+  }
+}
+
 @utility btn-primary {
   background-color: #2563eb;
   color: #ffffff;

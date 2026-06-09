@@ -84,6 +84,7 @@ export default function MemoriesView() {
   const [mapDateStart, setMapDateStart] = useState<string>('');
   const [mapDateEnd, setMapDateEnd] = useState<string>('');
   const [isGeneratingMap, setIsGeneratingMap] = useState(false);
+  const [mapPhraseIndex, setMapPhraseIndex] = useState(0);
 
   useEffect(() => {
     if (tripProfile && !mapDateStart && !mapDateEnd) {
@@ -91,6 +92,13 @@ export default function MemoriesView() {
       setMapDateEnd(tripProfile.endDate);
     }
   }, [tripProfile]);
+
+  useEffect(() => {
+    if (isGeneratingMap) {
+      const i = setInterval(() => setMapPhraseIndex(p => (p + 1) % MAP_LOADING_PHRASES.length), 3000);
+      return () => clearInterval(i);
+    }
+  }, [isGeneratingMap]);
 
   // Use generated map or fallback to destinations
   const mapUrl = tripProfile?.generatedMapUrl || React.useMemo(() => {
@@ -409,7 +417,18 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
           </div>
         </div>
 
-        {mapUrl ? (
+        {isGeneratingMap ? (
+           <div className="flex flex-col gap-3">
+            <div className="h-40 md:h-48 w-full rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative group bg-slate-100 dark:bg-slate-800">
+              <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '30px 30px' }}></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-600/30 to-brand-400/30 dark:from-brand-900/50 dark:to-brand-800/50 animate-pulse"></div>
+              <div className="absolute inset-0 z-10 flex items-center justify-center flex-col text-slate-800 dark:text-slate-200 p-6 text-center">
+                 <Loader2 size={32} className="animate-spin mb-4 text-brand-600 dark:text-brand-400" />
+                 <h3 className="text-xl font-bold mb-1 transition-all" key={mapPhraseIndex}>{MAP_LOADING_PHRASES[mapPhraseIndex]}</h3>
+              </div>
+            </div>
+           </div>
+        ) : mapUrl ? (
           <div className="flex flex-col gap-3">
             <div className="h-40 md:h-48 w-full rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden relative group bg-slate-100 dark:bg-slate-800">
               {/* Abstract Map Background CSS Pattern */}
@@ -431,9 +450,12 @@ Reply strictly in ${language} using markdown formatting. DO NOT output code bloc
             </div>
           </div>
         ) : (
-          <p className="text-center py-6 text-sm text-slate-500">
-            אין יעדים למפה עדיין. השתמש בכפתור למעלה כדי לחלץ יעדים מהמסלול.
-          </p>
+          <div className="text-center py-8 px-4 bg-brand-50 dark:bg-brand-900/20 rounded-xl border border-brand-100 dark:border-brand-800/50">
+             <MapPin size={32} className="mx-auto mb-3 text-brand-400 dark:text-brand-600 opacity-50" />
+             <p className="text-slate-600 dark:text-slate-300 font-medium">
+               רק לחיצה קטנה למעלה ואני מכין לך מפה מדהימה של המסלול! 🌍
+             </p>
+          </div>
         )}
       </div>
 

@@ -233,6 +233,14 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
 }
 
 // ── Main Itinerary View ───────────────────────────────────────────────────────
+const SCAN_LOADING_PHRASES = [
+  "קורא את האותיות הקטנות...",
+  "מפענח כתב חרטומים...",
+  "מחפש תאריכים ושעות...",
+  "מכין את ההזמנה שלך למסלול...",
+  "אוטוטו מסיימים..."
+];
+
 export default function ItineraryView() {
   const { t } = useTranslation();
   const { appUser } = useAuthStore();
@@ -243,6 +251,8 @@ export default function ItineraryView() {
   const [aiInput, setAiInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const touchTimer = useRef<NodeJS.Timeout | null>(null);
   const [editItemText, setEditItemText] = useState('');
   const [editItemType, setEditItemType] = useState('map');
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
@@ -256,9 +266,11 @@ export default function ItineraryView() {
   const [tempMapUrl, setTempMapUrl] = useState('');
   const [dayToDelete, setDayToDelete] = useState<string | null>(null);
   const [isScanningDoc, setIsScanningDoc] = useState(false);
+  const [scanPhraseIndex, setScanPhraseIndex] = useState(0);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [infoLocation, setInfoLocation] = useState<string | null>(null);
   const [showDailyBriefing, setShowDailyBriefing] = useState(false);
+  const [briefingTasks, setBriefingTasks] = useState<any[]>([]);
   const [isScanningReferrals, setIsScanningReferrals] = useState(false);
   const [todayItems, setTodayItems] = useState<ItineraryItem[]>([]);
   const fileRef = useRef<HTMLInputElement>(null!);
@@ -295,23 +307,69 @@ export default function ItineraryView() {
   useEffect(() => {
     if (days.length > 0 && !hasScrolled) {
       const todayDay = days.find(d => d.isoDate === todayIso);
-      const targetId = todayDay?.id || days[0].id;
+      const lastViewedDayId = currentTripId ? localStorage.getItem(`lastViewedDay_${currentTripId}`) : null;
+      const lastViewedDay = lastViewedDayId ? days.find(d => d.id === lastViewedDayId) : null;
+      const targetId = todayDay?.id || lastViewedDay?.id || days[0].id;
+      
       setTimeout(() => {
         dayRefs.current[targetId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 500);
       setHasScrolled(true);
 
       // Check for Daily Briefing
-      if (todayDay && currentTripId) {
+      if (currentTripId && tripProfile) {
         const briefingKey = `briefing_${currentTripId}_${todayIso}`;
         if (!localStorage.getItem(briefingKey)) {
-          setTodayItems(todayDay.items || []);
-          setShowDailyBriefing(true);
-          localStorage.setItem(briefingKey, 'true');
+          if (todayIso < tripProfile.startDate) {
+            // Pre-trip: fetch remaining tasks
+            const q = query(collection(db, 'trips', currentTripId, 'tasks'), where('completed', '==', false));
+            getDocs(q).then(snap => {
+              const pendingTasks = snap.docs.map(d => d.data())
+                .filter(t => t.category === 'planning' || t.category === 'pre_trip');
+              if (pendingTasks.length > 0) {
+                setTodayItems([]);
+                setBriefingTasks(pendingTasks);
+                setShowDailyBriefing(true);
+                localStorage.setItem(briefingKey, 'true');
+              } else {
+                localStorage.setItem(briefingKey, 'true');
+              }
+            });
+          } else if (todayDay) {
+            setTodayItems(todayDay.items || []);
+            setBriefingTasks([]);
+            setShowDailyBriefing(true);
+            localStorage.setItem(briefingKey, 'true');
+          }
         }
       }
     }
-  }, [days, hasScrolled, todayIso, currentTripId]);
+  }, [days, hasScrolled, todayIso, currentTripId, tripProfile]);
+
+  // Track the last viewed day
+  useEffect(() => {
+    if (!currentTripId || days.length === 0) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const dayId = entry.target.getAttribute('data-dayid');
+          if (dayId) localStorage.setItem(`lastViewedDay_${currentTripId}`, dayId);
+        }
+      });
+    }, { threshold: 0.5 });
+
+    Object.values(dayRefs.current).forEach(el => {
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [days, currentTripId]);
+
+  useEffect(() => {
+    if (isScanningDoc) {
+      const i = setInterval(() => setScanPhraseIndex(p => (p + 1) % SCAN_LOADING_PHRASES.length), 2500);
+      return () => clearInterval(i);
+    }
+  }, [isScanningDoc]);
 
   // ── AI add item ───────────────────────────────────────────────────────────
   const handleAiAdd = async (e: React.FormEvent) => {
@@ -461,8 +519,12 @@ export default function ItineraryView() {
       );
       
       setScannedDocumentData(res);
-    } catch (err) {
-      showToast({ type: 'error', message: t('errors.scanFailed', 'Failed to scan document.') });
+    } catch (err: any) {
+      if (!navigator.onLine || err.message?.includes('fetch') || err.message?.includes('network')) {
+        showToast({ type: 'error', message: 'שגיאת חיבור. לסריקה ופעולות חכמות נדרש חיבור אינטרנט וגישה ל-AI. אנא ודא חיבור ונסה שוב.' });
+      } else {
+        showToast({ type: 'error', message: t('errors.scanFailed', 'Failed to scan document.') });
+      }
     } finally {
       setIsScanningDoc(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -804,12 +866,23 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                       onDragEnd={() => { setDraggedDayId(null); setDraggedIdx(null); setDragOverIdx(null); }}
                       onDrop={() => handleDrop(day.docId, day.items)}
                       onClick={() => {
+                        if (actionMenuId === item.id) {
+                          setActionMenuId(null);
+                          return;
+                        }
                         if (editingItemId !== item.id) {
                           setDetailedItem({ dayDocId: day.docId, item });
                         }
                       }}
-                      className={`flex items-start gap-2 group p-2 rounded-xl transition-all cursor-pointer ${
-                        isDragging ? 'opacity-30 scale-95' : 'hover:bg-slate-50 dark:hover:bg-slate-900/40'
+                      onTouchStart={() => {
+                        touchTimer.current = setTimeout(() => {
+                          setActionMenuId(item.id);
+                        }, 500);
+                      }}
+                      onTouchEnd={() => { if (touchTimer.current) clearTimeout(touchTimer.current); }}
+                      onTouchMove={() => { if (touchTimer.current) clearTimeout(touchTimer.current); }}
+                      className={`bubble flex items-start gap-3 group p-3 sm:p-4 mb-3 transition-all cursor-pointer relative overflow-visible ${
+                        isDragging ? 'opacity-30 scale-95' : ''
                       } ${isOver ? 'border-t-2 border-brand-500' : ''}`}
                     >
                       {canWrite && (
@@ -835,11 +908,23 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                             <div className="flex gap-2">
                               <button onClick={async () => {
                                 if (!currentTripId) return;
-                                const updated = day.items.map(i => i.id === item.id ? { ...i, text: editItemText, type: editItemType } : i);
-                                await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
+                                if (!editItemText.trim()) {
+                                  const updated = day.items.filter(i => i.id !== item.id);
+                                  await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
+                                } else {
+                                  const updated = day.items.map(i => i.id === item.id ? { ...i, text: editItemText, type: editItemType } : i);
+                                  await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
+                                }
                                 setEditingItemId(null);
                               }} className="btn-primary text-sm py-1.5 px-3">{t('app.save')}</button>
-                              <button onClick={() => setEditingItemId(null)} className="btn-secondary text-sm py-1.5 px-3">{t('app.cancel')}</button>
+                              <button onClick={async () => {
+                                if (!currentTripId) return;
+                                if (item.text === 'פריט חדש...' && !editItemText.trim()) {
+                                  const updated = day.items.filter(i => i.id !== item.id);
+                                  await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
+                                }
+                                setEditingItemId(null);
+                              }} className="btn-secondary text-sm py-1.5 px-3">{t('app.cancel')}</button>
                             </div>
                           </div>
                         ) : (
@@ -873,9 +958,9 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                         )}
                       </div>
                       {canWrite && editingItemId !== item.id && !item.fixed && (
-                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1 w-16 sm:w-auto justify-end">
+                        <div className={`flex flex-wrap sm:flex-nowrap items-center gap-1 transition-opacity shrink-0 mt-1 w-16 sm:w-auto justify-end ${actionMenuId === item.id ? 'opacity-100' : 'opacity-0 sm:group-hover:opacity-100 hidden sm:flex'}`}>
                           <button
-                            onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditItemText(item.text); setEditItemType(item.type || 'map'); }}
+                            onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditItemText(item.text); setEditItemType(item.type || 'map'); setActionMenuId(null); }}
                             className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
                           >
                             <Edit2 size={14} />
@@ -883,6 +968,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                           <button
                             onClick={async (e) => {
                               e.stopPropagation();
+                              setActionMenuId(null);
                               if (!currentTripId) return;
                               if (!confirm(t('app.confirmDelete', 'Are you sure?'))) return;
                               const updated = day.items.filter(i => i.id !== item.id);
@@ -894,16 +980,16 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                           </button>
                           {idx > 0 && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleMove(day.docId, idx, -1); }}
-                              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors md:hidden"
+                              onClick={(e) => { e.stopPropagation(); handleMove(day.docId, idx, -1); setActionMenuId(null); }}
+                              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors sm:hidden"
                             >
                               <ChevronUp size={14} />
                             </button>
                           )}
                           {idx < day.items.length - 1 && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleMove(day.docId, idx, 1); }}
-                              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors md:hidden"
+                              onClick={(e) => { e.stopPropagation(); handleMove(day.docId, idx, 1); setActionMenuId(null); }}
+                              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors sm:hidden"
                             >
                               <ChevronDown size={14} />
                             </button>
@@ -1003,11 +1089,12 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
       {/* Daily Briefing Modal */}
       {showDailyBriefing && (
         <DailyBriefingModal 
-          todayItems={todayItems} 
-          tripName={tripProfile?.name || 'Trip'} 
+          todayItems={todayItems}
+          pendingTasks={briefingTasks}
+          tripName={tripProfile?.name || ''} 
           onClose={() => {
-            localStorage.setItem(`briefing_${currentTripId}_${todayIso}`, 'true');
             setShowDailyBriefing(false);
+            setBriefingTasks([]);
           }} 
         />
       )}
@@ -1019,6 +1106,19 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
           onConfirm={handleConfirmScannedData}
           onCancel={() => setScannedDocumentData(null)}
         />
+      )}
+
+      {/* Scanning Overlay */}
+      {isScanningDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center">
+            <Loader2 size={48} className="animate-spin text-brand-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 transition-all">
+               {SCAN_LOADING_PHRASES[scanPhraseIndex]}
+            </h3>
+            <p className="text-sm text-slate-500">זה יכול לקחת כמה שניות...</p>
+          </div>
+        </div>
       )}
     </div>
   );

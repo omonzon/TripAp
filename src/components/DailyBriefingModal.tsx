@@ -9,11 +9,12 @@ import { callAI } from '@/services/ai';
 
 interface DailyBriefingModalProps {
   todayItems: ItineraryItem[];
+  pendingTasks?: any[];
   tripName: string;
   onClose: () => void;
 }
 
-export default function DailyBriefingModal({ todayItems, tripName, onClose }: DailyBriefingModalProps) {
+export default function DailyBriefingModal({ todayItems, pendingTasks = [], tripName, onClose }: DailyBriefingModalProps) {
   const { t } = useTranslation();
   const { appUser } = useAuthStore();
   const { providerType, apiKey, getProviderForTask } = useAIStore();
@@ -32,13 +33,27 @@ export default function DailyBriefingModal({ todayItems, tripName, onClose }: Da
           throw new Error('AI provider not configured');
         }
 
-        const itemsText = todayItems.length > 0 
-          ? todayItems.map(i => `- ${i.text.replace(/<[^>]*>?/gm, '')}`).join('\n')
-          : t('dailyBriefing.freeDay', 'Free day! No specific plans.');
-
         const destinations = tripProfile?.destinations?.join(', ') || '';
 
-        const prompt = `Write a short, fun, and energetic morning briefing for today's trip! 
+        let prompt = '';
+        if (todayItems.length === 0 && pendingTasks.length > 0) {
+          const tasksText = pendingTasks.map(t => `- ${t.text}`).join('\n');
+          prompt = `Write a short, fun, and energetic briefing for the upcoming trip preparations!
+Trip name: ${tripName}
+Pending Tasks:
+${tasksText}
+
+Include:
+1. A quick energetic summary of the upcoming trip.
+2. Highlight the remaining tasks that need to be completed before the trip. Encourage them to finish these!
+3. A strong, funny group encouragement sentence at the end!
+Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 words). Use emojis!`;
+        } else {
+          const itemsText = todayItems.length > 0 
+            ? todayItems.map(i => `- ${i.text.replace(/<[^>]*>?/gm, '')}`).join('\n')
+            : t('dailyBriefing.freeDay', 'Free day! No specific plans.');
+            
+          prompt = `Write a short, fun, and energetic morning briefing for today's trip! 
 Trip name: ${tripName}
 Destinations/Location: ${destinations}
 Today's plan:
@@ -49,6 +64,7 @@ Include:
 2. 2-3 bullet points of important reminders (e.g. bring sunscreen, water, tickets, etc.) based on the activities.
 3. A strong, funny group encouragement sentence at the end!
 Language: same as the user prompt or Hebrew if unclear. Keep it short (max 100 words). Use emojis!`;
+        }
 
         const system = `You are an energetic, fun tour guide giving a morning briefing to a group of friends/family.`;
 

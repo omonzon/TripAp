@@ -15,19 +15,14 @@ Based on the provided trip profile and context, generate a comprehensive list of
 
 Include smart suggestions based on the specific destination, pace, and preferences. 
 Specifically include items for:
-1. Pre-trip: Planning, bookings, documents.
-2. Packaging: Smart packing list tailored to this specific destination and weather/climate.
+1. Planning: general planning, itineraries, research.
+2. Pre-trip: Bookings, documents, packaging, tailored to this destination and climate.
 3. During Trip: Things to do, logistical reminders, location-based tasks.
-4. Post-trip: Organizing photos, settling expenses, memory journaling.
 
-Group them into these specific categories (use exactly these strings):
-- תכנון לפני נסיעה (Pre-trip)
-- אריזה (Packaging)
-- הזמנות (Bookings)
-- מסמכים (Documents)
-- במהלך הטיול (During Trip)
-- אחרי הטיול (Post-trip)
-- כללי (General)
+Group them into these specific categories (use exactly these strings for the category field):
+- "planning"
+- "pre_trip"
+- "during_trip"
 
 Assign a priority ('low', 'medium', 'high') to each task.
 Write the task 'text' in the language requested. 
@@ -35,7 +30,7 @@ Write the task 'text' in the language requested.
 Return ONLY valid JSON matching this schema:
 {
   "tasks": [
-    { "text": "Task description here", "category": "אריזה", "priority": "high" }
+    { "text": "Task description here", "category": "planning", "priority": "high" }
   ]
 }`;
 
