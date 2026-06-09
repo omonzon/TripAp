@@ -30,6 +30,7 @@ export default function WelcomeSetupScreen() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showModelDowngradeAlert, setShowModelDowngradeAlert] = useState(false);
 
   const handleValidateKey = async () => {
     if (!tempApiKey.trim() && tempProvider !== 'ollama') return;
@@ -116,13 +117,13 @@ export default function WelcomeSetupScreen() {
             if (!testRes.ok) {
              let errorMsg = `המודל ${selectedModel} החזיר שגיאה ${testRes.status}. `;
              if (testRes.status === 403 || testRes.status === 400 || testRes.status === 429) {
-               errorMsg += `ייתכן שחרגת מהמכסה למודל זה או שהוא חסום לחשבון חינמי. המערכת בחרה אוטומטית במודל Flash - אנא לחץ שוב 'המשך'.`;
                if (availableModels.includes('gemini-2.5-flash')) setSelectedModel('gemini-2.5-flash');
                else if (availableModels.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
+               setShowModelDowngradeAlert(true);
              } else {
                errorMsg += `אנא בחר מודל אחר.`;
+               showToast({ type: 'error', message: errorMsg });
              }
-             showToast({ type: 'error', message: errorMsg });
              setIsValidating(false);
              setIsSaving(false);
              return;
@@ -375,6 +376,27 @@ export default function WelcomeSetupScreen() {
           </div>
         )}
       </div>
+
+      {showModelDowngradeAlert && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-md w-full p-6 text-center animate-fade-in shadow-xl border border-brand-200 dark:border-brand-800">
+            <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">עברנו למודל חינמי ומהיר 🚀</h3>
+            <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm leading-relaxed">
+              זיהינו שחשבון הגוגל שלך ללא חיוב פעיל (Billing), ולכן הגדרנו עבורך אוטומטית את מודל <strong>{selectedModel}</strong> שהוא חינמי ומעולה.<br/><br/>
+              💡 <strong>טיפ:</strong> שימוש במודל gemini-2.5-pro לאחר הגדרת Billing בגוגל יניב תוצאות עוד יותר טובות.
+            </p>
+            <button 
+              onClick={() => setShowModelDowngradeAlert(false)}
+              className="btn-primary w-full py-3"
+            >
+              הבנתי, בוא נמשיך!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
