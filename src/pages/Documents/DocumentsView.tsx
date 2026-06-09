@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Plus, Search, Loader2, Edit3, Trash2, X, ExternalLink, Link as LinkIcon, FileCheck } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useTripStore, useUserRole, TripDocument } from '@/store/useTripStore';
 import { db } from '@/services/firebase';
@@ -375,8 +376,8 @@ export default function DocumentsView() {
       )}
 
       {/* Document Edit/View Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in" dir="rtl">
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
               <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
@@ -452,7 +453,8 @@ export default function DocumentsView() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Document Scanning Review Modal */}

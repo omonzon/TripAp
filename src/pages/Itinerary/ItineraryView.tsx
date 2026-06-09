@@ -316,14 +316,14 @@ export default function ItineraryView() {
     const timeoutId = setTimeout(() => {
       observer = new IntersectionObserver((entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+          if (entry.isIntersecting) {
             const dayId = entry.target.getAttribute('data-day-id');
             if (dayId) {
               localStorage.setItem(`lastViewedDay_${currentTripId}`, dayId);
             }
           }
         }
-      }, { threshold: 0.5 });
+      }, { rootMargin: "-30% 0px -50% 0px", threshold: 0 });
 
       Object.values(dayRefs.current).forEach(ref => {
         if (ref) observer?.observe(ref);
