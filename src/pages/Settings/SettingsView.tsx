@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getDoc, getDocs, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { getDoc, getDocs, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion, onSnapshot, query } from 'firebase/firestore';
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
-  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle
+  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle, Send, Sparkles
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { deleteAllUserTrips } from '@/services/tripService';
@@ -17,6 +17,7 @@ import { syncUserSettingsToCloud } from '@/services/authService';
 import { exportTripToHTML, exportTripToPDF, exportTripToCSV } from '@/services/exportService';
 import { fetchGeminiModels } from '@/services/ai';
 import { TAB_DEFS } from '@/App';
+import { compressImageToBase64 } from '@/utils/imageCompressor';
 
 const PROVIDERS = [
   { id: 'gemini', label: 'Google Gemini', models: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'] },
@@ -72,6 +73,13 @@ export default function SettingsView() {
   const [addingUser, setAddingUser] = useState(false);
   const [newUserRole, setNewUserRole] = useState<'viewer' | 'editor' | 'admin'>('viewer');
   const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
+
+  // Agent Commands
+  const [agentRequest, setAgentRequest] = useState('');
+  const [agentImage, setAgentImage] = useState<string | null>(null);
+  const [agentCommands, setAgentCommands] = useState<any[]>([]);
+  const [sendingAgentCommand, setSendingAgentCommand] = useState(false);
+  const [agentListenInterval, setAgentListenInterval] = useState(10);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exportingType, setExportingType] = useState<'html' | 'pdf' | 'csv' | 'backup' | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -91,14 +99,20 @@ export default function SettingsView() {
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
-    if (isSuperAdmin) {
-      getDoc(doc(db, 'platform_settings', 'affiliates')).then((snap: any) => {
-        if (snap.exists() && snap.data().links) {
-          setAffiliateLinks(JSON.stringify(snap.data().links, null, 2));
+    const fetchInitialData = async () => {
+      const platformSnap = await getDoc(doc(db, 'platform_settings', 'global'));
+      if (platformSnap.exists()) {
+        const data = platformSnap.data();
+        if (data.affiliateLinks) {
+          setAffiliateLinks(JSON.stringify(data.affiliateLinks, null, 2));
         }
-      }).catch(console.error);
-    }
-  }, [isSuperAdmin]);
+        if (data.agentListenInterval) {
+          setAgentListenInterval(data.agentListenInterval);
+        }
+      }
+    };
+    fetchInitialData();
+  }, [currentTripId]);
 
   const saveAffiliates = async () => {
     if (!appUser?.email) return;
@@ -126,7 +140,47 @@ export default function SettingsView() {
       setLoadingUsers(false);
     };
     fetchUsers();
+
+    // Listen to agent commands
+    const unsubAgent = onSnapshot(query(collection(db, 'agent_commands')), (snap: any) => {
+      const cmds = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+      setAgentCommands(cmds);
+    });
+
+    return () => unsubAgent();
   }, [isSuperAdmin]);
+
+  const saveAgentListenInterval = async () => {
+    if (!appUser?.email) return;
+    try {
+      await setDoc(doc(db, 'platform_settings', 'global'), { agentListenInterval }, { merge: true });
+      showToast({ type: 'success', message: 'Agent listen interval saved!' });
+    } catch (e) {
+      showToast({ type: 'error', message: 'Failed to save settings.' });
+    }
+  };
+
+  const sendAgentCommand = async () => {
+    if (!agentRequest.trim()) return;
+    setSendingAgentCommand(true);
+    try {
+      const { Timestamp } = await import('firebase/firestore');
+      await setDoc(doc(collection(db, 'agent_commands')), {
+        requestText: agentRequest.trim(),
+        images: agentImage ? [agentImage] : [],
+        status: 'pending',
+        response: '',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      setAgentRequest('');
+      setAgentImage(null);
+      showToast({ type: 'success', message: 'Agent command sent!' });
+    } catch (e: any) {
+      showToast({ type: 'error', message: 'Failed to send command: ' + e.message });
+    }
+    setSendingAgentCommand(false);
+  };
 
   const handleBlockUser = async (email: string, currentBlocked: boolean) => {
     if (!isSuperAdmin || !confirm(`Are you sure you want to ${currentBlocked ? 'unblock' : 'block'} this user?`)) return;
@@ -847,11 +901,132 @@ export default function SettingsView() {
           <button
             onClick={saveAffiliates}
             disabled={savingAffiliates}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center justify-center gap-2"
           >
             {savingAffiliates ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             Save Affiliate Links
           </button>
+        </section>
+      )}
+
+      {/* ── AI Agent Remote Control (Super Admin only) ────────────────── */}
+      {isSuperAdmin && (
+        <section className="card p-5 space-y-4 border-2 border-purple-500">
+          <div className="flex justify-between items-center">
+            <h3 className="font-bold text-purple-700 dark:text-purple-400 flex items-center gap-2">
+              <Sparkles size={18} />
+              Super Admin: AI Agent Remote Control
+            </h3>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Send commands to the background AI Agent running in your local IDE.
+          </p>
+
+          <div className="flex items-center gap-3 bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-100 dark:border-purple-800">
+            <label className="text-sm font-medium text-purple-700 dark:text-purple-300 flex-1">
+              Pause Listener if User Active (minutes):
+            </label>
+            <input 
+              type="number" 
+              value={agentListenInterval} 
+              onChange={e => setAgentListenInterval(parseInt(e.target.value) || 10)}
+              className="input-base w-20 text-center"
+            />
+            <button onClick={saveAgentListenInterval} className="btn-secondary whitespace-nowrap text-xs">
+              Save
+            </button>
+          </div>
+
+          <div className="space-y-3 pt-3 border-t border-purple-100 dark:border-purple-800/50">
+            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">New Command</h4>
+            <textarea
+              value={agentRequest}
+              onChange={(e) => setAgentRequest(e.target.value)}
+              className="input-base w-full h-24"
+              placeholder="e.g. Add a delete button to the expenses page..."
+              dir="auto"
+            />
+            
+            <div className="flex items-center gap-3">
+              <label className="btn-secondary flex items-center gap-2 cursor-pointer flex-1 justify-center relative overflow-hidden">
+                <Camera size={16} />
+                <span className="text-xs">{agentImage ? 'Change Image' : 'Attach Screenshot'}</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    try {
+                      const base64 = await compressImageToBase64(f, 800, 0.7);
+                      setAgentImage(base64);
+                    } catch (err) {
+                      showToast({ type: 'error', message: 'Failed to compress image' });
+                    }
+                  }}
+                />
+                {agentImage && (
+                  <div className="absolute inset-0 bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center opacity-80">
+                    <CheckCircle2 size={16} className="text-brand-500" />
+                  </div>
+                )}
+              </label>
+              <button
+                onClick={sendAgentCommand}
+                disabled={sendingAgentCommand || !agentRequest.trim()}
+                className="btn-primary flex items-center gap-2 justify-center flex-[2]"
+              >
+                {sendingAgentCommand ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                Send to Agent
+              </button>
+            </div>
+            {agentImage && (
+              <div className="relative inline-block mt-2">
+                <img src={agentImage} alt="Attachment" className="h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+                <button onClick={() => setAgentImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-purple-100 dark:border-purple-800/50 space-y-3">
+            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">Command History</h4>
+            {agentCommands.length === 0 ? (
+              <p className="text-xs text-slate-400">No agent commands yet.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                {agentCommands.map((cmd) => (
+                  <div key={cmd.id} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700 text-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        cmd.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        cmd.status === 'running' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' :
+                        cmd.status === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      }`}>
+                        {cmd.status.toUpperCase()}
+                      </span>
+                      <span className="text-xs text-slate-400">{cmd.createdAt?.toDate().toLocaleString()}</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-300 font-medium mb-1 line-clamp-2" dir="auto">{cmd.requestText}</p>
+                    {cmd.images?.length > 0 && (
+                      <img src={cmd.images[0]} alt="Attached" className="h-10 object-cover rounded my-1 border" />
+                    )}
+                    {cmd.response && (
+                      <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <p className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-1 flex items-center gap-1">
+                          <Sparkles size={12} /> Agent Response:
+                        </p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap" dir="auto">{cmd.response}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       )}
 

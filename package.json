@@ -15,10 +15,13 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "test:auth": "playwright test tests/auth.setup.ts --headed"
+    "test:auth": "playwright test tests/auth.setup.ts --headed",
+    "agent:listen": "node scripts/agent_daemon.js",
+    "agent:complete": "node scripts/complete_agent_command.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
+    "dotenv": "^17.4.2",
     "firebase": "^12.14.0",
     "i18next": "^26.3.1",
     "lucide-react": "^1.17.0",
