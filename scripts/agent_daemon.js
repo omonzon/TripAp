@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,37 +80,36 @@ async function startDaemon() {
   });
 
   const commandsRef = collection(db, 'agent_commands');
-  const q = query(commandsRef, where('status', '==', 'pending'));
 
-  let activeTasks = new Set();
+  let pendingTasks = new Map(); // id -> data
   
   // Checking loop for delayed tasks
   setInterval(async () => {
-    if (activeTasks.size === 0) return;
-    
-    // Fetch all pending to see if any are ready
-    const snap = await getDocs(q);
-    snap.docs.forEach(async (docSnap) => {
-      await processTask(docSnap);
-    });
+    for (const [id, data] of pendingTasks) {
+      const docRef = doc(db, 'agent_commands', id);
+      await processTask({ id, ref: docRef, data: () => data });
+    }
   }, 60 * 1000); // check every minute
 
   console.log("[Daemon] Listening for pending commands...");
-  onSnapshot(q, (snapshot) => {
+  onSnapshot(commandsRef, (snapshot) => {
     snapshot.docChanges().forEach(async (change) => {
-      if (change.type === 'added') {
-        const docSnap = change.doc;
-        activeTasks.add(docSnap.id);
-        await processTask(docSnap);
+      const data = change.doc.data();
+      if (change.type === 'added' && data.status === 'pending') {
+        pendingTasks.set(change.doc.id, data);
+        await processTask({ id: change.doc.id, ref: change.doc.ref, data: () => data });
+      }
+      if (change.type === 'modified' && data.status !== 'pending') {
+        pendingTasks.delete(change.doc.id);
       }
       if (change.type === 'removed') {
-        activeTasks.delete(change.doc.id);
+        pendingTasks.delete(change.doc.id);
       }
     });
   });
 
-  async function processTask(docSnap) {
-    const data = docSnap.data();
+  async function processTask(task) {
+    const data = task.data();
     if (data.status !== 'pending') return;
 
     const srcDir = path.join(__dirname, '../src');
@@ -122,21 +121,21 @@ async function startDaemon() {
     if (timeSinceLastEdit < requiredDelay) {
       // User is active, delay
       const remainingMinutes = Math.ceil((requiredDelay - timeSinceLastEdit) / 60000);
-      console.log(`[Daemon] Task ${docSnap.id} pending. User active recently. Waiting ~${remainingMinutes}m.`);
+      console.log(`[Daemon] Task ${task.id} pending. User active recently. Waiting ~${remainingMinutes}m.`);
       return;
     }
 
     // Process the task!
-    console.log(`[Daemon] Processing task: ${docSnap.id}`);
+    console.log(`[Daemon] Processing task: ${task.id}`);
     try {
-      await updateDoc(docSnap.ref, { status: 'running', updatedAt: new Date() });
-      activeTasks.delete(docSnap.id);
+      await updateDoc(task.ref, { status: 'running', updatedAt: new Date() });
+      pendingTasks.delete(task.id);
       
       // Print the magic string that wakes up the Agent!
       console.log(`\n================================`);
       console.log(`AGENT_COMMAND_RECEIVED`);
       console.log(JSON.stringify({
-        id: docSnap.id,
+        id: task.id,
         requestText: data.requestText
       }));
       console.log(`================================\n`);
