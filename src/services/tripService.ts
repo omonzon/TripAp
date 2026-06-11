@@ -52,37 +52,41 @@ export async function deleteAllUserTrips(userEmail: string) {
   
   for (const trip of trips) {
     const tripId = trip.id;
-    const profileRef = doc(db, 'trips', tripId, 'profile', 'main');
-    const profileSnap = await getDoc(profileRef);
-    
-    if (profileSnap.exists()) {
-      const profileData = profileSnap.data();
-      const participants = profileData.participants || [];
-      const otherParticipants = participants.filter((p: any) => p.email !== userEmail);
-      const isCreator = profileData.createdBy === userEmail;
+    try {
+      const profileRef = doc(db, 'trips', tripId, 'profile', 'main');
+      const profileSnap = await getDoc(profileRef);
+      
+      if (profileSnap.exists()) {
+        const profileData = profileSnap.data();
+        const participants = profileData.participants || [];
+        const otherParticipants = participants.filter((p: any) => p.email !== userEmail);
+        const isCreator = profileData.createdBy === userEmail;
 
-      if (otherParticipants.length === 0) {
-        // User is the sole participant, wipe the trip completely
-        await deleteTripCompletely(tripId);
-      } else {
-        // There are other participants, just remove the user and transfer ownership if needed
-        let newCreatedBy = profileData.createdBy;
-        
-        if (isCreator) {
-          // Transfer ownership to the first available participant
-          newCreatedBy = otherParticipants[0].email;
-          const newAdminRef = doc(db, 'trips', tripId, 'users', newCreatedBy);
-          await updateDoc(newAdminRef, { role: 'admin' }).catch(() => {}); // Make them admin if not already
+        if (otherParticipants.length === 0) {
+          // User is the sole participant, wipe the trip completely
+          await deleteTripCompletely(tripId).catch(e => console.warn(`Could not delete trip ${tripId}:`, e));
+        } else {
+          // There are other participants, just remove the user and transfer ownership if needed
+          let newCreatedBy = profileData.createdBy;
+          
+          if (isCreator) {
+            // Transfer ownership to the first available participant
+            newCreatedBy = otherParticipants[0].email;
+            const newAdminRef = doc(db, 'trips', tripId, 'users', newCreatedBy);
+            await updateDoc(newAdminRef, { role: 'admin' }).catch(() => {}); // Make them admin if not already
+          }
+
+          await updateDoc(profileRef, { 
+            participants: otherParticipants,
+            createdBy: newCreatedBy
+          }).catch(e => console.warn(`Could not update profile for trip ${tripId}:`, e));
+          
+          // Remove from users subcollection
+          await deleteDoc(doc(db, 'trips', tripId, 'users', userEmail)).catch(e => console.warn(`Could not remove user from trip ${tripId}:`, e));
         }
-
-        await updateDoc(profileRef, { 
-          participants: otherParticipants,
-          createdBy: newCreatedBy
-        });
-        
-        // Remove from users subcollection
-        await deleteDoc(doc(db, 'trips', tripId, 'users', userEmail));
       }
+    } catch (err) {
+      console.warn(`Failed to process trip ${tripId} during account deletion:`, err);
     }
   }
 }
