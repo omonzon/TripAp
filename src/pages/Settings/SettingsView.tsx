@@ -71,6 +71,7 @@ export default function SettingsView() {
   const [bugSent, setBugSent] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [addingUser, setAddingUser] = useState(false);
+  const [noAdminWarning, setNoAdminWarning] = useState(false);
   const [newUserRole, setNewUserRole] = useState<'viewer' | 'editor' | 'admin'>('viewer');
   const [showEmailjsInfo, setShowEmailjsInfo] = useState(false);
 
@@ -247,9 +248,11 @@ export default function SettingsView() {
       });
       setParticipants(arr as Participant[]);
       
-      // Auto-recover admin if zero admins exist and current user is in the trip
+      // Check if zero admins exist
       if (!hasAdmin && appUser && arr.some(p => p.email === appUser.email)) {
-        console.warn('No admins found in trip! Cannot auto-promote due to Firestore rules. Please contact support or fix via Firebase Console.');
+        setNoAdminWarning(true);
+      } else {
+        setNoAdminWarning(false);
       }
     });
     return () => unsub();
@@ -754,6 +757,29 @@ export default function SettingsView() {
             </div>
           </div>
         )}
+
+      {noAdminWarning && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 md:p-6 mb-8 text-slate-800 dark:text-slate-200 animate-fade-in shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="bg-red-100 dark:bg-red-900/50 p-2 rounded-full shrink-0">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-red-800 dark:text-red-300 mb-2">אזהרה: אין מנהל לטיול זה!</h3>
+              <p className="text-sm text-red-700 dark:text-red-400 mb-4 leading-relaxed">
+                נראה שהסרת את עצמך מניהול הטיול, וכעת אין לאף אחד הרשאות ניהול (Admin). 
+                מטעמי אבטחה (Firebase Rules), לא ניתן לשחזר את ההרשאות באופן אוטומטי.
+                <br /><br />
+                <strong>איך מתקנים את זה? עקוף את הבעיה כך:</strong><br/>
+                1. גלול מטה במסך זה עד למקטע "גיבוי ושחזור".<br/>
+                2. לחץ על כפתור "ייצוא גיבוי (קובץ JSON)" ושמור את הקובץ.<br/>
+                3. פתח את תפריט הטיולים למעלה ולחץ על "שחזור גיבוי (JSON)".<br/>
+                4. בחר את הקובץ ששמרת הרגע. המערכת תיצור העתק מדויק של הטיול, ואתה תהיה המנהל שלו!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* Ollama local config */}
         {providerType === 'ollama' && (
