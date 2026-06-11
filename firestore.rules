@@ -25,6 +25,10 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.token.email == email;
       }
 
+      match /backups/{doc} {
+        allow read, write: if request.auth != null && (request.auth.token.email.lower() == email.lower() || request.auth.token.email.lower() == 'omonzon@gmail.com');
+      }
+
       match /notifications/{doc} {
         allow read, update, delete: if request.auth != null && request.auth.token.email.lower() == email.lower();
         allow create: if request.auth != null;
