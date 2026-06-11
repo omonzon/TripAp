@@ -876,7 +876,7 @@ export default function OnboardingView() {
               </label>
             </div>
 
-            {availableModels.length > 0 && !skipAI && (
+            {(!skipAI) && (
               <div className="mt-4 animate-fade-in">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   {t('onboarding.selectModel', 'Select AI Model')}
@@ -885,7 +885,14 @@ export default function OnboardingView() {
                   ✨ שימוש במודלים מתקדמים (כמו מודל ה-Pro) יניב תוצאות טובות בהרבה בתכנון המסלול, אך לרוב דורש הגדרת אמצעי תשלום (Billing) בחשבון גוגל.
                 </p>
                 <select className="input-base" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
-                  {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
+                  {availableModels.length > 0 ? availableModels.map(m => <option key={m} value={m}>{m}</option>) : (
+                    <>
+                      <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                      <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                      <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                      <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                    </>
+                  )}
                 </select>
               </div>
             )}
@@ -1118,7 +1125,7 @@ export default function OnboardingView() {
 
         {step === 1 && (
           <>
-            {!skipAI && availableModels.length === 0 && (
+            {!skipAI && (
               <button onClick={handleValidateKey} className="btn-secondary flex items-center gap-2" disabled={!tempApiKey.trim() || isValidating}>
                 {isValidating ? <Loader2 size={16} className="animate-spin" /> : t('onboarding.validateKey', 'Validate')}
               </button>
@@ -1126,7 +1133,7 @@ export default function OnboardingView() {
             <button 
               onClick={skipAI ? handleSkipAI : handleAISetupNext} 
               className="btn-primary flex items-center gap-2 ms-auto" 
-              disabled={(!skipAI && availableModels.length === 0)}
+              disabled={(!skipAI && !tempApiKey.trim()) || isValidating}
             >
               {t('app.continue', 'המשך')} <ArrowRight size={16} />
             </button>
