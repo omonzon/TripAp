@@ -4,12 +4,20 @@ import { getDoc, getDocs, doc, setDoc, updateDoc, collection, addDoc, deleteDoc,
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
-  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle, Send, Sparkles
+  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle, Send, Sparkles, Search
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { deleteAllUserTrips } from '@/services/tripService';
 import { useAuthStore, type AppUser } from '@/store/useAuthStore';
-import { useTripStore, useUserRole, type Participant } from '@/store/useTripStore';
+import { useTripStore, useUserRole, type TripProfile, type Participant } from '@/store/useTripStore';
+
+interface OrphanedTrip {
+  id: string;
+  name: string;
+  destinations: string[];
+  participants: Participant[];
+  pendingDeletionSince?: number;
+}
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
 import { exportTripToFile } from '@/services/backupService';
@@ -98,6 +106,8 @@ export default function SettingsView() {
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userSortBy, setUserSortBy] = useState<'name' | 'email' | 'date'>('date');
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [orphanedTrips, setOrphanedTrips] = useState<OrphanedTrip[]>([]);
+  const [scanningOrphanedTrips, setScanningOrphanedTrips] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -203,6 +213,128 @@ export default function SettingsView() {
       showToast({ type: 'success', message: 'User deleted successfully.' });
     } catch (e: any) {
       showToast({ type: 'error', message: `Failed to delete user: ${e.message}` });
+    }
+  };
+
+  const scanOrphanedTrips = async () => {
+    if (!isSuperAdmin) return;
+    setScanningOrphanedTrips(true);
+    try {
+      // Get all unique trip IDs from all users
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const tripIds = new Set<string>();
+      usersSnap.docs.forEach(d => {
+        const data = d.data();
+        if (data.trips && Array.isArray(data.trips)) {
+          data.trips.forEach((t: any) => tripIds.add(t.id));
+        }
+      });
+
+      const orphaned: OrphanedTrip[] = [];
+      for (const tripId of Array.from(tripIds)) {
+        try {
+          const profileSnap = await getDoc(doc(db, 'trips', tripId, 'profile', 'main'));
+          if (profileSnap.exists()) {
+            const data = profileSnap.data() as TripProfile;
+            const participants = data.participants || [];
+            const hasAdmin = participants.some(p => p.role === 'admin');
+            if (!hasAdmin) {
+              orphaned.push({
+                id: tripId,
+                name: data.name || 'Unknown Trip',
+                destinations: data.destinations || [],
+                participants,
+                pendingDeletionSince: (data as any).pendingDeletionSince
+              });
+            }
+          }
+        } catch (err) {
+          console.warn(`Failed to check trip ${tripId}:`, err);
+        }
+      }
+      setOrphanedTrips(orphaned);
+      showToast({ type: 'success', message: `Found ${orphaned.length} orphaned trips.` });
+    } catch (e: any) {
+      showToast({ type: 'error', message: `Failed to scan trips: ${e.message}` });
+    }
+    setScanningOrphanedTrips(false);
+  };
+
+  const sendOrphanedWarningEmail = async (trip: OrphanedTrip) => {
+    try {
+      if (trip.participants.length === 0) {
+        showToast({ type: 'error', message: 'No participants to send warning to.' });
+        return;
+      }
+      
+      const emailjsConfigString = localStorage.getItem('emailjs_config');
+      if (!emailjsConfigString) {
+        showToast({ type: 'error', message: 'Please configure EmailJS first.' });
+        return;
+      }
+      const emailjsConfig = JSON.parse(emailjsConfigString);
+      
+      const emailPromises = trip.participants.map(p => 
+        fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: emailjsConfig.serviceId,
+            template_id: 'template_orphaned_warning', // The user needs to create this template in EmailJS
+            user_id: emailjsConfig.publicKey,
+            template_params: {
+              to_email: p.email,
+              to_name: p.name || 'Traveler',
+              trip_name: trip.name,
+              trip_destinations: trip.destinations.join(', ')
+            }
+          })
+        })
+      );
+      
+      await Promise.all(emailPromises);
+      
+      const pendingDate = Date.now() + 14 * 24 * 60 * 60 * 1000;
+      await updateDoc(doc(db, 'trips', trip.id, 'profile', 'main'), { pendingDeletionSince: pendingDate });
+      
+      setOrphanedTrips(prev => prev.map(t => t.id === trip.id ? { ...t, pendingDeletionSince: pendingDate } : t));
+      showToast({ type: 'success', message: 'Warning email sent and deletion date scheduled.' });
+    } catch (e: any) {
+      console.error(e);
+      showToast({ type: 'error', message: 'Failed to send email: ' + (e.text || e.message) });
+    }
+  };
+
+  const deleteOrphanedTrip = async (tripId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this orphaned trip?')) return;
+    try {
+      const { deleteTripCompletely } = await import('@/services/tripService');
+      await deleteTripCompletely(tripId);
+      
+      // Also remove it from the participants' users doc
+      const trip = orphanedTrips.find(t => t.id === tripId);
+      if (trip) {
+        for (const p of trip.participants) {
+          try {
+            const userRef = doc(db, 'users', p.email);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              if (userData.trips) {
+                const newTrips = userData.trips.filter((t: any) => t.id !== tripId);
+                await updateDoc(userRef, { trips: newTrips });
+              }
+            }
+          } catch (e) {
+            console.warn(`Could not remove trip from user ${p.email}`, e);
+          }
+        }
+      }
+      
+      setOrphanedTrips(prev => prev.filter(t => t.id !== tripId));
+      showToast({ type: 'success', message: 'Orphaned trip deleted.' });
+    } catch (e: any) {
+      showToast({ type: 'error', message: 'Failed to delete trip: ' + e.message });
     }
   };
 
@@ -324,7 +456,10 @@ export default function SettingsView() {
             template_params: {
               to_email: email,
               subject: subject,
-              message: body
+              message: body,
+              app_link: appLink,
+              inviter_name: inviterName,
+              trip_name: tripName
             }
           })
         });
@@ -334,7 +469,7 @@ export default function SettingsView() {
         } else {
           console.error("EmailJS returned error:", await res.text());
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error("EmailJS failed to send invite:", e);
       }
     }
@@ -923,6 +1058,88 @@ export default function SettingsView() {
               </tbody>
             </table>
           </div>
+        </section>
+      )}
+
+      {/* ── Orphaned Trips Management (Super Admin only) ──────────────── */}
+      {isSuperAdmin && (
+        <section className="card p-5 space-y-4 border-2 border-red-500">
+          <div className="flex justify-between items-center">
+            <h3 className="font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+              <AlertTriangle size={18} />
+              Super Admin: ניהול טיולים יתומים
+            </h3>
+            <button
+              onClick={scanOrphanedTrips}
+              disabled={scanningOrphanedTrips}
+              className="btn-secondary text-sm flex items-center gap-2"
+            >
+              {scanningOrphanedTrips ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+              סרוק טיולים יתומים
+            </button>
+          </div>
+          <p className="text-xs text-slate-500">
+            טיולים ללא משתמש בהרשאת ניהול (Admin). ניתן למחוק אותם או לשלוח אזהרה למשתמשים.
+          </p>
+
+          {orphanedTrips.length > 0 && (
+            <div className="overflow-x-auto mt-4 rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-sm text-start text-slate-500 dark:text-slate-400">
+                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800/50 dark:text-slate-300">
+                  <tr>
+                    <th scope="col" className="px-4 py-3">Trip Name</th>
+                    <th scope="col" className="px-4 py-3">Participants</th>
+                    <th scope="col" className="px-4 py-3">Pending Deletion</th>
+                    <th scope="col" className="px-4 py-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orphanedTrips.map(trip => {
+                    const isExpired = trip.pendingDeletionSince && Date.now() > trip.pendingDeletionSince;
+                    return (
+                      <tr key={trip.id} className={`border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isExpired ? 'bg-red-50 dark:bg-red-900/10' : 'bg-white dark:bg-slate-900'}`}>
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                          <div>{trip.name}</div>
+                          <div className="text-xs text-slate-500">{trip.destinations.join(', ')}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {trip.participants.map(p => (
+                            <div key={p.email} className="text-xs">{p.email} ({p.role})</div>
+                          ))}
+                        </td>
+                        <td className="px-4 py-3">
+                          {trip.pendingDeletionSince ? (
+                            <span className={`text-xs font-medium px-2 py-1 rounded ${isExpired ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'}`}>
+                              {new Date(trip.pendingDeletionSince).toLocaleDateString()}
+                              {isExpired && ' (Expired)'}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">Not Scheduled</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => sendOrphanedWarningEmail(trip)}
+                            className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors dark:bg-blue-900/30 dark:hover:bg-blue-900/50"
+                            title="Send Warning Email (14 days)"
+                          >
+                            <Mail size={16} />
+                          </button>
+                          <button
+                            onClick={() => deleteOrphanedTrip(trip.id)}
+                            className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                            title="Delete Trip Now"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
 
