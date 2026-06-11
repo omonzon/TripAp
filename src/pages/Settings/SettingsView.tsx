@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getDoc, getDocs, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, arrayUnion, onSnapshot, query } from 'firebase/firestore';
 import {
-  Settings, Key, Cpu, Moon, Sun, Globe, DollarSign,
+  Settings, Key, Cpu, Moon, Sun, Globe, DollarSign, Cloud,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
   Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle, Send, Sparkles, Search
 } from 'lucide-react';
@@ -26,6 +26,7 @@ import { exportTripToHTML, exportTripToPDF, exportTripToCSV } from '@/services/e
 import { fetchGeminiModels } from '@/services/ai';
 import { TAB_DEFS } from '@/App';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
+import { CloudRestoreModal } from '@/components/CloudRestoreModal';
 
 const PROVIDERS = [
   { id: 'gemini', label: 'Google Gemini', models: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'] },
@@ -108,6 +109,8 @@ export default function SettingsView() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [orphanedTrips, setOrphanedTrips] = useState<OrphanedTrip[]>([]);
   const [scanningOrphanedTrips, setScanningOrphanedTrips] = useState(false);
+
+  const [showCloudRestore, setShowCloudRestore] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -1340,11 +1343,16 @@ export default function SettingsView() {
           <Download size={18} className="text-brand-500" />
           {t('settings.backup')}
         </h3>
-        <div className="flex gap-3 mt-4">
-          <button id="btn-export-backup" onClick={exportBackup} className="btn-secondary flex items-center gap-2 flex-1 justify-center">
-            <Download size={16} /> {t('settings.exportBackup')}
+        <div className="flex flex-col gap-3 mt-4">
+          <button onClick={() => setShowCloudRestore(true)} className="btn-primary flex items-center gap-2 justify-center py-3">
+            <Cloud className="w-5 h-5" /> 
+            שחזר מגיבוי ענן (אוטומטי)
           </button>
-          <label className="btn-secondary flex items-center gap-2 flex-1 cursor-pointer justify-center">
+          <div className="flex gap-3">
+            <button id="btn-export-backup" onClick={exportBackup} className="btn-secondary flex items-center gap-2 flex-1 justify-center">
+              <Download size={16} /> {t('settings.exportBackup')}
+            </button>
+            <label className="btn-secondary flex items-center gap-2 flex-1 cursor-pointer justify-center">
             <Upload size={16} /> {t('settings.importBackup')}
             <input type="file" accept=".json" className="hidden" onChange={e => {
               const f = e.target.files?.[0];
@@ -1361,6 +1369,7 @@ export default function SettingsView() {
               reader.readAsText(f);
             }} />
           </label>
+          </div>
         </div>
         
         <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -1659,6 +1668,8 @@ export default function SettingsView() {
       <p className="text-xs text-center text-slate-400 dark:text-slate-600 pb-2">
         TravelPlatform v{import.meta.env.VITE_APP_VERSION ?? '1.0.0'} · {import.meta.env.VITE_FIREBASE_PROJECT_ID}
       </p>
+
+      <CloudRestoreModal isOpen={showCloudRestore} onClose={() => setShowCloudRestore(false)} />
     </div>
   );
 }
