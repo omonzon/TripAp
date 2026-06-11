@@ -82,7 +82,12 @@ export default function OnboardingView() {
   const [restoring, setRestoring] = useState(false);
   const [addedSegments, setAddedSegments] = useState<{ id: string, type: 'text' | 'file', title: string, constraintsFound: number }[]>([]);
   const [currentSegmentText, setCurrentSegmentText] = useState('');
-  const [showModelDowngradeAlert, setShowModelDowngradeAlert] = useState(false);
+  const [downgradePrompt, setDowngradePrompt] = useState<{
+    isOpen: boolean;
+    errorMsg: string;
+    fallbackModel: string;
+    isValidationOnly: boolean;
+  } | null>(null);
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
   const [generatedTripId, setGeneratedTripId] = useState<string | null>(null);
 
@@ -240,13 +245,18 @@ export default function OnboardingView() {
         const errMsg = err?.message || String(err);
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
-        if (isQuotaError && tempProvider === 'gemini' && !modelToTest.includes('flash')) {
+        if (tempProvider === 'gemini' && !modelToTest.includes('flash')) {
           let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
                               (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
           
           if (fallbackModel) {
             setSelectedModel(fallbackModel);
-            setShowModelDowngradeAlert(true);
+            setDowngradePrompt({
+              isOpen: true,
+              errorMsg: errMsg,
+              fallbackModel: fallbackModel,
+              isValidationOnly: true
+            });
             modelToTest = fallbackModel;
             isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
           } else {
@@ -290,13 +300,18 @@ export default function OnboardingView() {
         const errMsg = err?.message || String(err);
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
-        if (isQuotaError && tempProvider === 'gemini' && !finalModel.includes('flash')) {
+        if (tempProvider === 'gemini' && !finalModel.includes('flash')) {
           let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
                               (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
           
           if (fallbackModel) {
             setSelectedModel(fallbackModel);
-            setShowModelDowngradeAlert(true);
+            setDowngradePrompt({
+              isOpen: true,
+              errorMsg: errMsg,
+              fallbackModel: fallbackModel,
+              isValidationOnly: true
+            });
             finalModel = fallbackModel;
             try {
               isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), finalModel);
@@ -591,48 +606,38 @@ export default function OnboardingView() {
           const errorMsg = aiErr?.message || String(aiErr);
           const isQuotaError = errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota') || errorMsg.includes('Too Many Requests') || errorMsg.includes('GeminiOverloadError') || errorMsg.includes('RESOURCE_EXHAUSTED');
           
-          let retrySuccess = false;
-          if (isQuotaError && tempProvider === 'gemini' && !selectedModel.includes('flash')) {
+          if (tempProvider === 'gemini' && !selectedModel.includes('flash')) {
              let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
                                  (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
              if (fallbackModel) {
-                 showToast({ type: 'warning', message: `שגיאת מכסה במודל ${selectedModel}. מנסה שוב אוטומטית עם מודל חינמי (${fallbackModel})...` });
                  setSelectedModel(fallbackModel);
                  setAllGeminiModels(fallbackModel);
-                 try {
-                     await generateComprehensiveTrip(
-                        profile, 
-                        form.bookings, 
-                        getProviderForTask('itinerary'), 
-                        i18n.language, 
-                        appUser.email,
-                        setGenerationProgress
-                     );
-                     retrySuccess = true;
-                     showToast({ type: 'success', message: `הטיול נוצר בהצלחה באמצעות מודל חלופי (${fallbackModel}).` });
-                 } catch(retryErr: any) {
-                     console.error("Retry failed:", retryErr);
-                     aiErr.message = `גם המודל החינמי כשל: ${retryErr?.message || String(retryErr)}`;
-                 }
+                 setDowngradePrompt({
+                   isOpen: true,
+                   errorMsg: aiErr.message || String(aiErr),
+                   fallbackModel: fallbackModel,
+                   isValidationOnly: false
+                 });
+                 // Stop generating, let user decide via modal
+                 setGenerating(false);
+                 return;
              }
           }
 
-          if (!retrySuccess) {
-            await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
-            await deleteDoc(doc(db, 'trips', tripId, 'users', appUser.email));
-            await updateDoc(doc(db, 'users', appUser.email), {
-              trips: arrayRemove({ id: tripId, name: profile.name, destinations: profile.destinations })
-            });
-            
-            if (isQuotaError) {
-              setKeyError(`המפתח תקין אך חרגת ממכסת הבקשות (Rate Limit) למודל זה. אנא נסה מודל אחר או בדוק את מצב החשבון שלך. (${aiErr.message || String(aiErr)})`);
-            } else {
-              setKeyError(`שגיאה בתקשורת עם ה-AI: ${aiErr.message || String(aiErr)}. אנא ודא שהמפתח תקין.`);
-            }
-            
-            setStep(1);
-            throw new Error('AI_GENERATION_FAILED');
+          await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
+          await deleteDoc(doc(db, 'trips', tripId, 'users', appUser.email));
+          await updateDoc(doc(db, 'users', appUser.email), {
+            trips: arrayRemove({ id: tripId, name: profile.name, destinations: profile.destinations })
+          });
+          
+          if (isQuotaError) {
+            setKeyError(`המפתח תקין אך חרגת ממכסת הבקשות (Rate Limit) למודל זה. אנא נסה מודל אחר או בדוק את מצב החשבון שלך. (${aiErr.message || String(aiErr)})`);
+          } else {
+            setKeyError(`שגיאה בתקשורת עם ה-AI: ${aiErr.message || String(aiErr)}. אנא ודא שהמפתח תקין.`);
           }
+          
+          setStep(1);
+          throw new Error('AI_GENERATION_FAILED');
         }
       }
 
@@ -1200,23 +1205,39 @@ export default function OnboardingView() {
       )}
 
       {showTos && <TermsOfServiceModal onClose={() => setShowTos(false)} />}
-      {showModelDowngradeAlert && (
+      {downgradePrompt?.isOpen && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl max-w-md w-full p-6 text-center animate-fade-in shadow-xl border border-brand-200 dark:border-brand-800">
             <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Sparkles size={32} />
+              <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">עברנו למודל חינמי ומהיר 🚀</h3>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">בעיה במודל הנבחר</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm leading-relaxed">
-              זיהינו שחשבון הגוגל שלך ללא חיוב פעיל (Billing), ולכן הגדרנו עבורך אוטומטית את מודל <strong>{selectedModel}</strong> שהוא חינמי ומעולה.<br/><br/>
-              💡 <strong>טיפ:</strong> שימוש במודל gemini-2.5-pro לאחר הגדרת Billing בגוגל יניב תוצאות עוד יותר טובות.
+              זיהינו שגיאה בשימוש במודל המתקדם: <br/><span className="text-red-500 font-mono text-xs">{downgradePrompt.errorMsg}</span><br/><br/>
+              כדי שתוכל להמשיך, עברנו אוטומטית להשתמש במודל חינמי מהיר (<strong>{downgradePrompt.fallbackModel}</strong>).
             </p>
-            <button 
-              onClick={() => setShowModelDowngradeAlert(false)}
-              className="btn-primary w-full py-3"
-            >
-              הבנתי, בוא נמשיך!
-            </button>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  setDowngradePrompt(null);
+                  if (!downgradePrompt.isValidationOnly) {
+                    createTrip();
+                  }
+                }}
+                className="btn-primary w-full py-3"
+              >
+                אישור והמשך עם המודל החינמי
+              </button>
+              <button 
+                onClick={() => {
+                  setDowngradePrompt(null);
+                  setStep(1);
+                }}
+                className="btn-secondary w-full py-3"
+              >
+                חזור למסך הגדרות API ומודל
+              </button>
+            </div>
           </div>
         </div>
       )}

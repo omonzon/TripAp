@@ -73,7 +73,7 @@ export default function WelcomeSetupScreen() {
         const errMsg = err?.message || String(err);
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
-        if (isQuotaError && tempProvider === 'gemini' && !modelToTest.includes('flash')) {
+        if (tempProvider === 'gemini' && !modelToTest.includes('flash')) {
           let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
                               (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
           
