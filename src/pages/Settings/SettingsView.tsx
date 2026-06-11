@@ -282,23 +282,26 @@ export default function SettingsView() {
         return;
       }
       
-      const emailPromises = trip.participants.map(p => 
-        fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      const emailPromises = trip.participants.map(async p => {
+        const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             service_id: emailjsConfig.serviceId,
-            template_id: 'template_orphaned_warning', // The user needs to create this template in EmailJS
+            template_id: emailjsConfig.templateId || emailjsConfig.bugTemplateId,
             user_id: emailjsConfig.publicKey,
             template_params: {
               to_email: p.email,
-              to_name: p.name || 'Traveler',
-              trip_name: trip.name,
-              trip_destinations: trip.destinations.join(', ')
+              title: `התראת מחיקה: טיול ללא מנהל - ${trip.name}`,
+              message: `שלום ${p.name || 'נוסע'},\n\nהטיול "${trip.name}" (${trip.destinations.join(', ')}) נותר ללא משתמש בעל הרשאות ניהול (Admin). \nעל פי נהלי המערכת, טיול יתום יימחק אוטומטית בעוד 14 יום.\n\nכדי לשמור את הטיול, אנא היכנס למערכת, בצע "ייצוא גיבוי" מההגדרות, ולאחר מכן תוכל לטעון אותו מחדש כטיול חדש שבו תהיה המנהל.\n\nצוות המערכת.`
             }
           })
-        })
-      );
+        });
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+        return res;
+      });
       
       await Promise.all(emailPromises);
       
