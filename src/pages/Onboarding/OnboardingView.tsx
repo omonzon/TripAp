@@ -10,7 +10,7 @@ import { extractSemanticGraph, getConstraints } from '@/engine/semanticEngine';
 import { extractDocumentData, integrateDocumentData, type DocumentExtractionResult } from '@/engine/documentAnalyzer';
 import DocumentAnalysisReviewModal from '@/components/documents/DocumentAnalysisReviewModal';
 import { generateComprehensiveTrip } from '@/engine/comprehensiveGenerator';
-import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, type AIProvider } from '@/services/ai';
+import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, validateAIConnection, type AIProvider } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { restoreTripFromFile } from '@/services/backupService';
 import { UploadCloud } from 'lucide-react';
@@ -35,18 +35,42 @@ export default function OnboardingView() {
   const [tempApiKey, setTempApiKey] = useState('');
   const [keyError, setKeyError] = useState<string | null>(null);
   const [keySuccess, setKeySuccess] = useState(false);
-  const [form, setForm] = useState({
-    name: '',
-    destinations: '',
-    startDate: '',
-    endDate: '',
-    budget: '',
-    currency: 'USD',
-    pace: 'moderate' as TripProfile['pace'],
-    preferences: '',
-    bookings: '',
-    tripStyle: [] as string[],
+
+  interface OnboardingForm {
+    name: string;
+    destinations: string;
+    startDate: string;
+    endDate: string;
+    budget: string;
+    currency: string;
+    pace: TripProfile['pace'];
+    preferences: string;
+    bookings: string;
+    tripStyle: string[];
+  }
+
+  const [form, setForm] = useState<OnboardingForm>(() => {
+    const saved = localStorage.getItem('onboarding_form');
+    if (saved) {
+      try { return JSON.parse(saved) as OnboardingForm; } catch (e) { /* ignore */ }
+    }
+    return {
+      name: '',
+      destinations: '',
+      startDate: '',
+      endDate: '',
+      budget: '',
+      currency: 'USD',
+      pace: 'moderate' as TripProfile['pace'],
+      preferences: '',
+      bookings: '',
+      tripStyle: [] as string[],
+    };
   });
+
+  React.useEffect(() => {
+    localStorage.setItem('onboarding_form', JSON.stringify(form));
+  }, [form]);
   const [constraintCount, setConstraintCount] = useState(0);
   const [extracting, setExtracting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -184,10 +208,8 @@ export default function OnboardingView() {
       if (tempProvider === 'gemini') {
         const models = await fetchGeminiModels(tempApiKey.trim());
         setAvailableModels(models);
-        if (models.includes('gemini-2.5-pro')) setSelectedModel('gemini-2.5-pro');
-        else if (models.includes('gemini-1.5-pro')) setSelectedModel('gemini-1.5-pro');
-        else if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
-        else if (models.length > 0) setSelectedModel(models[0]);
+        let defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
+        setSelectedModel(defaultModel);
       } else if (tempProvider === 'openai') {
         let models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
         try {
@@ -195,8 +217,7 @@ export default function OnboardingView() {
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch OpenAI models, using fallback", e); }
         setAvailableModels(models);
-        if (models.includes('gpt-4o')) setSelectedModel('gpt-4o');
-        else setSelectedModel(models[0]);
+        setSelectedModel(models.includes('gpt-4o') ? 'gpt-4o' : models[0]);
       } else if (tempProvider === 'anthropic') {
         let models = ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'];
         try {
@@ -204,15 +225,22 @@ export default function OnboardingView() {
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch Anthropic models, using fallback", e); }
         setAvailableModels(models);
-        if (models.includes('claude-3-5-sonnet-20240620')) setSelectedModel('claude-3-5-sonnet-20240620');
-        else setSelectedModel(models[0]);
+        setSelectedModel(models.includes('claude-3-5-sonnet-20240620') ? 'claude-3-5-sonnet-20240620' : models[0]);
       } else if (tempProvider === 'ollama') {
         setAvailableModels(['llama3', 'gemma2']);
         setSelectedModel('gemma2');
       }
+      
+      const modelToTest = selectedModel || availableModels[0] || 'gemini-1.5-flash';
+      const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+      
+      if (!isConnectionValid) {
+        throw new Error('AI Test Failed');
+      }
+      
       setKeySuccess(true);
     } catch (err) {
-      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי. אנא ודא שהעתקת אותו נכון.'));
+      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא ודא שהעתקת אותו נכון.'));
     } finally {
       setIsValidating(false);
     }
@@ -221,31 +249,11 @@ export default function OnboardingView() {
   const handleAISetupNext = async () => {
     if (tempApiKey.trim() || tempProvider === 'ollama') {
       setIsValidating(true);
-      if (tempProvider === 'gemini') {
-        try {
-          const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${tempApiKey.trim()}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
-          });
-          if (!testRes.ok) {
-             let errorMsg = `המודל ${selectedModel} החזיר שגיאה ${testRes.status}. `;
-             if (testRes.status === 403 || testRes.status === 400 || testRes.status === 429) {
-               if (availableModels.includes('gemini-2.5-flash')) setSelectedModel('gemini-2.5-flash');
-               else if (availableModels.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
-               setShowModelDowngradeAlert(true);
-             } else {
-               errorMsg += `אנא בחר מודל אחר.`;
-               showToast({ type: 'error', message: errorMsg });
-             }
-             setIsValidating(false);
-             return;
-          }
-        } catch (err) {
-           showToast({ type: 'error', message: `שגיאת רשת בבדיקת המודל ${selectedModel}.` });
-           setIsValidating(false);
-           return;
-        }
+      const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), selectedModel);
+      if (!isConnectionValid) {
+        showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${selectedModel}). אנא ודא שהמפתח תקין או בחר מודל אחר.` });
+        setIsValidating(false);
+        return;
       }
       setIsValidating(false);
 
@@ -488,6 +496,14 @@ export default function OnboardingView() {
 
       if (!skipAI && tempApiKey.trim()) {
         try {
+          showToast({ type: 'info', message: t('onboarding.validatingConnection', 'מוודא חיבור AI...') });
+          const isValidConnection = await validateAIConnection(tempProvider, tempApiKey.trim(), selectedModel);
+          if (!isValidConnection) {
+             setKeyError('המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא הזן מפתח API תקין.');
+             setStep(1);
+             throw new Error('AI_TEST_FAILED');
+          }
+          
           showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is building your comprehensive trip data...') });
           setGenerationProgress(t('onboarding.startingGeneration', 'מתחיל ניתוח...'));
           await generateComprehensiveTrip(
@@ -498,6 +514,7 @@ export default function OnboardingView() {
             appUser.email,
             setGenerationProgress
           );
+
         } catch (aiErr: any) {
           console.error("AI Generation failed:", aiErr);
           
@@ -522,6 +539,7 @@ export default function OnboardingView() {
       setTripProfile(profile);
       setGeneratedTripId(tripId);
       setCurrentTrip(tripId);
+      localStorage.removeItem('onboarding_form');
       showToast({ type: 'success', message: `Trip "${profile.name}" created! 🎉` });
       
     } catch (err: any) {

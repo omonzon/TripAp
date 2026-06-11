@@ -6,7 +6,7 @@ import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
-import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, type AIProvider } from '@/services/ai';
+import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, validateAIConnection, type AIProvider } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 
 export default function WelcomeSetupScreen() {
@@ -41,10 +41,8 @@ export default function WelcomeSetupScreen() {
       if (tempProvider === 'gemini') {
         const models = await fetchGeminiModels(tempApiKey.trim());
         setAvailableModels(models);
-        if (models.includes('gemini-2.5-pro')) setSelectedModel('gemini-2.5-pro');
-        else if (models.includes('gemini-1.5-pro')) setSelectedModel('gemini-1.5-pro');
-        else if (models.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
-        else if (models.length > 0) setSelectedModel(models[0]);
+        let defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
+        setSelectedModel(defaultModel);
       } else if (tempProvider === 'openai') {
         let models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
         try {
@@ -52,8 +50,7 @@ export default function WelcomeSetupScreen() {
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch OpenAI models, using fallback", e); }
         setAvailableModels(models);
-        if (models.includes('gpt-4o')) setSelectedModel('gpt-4o');
-        else setSelectedModel(models[0]);
+        setSelectedModel(models.includes('gpt-4o') ? 'gpt-4o' : models[0]);
       } else if (tempProvider === 'anthropic') {
         let models = ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'];
         try {
@@ -61,15 +58,22 @@ export default function WelcomeSetupScreen() {
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch Anthropic models, using fallback", e); }
         setAvailableModels(models);
-        if (models.includes('claude-3-5-sonnet-20240620')) setSelectedModel('claude-3-5-sonnet-20240620');
-        else setSelectedModel(models[0]);
+        setSelectedModel(models.includes('claude-3-5-sonnet-20240620') ? 'claude-3-5-sonnet-20240620' : models[0]);
       } else if (tempProvider === 'ollama') {
         setAvailableModels(['llama3', 'gemma2']);
         setSelectedModel('gemma2');
       }
+      
+      const modelToTest = selectedModel || availableModels[0] || 'gemini-1.5-flash';
+      const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+      
+      if (!isConnectionValid) {
+        throw new Error('AI Test Failed');
+      }
+      
       setKeySuccess(true);
     } catch (err) {
-      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי. אנא ודא שהעתקת אותו נכון.'));
+      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא ודא שהעתקת אותו נכון.'));
     } finally {
       setIsValidating(false);
     }
