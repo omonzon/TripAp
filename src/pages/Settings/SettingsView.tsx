@@ -76,6 +76,7 @@ export default function SettingsView() {
 
   // Bug reporting
   const [bugReport, setBugReport] = useState('');
+  const [bugImage, setBugImage] = useState<string | null>(null);
   const [sendingBug, setSendingBug] = useState(false);
   const [bugSent, setBugSent] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -692,11 +693,13 @@ export default function SettingsView() {
     if (!bugReport.trim() || !appUser) return;
     setSendingBug(true);
     try {
-      await addDoc(collection(db, 'feedback'), {
-        userEmail: appUser.email,
+      await addDoc(collection(db, 'bugs'), {
+        userId: appUser.email,
+        text: bugReport.trim(),
+        image: bugImage,
+        createdAt: new Date(),
         userName: appUser.name,
         userAgent: navigator.userAgent,
-        text: bugReport.trim(),
         currentTripId,
         timestamp: Date.now(),
         date: new Date().toISOString()
@@ -725,6 +728,7 @@ export default function SettingsView() {
 
       setBugSent(true);
       setBugReport('');
+      setBugImage(null);
       showToast({ type: 'success', message: 'תודה! הדיווח נשלח בהצלחה.' });
       setTimeout(() => setBugSent(false), 5000);
     } catch (e) {
@@ -1708,14 +1712,43 @@ export default function SettingsView() {
           className="input-base w-full h-24 resize-none"
           dir="auto"
         />
-        <button
-          onClick={handleReportBug}
-          disabled={!bugReport.trim() || sendingBug}
-          className="btn-primary w-full flex items-center justify-center gap-2"
-        >
-          {sendingBug ? <Loader2 size={16} className="animate-spin" /> : (bugSent ? <CheckCircle2 size={16} /> : <FileText size={16} />)}
-          {bugSent ? 'נשלח בהצלחה' : 'שלח דיווח'}
-        </button>
+        <div className="flex items-center gap-2">
+          <label className="btn-secondary flex items-center justify-center gap-2 cursor-pointer flex-1 py-3">
+            <Camera size={16} className={bugImage ? 'text-brand-500' : ''} />
+            <span className="text-sm font-medium">{bugImage ? 'שנה צילום' : 'צרף צילום מסך'}</span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                try {
+                  const base64 = await compressImageToBase64(f, 800, 0.7);
+                  setBugImage(base64);
+                } catch (err) {
+                  showToast({ type: 'error', message: 'Failed to compress image' });
+                }
+              }}
+            />
+          </label>
+          <button
+            onClick={handleReportBug}
+            disabled={!bugReport.trim() || sendingBug}
+            className="btn-primary flex-[2] flex items-center justify-center gap-2 py-3"
+          >
+            {sendingBug ? <Loader2 size={16} className="animate-spin" /> : (bugSent ? <CheckCircle2 size={16} /> : <FileText size={16} />)}
+            {bugSent ? 'נשלח בהצלחה' : 'שלח דיווח'}
+          </button>
+        </div>
+        {bugImage && (
+          <div className="relative inline-block mt-2">
+            <img src={bugImage.startsWith('data:') ? bugImage : `data:image/jpeg;base64,${bugImage}`} alt="Attachment" className="h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+            <button onClick={() => setBugImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md">
+              <Trash2 size={12} />
+            </button>
+          </div>
+        )}
       </section>
 
       {/* App version */}
