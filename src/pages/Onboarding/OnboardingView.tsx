@@ -265,7 +265,7 @@ export default function OnboardingView() {
     } catch (err: any) {
       const errMsg = err?.message || String(err);
       if (errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED')) {
-        setKeyError(`שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}`);
+        setKeyError(`שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. באפשרותך לנסות מודל חלופי או להוסיף אמצעי תשלום למפתח שלך.`);
       } else {
         setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא ודא שהעתקת אותו נכון.'));
       }
@@ -306,17 +306,17 @@ export default function OnboardingView() {
                 return;
               }
             } catch(e) {
-               showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}` });
+               showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה גם במודל החינמי.` });
                setIsValidating(false);
                return;
             }
           } else {
-             showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}` });
+             showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה.` });
              setIsValidating(false);
              return;
           }
         } else if (isQuotaError) {
-          showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}` });
+          showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה.` });
           setIsValidating(false);
           return;
         } else {
