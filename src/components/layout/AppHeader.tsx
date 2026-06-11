@@ -8,6 +8,7 @@ import { showToast } from '@/components/ui/Toast';
 import { signOut, syncUserSettingsToCloud } from '@/services/authService';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
+import { restoreTripFromFile } from '@/services/backupService';
 import type { TabId } from '@/App';
 import HelpGuideModal from '@/components/HelpGuideModal';
 
@@ -25,6 +26,8 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
   const [showTripsDropdown, setShowTripsDropdown] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [notifications, setNotifications] = React.useState<any[]>([]);
+  const [restoring, setRestoring] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (!appUser?.email) return;
@@ -48,6 +51,25 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
         // Run in background so it doesn't block UI
         translateTripContent(currentTripId, newLang);
       }
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !appUser) return;
+    
+    setRestoring(true);
+    setShowTripsDropdown(false);
+    try {
+      showToast({ type: 'info', message: t('onboarding.restoringToast', 'Restoring trip...') });
+      const newTripId = await restoreTripFromFile(file, appUser.email, appUser.name);
+      setCurrentTrip(newTripId);
+      showToast({ type: 'success', message: t('onboarding.restoreSuccess', 'Trip restored successfully! 🎉') });
+    } catch (err) {
+      showToast({ type: 'error', message: t('onboarding.restoreError', 'Failed to restore trip from file.') });
+    } finally {
+      setRestoring(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -117,6 +139,22 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
                   >
                     + {t('app.createNewTrip', 'Create New Trip')}
                   </button>
+                  <button 
+                    className="w-full text-start px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-blue-600 dark:text-blue-400 transition-colors"
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={restoring}
+                  >
+                    {restoring ? '⏳ משחזר...' : '📂 שחזור גיבוי (JSON)'}
+                  </button>
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    onChange={handleRestore} 
+                  />
                 </div>
               </>
             )}
