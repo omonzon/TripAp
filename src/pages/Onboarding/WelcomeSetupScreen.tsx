@@ -78,8 +78,7 @@ export default function WelcomeSetupScreen() {
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
         if (tempProvider === 'gemini' && !modelToTest.includes('flash')) {
-          let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
-                              (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
+          let fallbackModel = (availableModels.length > 0 && availableModels.includes('gemini-2.5-flash')) ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
           
           if (fallbackModel) {
             setSelectedModel(fallbackModel);
@@ -155,8 +154,7 @@ export default function WelcomeSetupScreen() {
           } catch (err: any) {
             const errMsg = err?.message || String(err);
             if (tempProvider === 'gemini' && !selectedModel.includes('flash')) {
-              let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
-                                  (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
+              let fallbackModel = (availableModels.length > 0 && availableModels.includes('gemini-2.5-flash')) ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
               if (fallbackModel) {
                 setSelectedModel(fallbackModel);
                 setDowngradePrompt({
