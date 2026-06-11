@@ -277,12 +277,10 @@ export default function SettingsView() {
         return;
       }
       
-      const emailjsConfigString = localStorage.getItem('emailjs_config');
-      if (!emailjsConfigString) {
+      if (!emailjsConfig || !emailjsConfig.serviceId || !emailjsConfig.publicKey) {
         showToast({ type: 'error', message: 'Please configure EmailJS first.' });
         return;
       }
-      const emailjsConfig = JSON.parse(emailjsConfigString);
       
       const emailPromises = trip.participants.map(p => 
         fetch('https://api.emailjs.com/api/v1.0/email/send', {
