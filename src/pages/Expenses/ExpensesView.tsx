@@ -417,7 +417,7 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
                             }); 
                             setEditingId(ex.id); 
                             setShowForm(true); 
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                           }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-colors"><Edit2 size={14} /></button>
                           <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'expenses', ex.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><Trash2 size={14} /></button>
                         </div>
