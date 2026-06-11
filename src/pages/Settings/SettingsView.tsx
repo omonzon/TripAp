@@ -189,15 +189,7 @@ export default function SettingsView() {
         updatedAt: Timestamp.now()
       });
       
-      try {
-        await fetch('http://localhost:54321/command', {
-          method: 'POST',
-          body: JSON.stringify({ command: agentRequest.trim(), docId: docRef.id }),
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (e) {
-         console.warn('Local agent listener not running', e);
-      }
+      // Removed localhost:54321 fetch since we now use Firebase listener
       setAgentRequest('');
       setAgentImage(null);
       showToast({ type: 'success', message: 'Agent command sent!' });

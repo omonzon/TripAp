@@ -220,21 +220,6 @@ export default function App() {
 
   // If no trip created, show onboarding (or Management for Super Admin)
   if (!currentTripId || currentTripId === 'new') {
-    if (!currentTripId && appUser?.email?.toLowerCase().trim() === 'omonzon@gmail.com') {
-      return (
-        <div className="min-h-screen flex flex-col">
-          <AppHeader showTabs={false} />
-          <main
-            className="flex-1 overflow-y-auto px-4 py-6 md:px-6 pb-24 md:pb-6 relative"
-            dir={language === 'he' ? 'rtl' : 'ltr'}
-          >
-            <Suspense fallback={<PageLoader />}>
-              <SettingsView />
-            </Suspense>
-          </main>
-        </div>
-      );
-    }
 
     return (
       <div className="min-h-screen flex flex-col">

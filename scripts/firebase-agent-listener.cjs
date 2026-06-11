@@ -18,26 +18,15 @@ let initialLoad = true;
 const unsubscribe = db.collection('agent_commands')
   .where('status', '==', 'pending')
   .onSnapshot(snapshot => {
-    if (initialLoad) {
-      initialLoad = false;
-      return; // Skip the initial snapshot which contains existing pending commands
-    }
-
     snapshot.docChanges().forEach(change => {
       if (change.type === 'added' || change.type === 'modified') {
         const data = change.doc.data();
         if (data.status === 'pending') {
           console.log('\n==================================================');
-          console.log('*** NEW USER COMMAND RECEIVED FROM FIREBASE ***');
+          console.log('*** NEW PENDING COMMAND RECEIVED FROM FIREBASE ***');
           console.log('DocID:', change.doc.id);
           console.log('Command:', data.requestText);
           console.log('==================================================\n');
-          
-          // Acknowledge the command so it moves to "running" state
-          change.doc.ref.update({
-            status: 'running',
-            updatedAt: new Date()
-          }).catch(err => console.error("Failed to update status to running:", err));
         }
       }
     });
