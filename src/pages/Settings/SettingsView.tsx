@@ -179,7 +179,8 @@ export default function SettingsView() {
     setSendingAgentCommand(true);
     try {
       const { Timestamp } = await import('firebase/firestore');
-      await setDoc(doc(collection(db, 'agent_commands')), {
+      const docRef = doc(collection(db, 'agent_commands'));
+      await setDoc(docRef, {
         requestText: agentRequest.trim(),
         images: agentImage ? [agentImage] : [],
         status: 'pending',
@@ -187,6 +188,16 @@ export default function SettingsView() {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
+      
+      try {
+        await fetch('http://localhost:54321/command', {
+          method: 'POST',
+          body: JSON.stringify({ command: agentRequest.trim(), docId: docRef.id }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+         console.warn('Local agent listener not running', e);
+      }
       setAgentRequest('');
       setAgentImage(null);
       showToast({ type: 'success', message: 'Agent command sent!' });
