@@ -214,7 +214,9 @@ export default function OnboardingView() {
         const models = await fetchGeminiModels(tempApiKey.trim());
         setAvailableModels(models);
         let defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
-        setSelectedModel(defaultModel);
+        if (!selectedModel || !models.includes(selectedModel)) {
+          setSelectedModel(defaultModel);
+        }
       } else if (tempProvider === 'openai') {
         let models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
         try {
@@ -222,7 +224,9 @@ export default function OnboardingView() {
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch OpenAI models, using fallback", e); }
         setAvailableModels(models);
-        setSelectedModel(models.includes('gpt-4o') ? 'gpt-4o' : models[0]);
+        if (!selectedModel || !models.includes(selectedModel)) {
+          setSelectedModel(models.includes('gpt-4o') ? 'gpt-4o' : models[0]);
+        }
       } else if (tempProvider === 'anthropic') {
         let models = ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'];
         try {
@@ -230,10 +234,14 @@ export default function OnboardingView() {
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch Anthropic models, using fallback", e); }
         setAvailableModels(models);
-        setSelectedModel(models.includes('claude-3-5-sonnet-20240620') ? 'claude-3-5-sonnet-20240620' : models[0]);
+        if (!selectedModel || !models.includes(selectedModel)) {
+          setSelectedModel(models.includes('claude-3-5-sonnet-20240620') ? 'claude-3-5-sonnet-20240620' : models[0]);
+        }
       } else if (tempProvider === 'ollama') {
         setAvailableModels(['llama3', 'gemma2']);
-        setSelectedModel('gemma2');
+        if (!selectedModel || !['llama3', 'gemma2'].includes(selectedModel)) {
+          setSelectedModel('gemma2');
+        }
       }
       
       let modelToTest = selectedModel || (tempProvider === 'gemini' && availableModels.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : availableModels[0]) || 'gemini-1.5-flash';
