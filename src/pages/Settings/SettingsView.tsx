@@ -249,8 +249,7 @@ export default function SettingsView() {
       
       // Auto-recover admin if zero admins exist and current user is in the trip
       if (!hasAdmin && appUser && arr.some(p => p.email === appUser.email)) {
-        console.warn('No admins found in trip! Auto-promoting current user to admin.');
-        setDoc(doc(db, 'trips', currentTripId, 'users', appUser.email), { role: 'admin' }, { merge: true }).catch(console.error);
+        console.warn('No admins found in trip! Cannot auto-promote due to Firestore rules. Please contact support or fix via Firebase Console.');
       }
     });
     return () => unsub();
