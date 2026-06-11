@@ -30,7 +30,11 @@ export default function WelcomeSetupScreen() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [showModelDowngradeAlert, setShowModelDowngradeAlert] = useState(false);
+  const [downgradePrompt, setDowngradePrompt] = useState<{
+    isOpen: boolean;
+    errorMsg: string;
+    fallbackModel: string;
+  } | null>(null);
 
   const handleValidateKey = async () => {
     if (!tempApiKey.trim() && tempProvider !== 'ollama') return;
@@ -79,9 +83,14 @@ export default function WelcomeSetupScreen() {
           
           if (fallbackModel) {
             setSelectedModel(fallbackModel);
-            setShowModelDowngradeAlert(true);
-            modelToTest = fallbackModel;
-            isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+            setDowngradePrompt({
+              isOpen: true,
+              errorMsg: errMsg,
+              fallbackModel: fallbackModel
+            });
+            // Stop validating, let user decide via modal
+            setIsValidating(false);
+            return;
           } else {
             throw err;
           }
@@ -141,30 +150,29 @@ export default function WelcomeSetupScreen() {
         setIsValidating(true);
         if (tempProvider === 'gemini') {
           try {
-            const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${tempApiKey.trim()}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
-            });
-            if (!testRes.ok) {
-             let errorMsg = `המודל ${selectedModel} החזיר שגיאה ${testRes.status}. `;
-             if (testRes.status === 403 || testRes.status === 400 || testRes.status === 429) {
-               if (availableModels.includes('gemini-2.5-flash')) setSelectedModel('gemini-2.5-flash');
-               else if (availableModels.includes('gemini-1.5-flash')) setSelectedModel('gemini-1.5-flash');
-               setShowModelDowngradeAlert(true);
-             } else {
-               errorMsg += `אנא בחר מודל אחר.`;
-               showToast({ type: 'error', message: errorMsg });
-             }
-             setIsValidating(false);
-             setIsSaving(false);
-             return;
-          }
-          } catch (err) {
-             showToast({ type: 'error', message: `שגיאת רשת בבדיקת המודל ${selectedModel}.` });
-             setIsValidating(false);
-             setIsSaving(false);
-             return;
+            const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), selectedModel);
+            if (!isConnectionValid) throw new Error('Test Failed');
+          } catch (err: any) {
+            const errMsg = err?.message || String(err);
+            if (tempProvider === 'gemini' && !selectedModel.includes('flash')) {
+              let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
+                                  (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
+              if (fallbackModel) {
+                setSelectedModel(fallbackModel);
+                setDowngradePrompt({
+                  isOpen: true,
+                  errorMsg: errMsg,
+                  fallbackModel: fallbackModel
+                });
+                setIsValidating(false);
+                setIsSaving(false);
+                return;
+              }
+            }
+            showToast({ type: 'error', message: `שגיאת רשת בבדיקת המודל ${selectedModel}.` });
+            setIsValidating(false);
+            setIsSaving(false);
+            return;
           }
         }
         
@@ -420,23 +428,36 @@ export default function WelcomeSetupScreen() {
         )}
       </div>
 
-      {showModelDowngradeAlert && (
+      {downgradePrompt?.isOpen && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl max-w-md w-full p-6 text-center animate-fade-in shadow-xl border border-brand-200 dark:border-brand-800">
             <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Sparkles size={32} />
+              <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">עברנו למודל חינמי ומהיר 🚀</h3>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">בעיה במודל הנבחר</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm leading-relaxed">
-              זיהינו שחשבון הגוגל שלך ללא חיוב פעיל (Billing), ולכן הגדרנו עבורך אוטומטית את מודל <strong>{selectedModel}</strong> שהוא חינמי ומעולה.<br/><br/>
-              💡 <strong>טיפ:</strong> שימוש במודל gemini-2.5-pro לאחר הגדרת Billing בגוגל יניב תוצאות עוד יותר טובות.
+              זיהינו שגיאה בשימוש במודל המתקדם: <br/><span className="text-red-500 font-mono text-xs">{downgradePrompt.errorMsg}</span><br/><br/>
+              כדי שתוכל להמשיך, עברנו אוטומטית להשתמש במודל חינמי מהיר (<strong>{downgradePrompt.fallbackModel}</strong>).
             </p>
-            <button 
-              onClick={() => setShowModelDowngradeAlert(false)}
-              className="btn-primary w-full py-3"
-            >
-              הבנתי, בוא נמשיך!
-            </button>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  setDowngradePrompt(null);
+                  handleValidateKey();
+                }}
+                className="btn-primary w-full py-3"
+              >
+                אישור אימות מחדש עם המודל החינמי
+              </button>
+              <button 
+                onClick={() => {
+                  setDowngradePrompt(null);
+                }}
+                className="btn-secondary w-full py-3"
+              >
+                בטל וחזור להגדרות
+              </button>
+            </div>
           </div>
         </div>
       )}
