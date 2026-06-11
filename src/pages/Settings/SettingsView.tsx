@@ -236,8 +236,18 @@ export default function SettingsView() {
           const profileSnap = await getDoc(doc(db, 'trips', tripId, 'profile', 'main'));
           if (profileSnap.exists()) {
             const data = profileSnap.data() as TripProfile;
-            const participants = data.participants || [];
-            const hasAdmin = participants.some(p => p.role === 'admin');
+            
+            // Fetch participants from the subcollection
+            const usersSnap = await getDocs(collection(db, 'trips', tripId, 'users'));
+            const participants: Participant[] = [];
+            let hasAdmin = false;
+            
+            usersSnap.forEach(d => {
+              const pData = d.data() as Participant;
+              if (pData.role === 'admin') hasAdmin = true;
+              participants.push(pData);
+            });
+            
             if (!hasAdmin) {
               orphaned.push({
                 id: tripId,
