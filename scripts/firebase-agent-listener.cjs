@@ -27,6 +27,9 @@ const unsubscribe = db.collection('agent_commands')
           console.log('DocID:', change.doc.id);
           console.log('Command:', data.requestText);
           console.log('==================================================\n');
+          
+          // Exit to wake up the IDE agent!
+          process.exit(0);
         }
       }
     });
