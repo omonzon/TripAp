@@ -298,7 +298,10 @@ export default function ItineraryView() {
       orderBy('isoDate', 'asc'),
     );
     const unsub = onSnapshot(q, snap => {
-      setDays(snap.docs.map(d => ({ docId: d.id, ...d.data() } as ItineraryDay)));
+      setDays(snap.docs.map(d => {
+        const data = d.data();
+        return { docId: d.id, ...data, id: data.id || d.id } as ItineraryDay;
+      }));
       setLoading(false);
     }, err => {
       console.error(err);
