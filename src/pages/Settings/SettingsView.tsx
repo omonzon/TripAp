@@ -1322,7 +1322,7 @@ export default function SettingsView() {
                         cmd.status === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                         'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                       }`}>
-                        {cmd.status.toUpperCase()}
+                        {cmd.status ? cmd.status.toUpperCase() : 'UNKNOWN'}
                       </span>
                       <span className="text-xs text-slate-400">{cmd.createdAt?.toDate().toLocaleString()}</span>
                     </div>
