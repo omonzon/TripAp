@@ -4,7 +4,7 @@ import { getDoc, getDocs, doc, setDoc, updateDoc, collection, addDoc, deleteDoc,
 import {
   Settings, Key, Cpu, Moon, Sun, Globe, DollarSign, Cloud,
   Users, Eye, EyeOff, Bell, Download, Upload, CheckCircle2,
-  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle, Send, Sparkles, Search
+  Trash2, Plus, Loader2, Camera, Info, Mail, FileText, Table, AlertTriangle, Send, Sparkles, Search, Pen
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { deleteAllUserTrips } from '@/services/tripService';
@@ -197,6 +197,33 @@ export default function SettingsView() {
       showToast({ type: 'error', message: 'Failed to send command: ' + e.message });
     }
     setSendingAgentCommand(false);
+  };
+
+  const deleteAgentCommand = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this command?')) return;
+    try {
+      await deleteDoc(doc(db, 'agent_commands', id));
+      showToast({ type: 'success', message: 'Command deleted' });
+    } catch (e) {
+      showToast({ type: 'error', message: 'Failed to delete command' });
+    }
+  };
+
+  const editAgentCommand = async (cmd: any) => {
+    const newText = window.prompt('Edit command:', cmd.requestText);
+    if (newText && newText !== cmd.requestText) {
+      try {
+        const { Timestamp } = await import('firebase/firestore');
+        await updateDoc(doc(db, 'agent_commands', cmd.id), {
+          requestText: newText,
+          status: 'pending',
+          updatedAt: Timestamp.now()
+        });
+        showToast({ type: 'success', message: 'Command updated & queued!' });
+      } catch (e) {
+        showToast({ type: 'error', message: 'Failed to update command' });
+      }
+    }
   };
 
   const handleBlockUser = async (email: string, currentBlocked: boolean) => {
@@ -1308,15 +1335,25 @@ export default function SettingsView() {
                 {agentCommands.map((cmd) => (
                   <div key={cmd.id} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700 text-sm">
                     <div className="flex justify-between items-start mb-2">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        cmd.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                        cmd.status === 'running' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' :
-                        cmd.status === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      }`}>
-                        {cmd.status ? cmd.status.toUpperCase() : 'UNKNOWN'}
-                      </span>
-                      <span className="text-xs text-slate-400">{cmd.createdAt?.toDate().toLocaleString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          cmd.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                          cmd.status === 'running' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' :
+                          cmd.status === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {cmd.status ? cmd.status.toUpperCase() : 'UNKNOWN'}
+                        </span>
+                        <span className="text-xs text-slate-400">{cmd.createdAt?.toDate().toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+                        <button onClick={() => editAgentCommand(cmd)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500" title="Edit Command">
+                          <Pen size={14} />
+                        </button>
+                        <button onClick={() => deleteAgentCommand(cmd.id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500" title="Delete Command">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-slate-700 dark:text-slate-300 font-medium mb-1 line-clamp-2" dir="auto">{cmd.requestText}</p>
                     {cmd.images?.length > 0 && (
