@@ -9,7 +9,7 @@ import {
 import { db } from '@/services/firebase';
 import { deleteAllUserTrips } from '@/services/tripService';
 import { useAuthStore, type AppUser } from '@/store/useAuthStore';
-import { useTripStore, useUserRole } from '@/store/useTripStore';
+import { useTripStore, useUserRole, type Participant } from '@/store/useTripStore';
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
 import { exportTripToFile } from '@/services/backupService';
@@ -236,12 +236,25 @@ export default function SettingsView() {
   const isAdmin = userRole === 'admin';
 
   useEffect(() => {
-    if (!currentTripId || !isAdmin) return;
-    const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'users'), snap => {
-      setParticipants(snap.docs.map(d => d.data()));
+    if (!currentTripId) return;
+    const unsub = onSnapshot(collection(db, 'trips', currentTripId, 'users'), (snap) => {
+      const arr: any[] = [];
+      let hasAdmin = false;
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.role === 'admin') hasAdmin = true;
+        arr.push(data);
+      });
+      setParticipants(arr as Participant[]);
+      
+      // Auto-recover admin if zero admins exist and current user is in the trip
+      if (!hasAdmin && appUser && arr.some(p => p.email === appUser.email)) {
+        console.warn('No admins found in trip! Auto-promoting current user to admin.');
+        setDoc(doc(db, 'trips', currentTripId, 'users', appUser.email), { role: 'admin' }, { merge: true }).catch(console.error);
+      }
     });
     return () => unsub();
-  }, [currentTripId, isAdmin]);
+  }, [currentTripId, appUser]);
 
   const saveAISettings = async () => {
     if (providerType === 'gemini' && localKey.trim()) {
@@ -332,9 +345,15 @@ export default function SettingsView() {
 
   const addUser = async () => {
     if (!newUserEmail.trim() || !currentTripId) return;
+    const cleanEmail = newUserEmail.trim().toLowerCase();
+    
+    if (appUser && cleanEmail === appUser.email.toLowerCase()) {
+      showToast({ type: 'error', message: 'אינך יכול להזמין את עצמך' });
+      return;
+    }
+
     setAddingUser(true);
     let successCount = 0;
-    const cleanEmail = newUserEmail.trim().toLowerCase();
 
     try {
       await setDoc(doc(db, 'trips', currentTripId, 'users', cleanEmail), {
@@ -373,6 +392,19 @@ export default function SettingsView() {
 
   const updateParticipant = async (email: string, data: any) => {
     if (!currentTripId) return;
+    
+    // Prevent removing the last admin
+    if (data.role && data.role !== 'admin') {
+      const currentP = participants.find(p => p.email === email);
+      if (currentP?.role === 'admin') {
+        const adminCount = participants.filter(p => p.role === 'admin').length;
+        if (adminCount <= 1) {
+          showToast({ type: 'error', message: 'חובה שיהיה לפחות מנהל אחד בטיול. לא ניתן לשנות את הרשאת המנהל היחיד.' });
+          return;
+        }
+      }
+    }
+
     try {
       await setDoc(doc(db, 'trips', currentTripId, 'users', email), data, { merge: true });
     } catch (e) {
@@ -382,6 +414,17 @@ export default function SettingsView() {
 
   const removeParticipant = async (email: string) => {
     if (!currentTripId || !isAdmin) return;
+    
+    // Prevent removing the last admin
+    const currentP = participants.find(p => p.email === email);
+    if (currentP?.role === 'admin') {
+      const adminCount = participants.filter(p => p.role === 'admin').length;
+      if (adminCount <= 1) {
+        showToast({ type: 'error', message: 'חובה שיהיה לפחות מנהל אחד בטיול. לא ניתן למחוק את המנהל היחיד.' });
+        return;
+      }
+    }
+
     if (confirm(t('settings.confirmRemoveUser', 'האם אתה בטוח שברצונך להסיר משתמש זה מהטיול?'))) {
       try {
         await deleteDoc(doc(db, 'trips', currentTripId, 'users', email));
