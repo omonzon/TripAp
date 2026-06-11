@@ -27,6 +27,7 @@ import { fetchGeminiModels } from '@/services/ai';
 import { TAB_DEFS } from '@/App';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
 import { CloudRestoreModal } from '@/components/CloudRestoreModal';
+import { AdminBugsManagement } from '@/components/admin/AdminBugsManagement';
 
 const PROVIDERS = [
   { id: 'gemini', label: 'Google Gemini', models: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'] },
@@ -112,6 +113,7 @@ export default function SettingsView() {
   const [scanningOrphanedTrips, setScanningOrphanedTrips] = useState(false);
 
   const [showCloudRestore, setShowCloudRestore] = useState(false);
+  const [showAdminBugs, setShowAdminBugs] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -1220,7 +1222,25 @@ export default function SettingsView() {
         </div>
       </section>
 
+      {/* ── Admin Bugs Management (Super Admin only) ────────────────────────── */}
+      {isSuperAdmin && (
+        <section className="card p-5 space-y-4 border-2 border-amber-500">
+          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <AlertTriangle size={18} className="text-amber-500" />
+            Super Admin: Bug Reports & Ideas
+          </h3>
+          <p className="text-xs text-slate-500">Manage all bug reports, view screenshots, and send to AI agent.</p>
+          <button
+            onClick={() => setShowAdminBugs(true)}
+            className="btn-primary w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 border-amber-600"
+          >
+            <AlertTriangle size={16} />
+            ניהול באגים והצעות לשיפור 🐞
+          </button>
+        </section>
+      )}
 
+      {showAdminBugs && <AdminBugsManagement onClose={() => setShowAdminBugs(false)} />}
 
       {/* ── Affiliate Links (Super Admin only) ────────────────────────── */}
       {isSuperAdmin && (
