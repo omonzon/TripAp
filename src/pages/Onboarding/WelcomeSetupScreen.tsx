@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, ArrowRight, ArrowLeft, Loader2, Key, Info, AlertTriangle } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Loader2, Key, Info, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -291,6 +291,21 @@ export default function WelcomeSetupScreen() {
               <Info size={14} className="shrink-0 mt-0.5" />
               הפרטים האישיים יתווספו להעדפות הטיול הכלליות כך שה-AI יוכל להתחשב בהם בתכנון (העדפות מזון, נגישות וכדומה).
             </p>
+
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 rounded-xl p-4 mt-6">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-800/50 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-1">המידע שלך מאובטח</h4>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
+                    התקשורת מהמכשיר שלך לענן הטיולים מוצפנת לחלוטין (Encrypted in Transit - HTTPS/WSS). 
+                    המידע נשמר על גבי השרתים המאובטחים של Google Firebase תחת הרשאות חסיגות כך שרק אתה (או מי שהזמנת) תוכלו לקרוא ולערוך את פרטי הטיול.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <button
               onClick={() => needsApiKey ? setStep(2) : handleValidateAndSave(true)}
