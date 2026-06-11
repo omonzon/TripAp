@@ -20,7 +20,7 @@ interface OrphanedTrip {
 }
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
-import { exportTripToFile } from '@/services/backupService';
+import { exportTripToFile, createFullBackup } from '@/services/backupService';
 import { syncUserSettingsToCloud } from '@/services/authService';
 import { exportTripToHTML, exportTripToPDF, exportTripToCSV } from '@/services/exportService';
 import { fetchGeminiModels } from '@/services/ai';
@@ -54,7 +54,7 @@ const TASK_LABELS: Record<TaskType, string> = {
 
 export default function SettingsView() {
   const { t } = useTranslation();
-  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, autoBackupInterval, setAutoBackupInterval, emailjsConfig, setEmailjsConfig } = useAuthStore();
+  const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, autoBackupInterval, setAutoBackupInterval, emailjsConfig, setEmailjsConfig, setLastBackupTime } = useAuthStore();
   const { currentTripId, tripProfile, availableTrips, setTripProfile } = useTripStore();
   const {
     providerType, apiKey, models, localUrl, localModelName,
@@ -1379,9 +1379,23 @@ export default function SettingsView() {
           </div>
           <select 
             value={autoBackupInterval.toString()}
-            onChange={e => {
-              setAutoBackupInterval(parseInt(e.target.value, 10));
+            onChange={async (e) => {
+              const newVal = parseInt(e.target.value, 10);
+              const isEnabling = autoBackupInterval === 0 && newVal > 0;
+              setAutoBackupInterval(newVal);
               setTimeout(() => syncUserSettingsToCloud(), 100);
+
+              if (isEnabling && currentTripId && appUser?.email && tripProfile?.name) {
+                try {
+                  showToast({ type: 'info', message: t('backup.creatingFirst', 'יוצר גיבוי ראשוני בענן...') });
+                  await createFullBackup(currentTripId, appUser.email);
+                  setLastBackupTime(Date.now());
+                  showToast({ type: 'success', message: t('backup.firstCreated', 'גיבוי ראשוני נוצר בהצלחה!') });
+                } catch(err) {
+                  console.error(err);
+                  showToast({ type: 'error', message: t('backup.firstFailed', 'שגיאה ביצירת גיבוי ראשוני') });
+                }
+              }
             }}
             className="input-base text-sm py-1.5 w-32"
           >
