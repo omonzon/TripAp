@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X, Users, HelpCircle, MessageSquare } from 'lucide-react';
+import { Globe, Moon, Sun, LogOut, WifiOff, Bell, ChevronDown, CheckCircle2, Type, Languages, X, Users, HelpCircle, MessageSquare, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore } from '@/store/useTripStore';
 import { translateTripContent } from '@/services/translationService';
@@ -208,6 +208,18 @@ export function AppHeader({ showTabs, activeTab }: AppHeaderProps) {
           >
             {isDarkMode ? <Sun size={iconSize} /> : <Moon size={iconSize} />}
           </button>
+
+          {/* Super Admin Settings Button (if no tabs shown) */}
+          {!showTabs && appUser?.email?.toLowerCase().trim() === 'omonzon@gmail.com' && (
+            <button
+              onClick={() => setCurrentTrip(null)}
+              className="btn-ghost p-2"
+              aria-label="Settings"
+              title="Super Admin Settings"
+            >
+              <Settings size={iconSize} />
+            </button>
+          )}
 
           {/* Help Button */}
           <button 

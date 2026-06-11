@@ -220,6 +220,18 @@ export default function App() {
 
   // If no trip created, show onboarding (or Management for Super Admin)
   if (!currentTripId || currentTripId === 'new') {
+    if (!currentTripId && appUser?.email?.toLowerCase().trim() === 'omonzon@gmail.com') {
+      return (
+        <div className="min-h-screen flex flex-col pb-20 md:pb-0">
+          <AppHeader showTabs={true} activeTab="settings" />
+          <main className="flex-1 w-full max-w-7xl mx-auto md:p-4">
+            <Suspense fallback={<PageLoader />}>
+              <SettingsView />
+            </Suspense>
+          </main>
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen flex flex-col">
