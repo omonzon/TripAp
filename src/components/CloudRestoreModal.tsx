@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { createPortal } from 'react-dom';
 import { Cloud, RotateCcw, X, Loader2, Calendar } from 'lucide-react';
 import { getCloudBackups, restoreFromCloudBackup, CloudBackup } from '@/services/backupService';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -65,8 +66,8 @@ export function CloudRestoreModal({ isOpen, onClose }: Props) {
     return acc;
   }, {} as Record<string, { name: string, items: CloudBackup[] }>);
 
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  const content = (
+    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-xl" dir="rtl">
         <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center gap-3">
@@ -91,7 +92,7 @@ export function CloudRestoreModal({ isOpen, onClose }: Props) {
                 <Cloud className="w-8 h-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">אין גיבויים זמינים</h3>
-              <p className="text-gray-500 dark:text-gray-400">גיבויים אוטומטיים נוצרים כל 15 דקות כאשר אתה נמצא בתוך הטיול.</p>
+              <p className="text-gray-500 dark:text-gray-400">גיבויים אוטומטיים נוצרים בהתאם לתדירות שהגדרת במסך ההגדרות.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -137,4 +138,6 @@ export function CloudRestoreModal({ isOpen, onClose }: Props) {
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }
