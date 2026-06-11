@@ -86,7 +86,7 @@ export default function OnboardingView() {
     isOpen: boolean;
     errorMsg: string;
     fallbackModel: string;
-    onApprove: () => void;
+    action: 'validate' | 'next' | 'create';
   } | null>(null);
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
   const [generatedTripId, setGeneratedTripId] = useState<string | null>(null);
@@ -210,8 +210,10 @@ export default function OnboardingView() {
     setKeyError(null);
     setKeySuccess(false);
     try {
+      let fetchedModels: string[] = [];
       if (tempProvider === 'gemini') {
         const models = await fetchGeminiModels(tempApiKey.trim());
+        fetchedModels = models;
         setAvailableModels(models);
         let defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
         if (!selectedModel || !models.includes(selectedModel)) {
@@ -254,7 +256,12 @@ export default function OnboardingView() {
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
         if (tempProvider === 'gemini' && !modelToTest.includes('flash')) {
-          let fallbackModel = (availableModels.length > 0 && availableModels.includes('gemini-2.5-flash')) ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
+          let currentModels = fetchedModels.length > 0 ? fetchedModels : availableModels;
+          let fallbackModel = 'gemini-1.5-flash';
+          if (currentModels.length > 0) {
+            const flashModel = currentModels.find(m => m.includes('flash'));
+            if (flashModel) fallbackModel = flashModel;
+          }
           
           if (fallbackModel) {
             setSelectedModel(fallbackModel);
@@ -262,7 +269,7 @@ export default function OnboardingView() {
               isOpen: true,
               errorMsg: isQuotaError ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
               fallbackModel: fallbackModel,
-              onApprove: () => handleValidateKey()
+              action: 'validate'
             });
             setIsValidating(false);
             return;
@@ -308,7 +315,11 @@ export default function OnboardingView() {
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
         if (tempProvider === 'gemini' && !finalModel.includes('flash')) {
-          let fallbackModel = (availableModels.length > 0 && availableModels.includes('gemini-2.5-flash')) ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
+          let fallbackModel = 'gemini-1.5-flash';
+          if (availableModels.length > 0) {
+            const flashModel = availableModels.find(m => m.includes('flash'));
+            if (flashModel) fallbackModel = flashModel;
+          }
           
           if (fallbackModel) {
             setSelectedModel(fallbackModel);
@@ -316,7 +327,7 @@ export default function OnboardingView() {
               isOpen: true,
               errorMsg: isQuotaError ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
               fallbackModel: fallbackModel,
-              onApprove: () => handleAISetupNext()
+              action: 'next'
             });
             setIsValidating(false);
             return;
@@ -602,7 +613,11 @@ export default function OnboardingView() {
           const isQuotaError = errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota') || errorMsg.includes('Too Many Requests') || errorMsg.includes('GeminiOverloadError') || errorMsg.includes('RESOURCE_EXHAUSTED');
           
           if (tempProvider === 'gemini' && !selectedModel.includes('flash')) {
-             let fallbackModel = (availableModels.length > 0 && availableModels.includes('gemini-2.5-flash')) ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
+             let fallbackModel = 'gemini-1.5-flash';
+             if (availableModels.length > 0) {
+               const flashModel = availableModels.find(m => m.includes('flash'));
+               if (flashModel) fallbackModel = flashModel;
+             }
              if (fallbackModel) {
                  setSelectedModel(fallbackModel);
                  setAllGeminiModels(fallbackModel);
@@ -610,7 +625,7 @@ export default function OnboardingView() {
                    isOpen: true,
                    errorMsg: isQuotaError ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
                    fallbackModel: fallbackModel,
-                   onApprove: () => createTrip()
+                   action: 'create'
                  });
                  // Stop generating, let user decide via modal
                  setGenerating(false);
@@ -1220,9 +1235,11 @@ export default function OnboardingView() {
             <div className="flex flex-col gap-3">
               <button 
                 onClick={() => {
-                  const onApprove = downgradePrompt.onApprove;
+                  const action = downgradePrompt.action;
                   setDowngradePrompt(null);
-                  if (onApprove) onApprove();
+                  if (action === 'validate') handleValidateKey();
+                  else if (action === 'next') handleAISetupNext();
+                  else if (action === 'create') createTrip();
                 }}
                 className="btn-primary w-full py-3"
               >
