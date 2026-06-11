@@ -64,8 +64,31 @@ export default function WelcomeSetupScreen() {
         setSelectedModel('gemma2');
       }
       
-      const modelToTest = selectedModel || availableModels[0] || 'gemini-1.5-flash';
-      const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+      let modelToTest = selectedModel || (tempProvider === 'gemini' && availableModels.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : availableModels[0]) || 'gemini-1.5-flash';
+      let isConnectionValid = false;
+
+      try {
+        isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+      } catch (err: any) {
+        const errMsg = err?.message || String(err);
+        const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
+        
+        if (isQuotaError && tempProvider === 'gemini' && !modelToTest.includes('flash')) {
+          let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
+                              (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
+          
+          if (fallbackModel) {
+            setSelectedModel(fallbackModel);
+            setShowModelDowngradeAlert(true);
+            modelToTest = fallbackModel;
+            isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+          } else {
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
       
       if (!isConnectionValid) {
         throw new Error('AI Test Failed');

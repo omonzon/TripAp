@@ -231,8 +231,31 @@ export default function OnboardingView() {
         setSelectedModel('gemma2');
       }
       
-      const modelToTest = selectedModel || availableModels[0] || 'gemini-1.5-flash';
-      const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+      let modelToTest = selectedModel || (tempProvider === 'gemini' && availableModels.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : availableModels[0]) || 'gemini-1.5-flash';
+      let isConnectionValid = false;
+
+      try {
+        isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+      } catch (err: any) {
+        const errMsg = err?.message || String(err);
+        const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
+        
+        if (isQuotaError && tempProvider === 'gemini' && !modelToTest.includes('flash')) {
+          let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
+                              (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
+          
+          if (fallbackModel) {
+            setSelectedModel(fallbackModel);
+            setShowModelDowngradeAlert(true);
+            modelToTest = fallbackModel;
+            isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+          } else {
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
       
       if (!isConnectionValid) {
         throw new Error('AI Test Failed');
@@ -254,28 +277,59 @@ export default function OnboardingView() {
   const handleAISetupNext = async () => {
     if (tempApiKey.trim() || tempProvider === 'ollama') {
       setIsValidating(true);
+      let isConnectionValid = false;
+      let finalModel = selectedModel;
       try {
-        const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), selectedModel);
+        isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), finalModel);
         if (!isConnectionValid) {
-          showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${selectedModel}). אנא ודא שהמפתח תקין או בחר מודל אחר.` });
+          showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${finalModel}). אנא ודא שהמפתח תקין או בחר מודל אחר.` });
           setIsValidating(false);
           return;
         }
       } catch (err: any) {
         const errMsg = err?.message || String(err);
-        if (errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+        const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
+        
+        if (isQuotaError && tempProvider === 'gemini' && !finalModel.includes('flash')) {
+          let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
+                              (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
+          
+          if (fallbackModel) {
+            setSelectedModel(fallbackModel);
+            setShowModelDowngradeAlert(true);
+            finalModel = fallbackModel;
+            try {
+              isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), finalModel);
+              if (!isConnectionValid) {
+                showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI גם במודל החינמי (${finalModel}).` });
+                setIsValidating(false);
+                return;
+              }
+            } catch(e) {
+               showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}` });
+               setIsValidating(false);
+               return;
+            }
+          } else {
+             showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}` });
+             setIsValidating(false);
+             return;
+          }
+        } else if (isQuotaError) {
           showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}` });
+          setIsValidating(false);
+          return;
         } else {
-          showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${selectedModel}). אנא ודא שהמפתח תקין.` });
+          showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${finalModel}). אנא ודא שהמפתח תקין.` });
+          setIsValidating(false);
+          return;
         }
-        setIsValidating(false);
-        return;
       }
       setIsValidating(false);
 
       setProvider(tempProvider);
       setApiKey(tempApiKey.trim());
-      setAllGeminiModels(selectedModel);
+      setAllGeminiModels(finalModel);
       
       // Sync model and key to user settings
       if (appUser?.email) {
@@ -534,21 +588,51 @@ export default function OnboardingView() {
         } catch (aiErr: any) {
           console.error("AI Generation failed:", aiErr);
           
-          await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
-          await deleteDoc(doc(db, 'trips', tripId, 'users', appUser.email));
-          await updateDoc(doc(db, 'users', appUser.email), {
-            trips: arrayRemove({ id: tripId, name: profile.name, destinations: profile.destinations })
-          });
-          
           const errorMsg = aiErr?.message || String(aiErr);
-          if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota') || errorMsg.includes('Too Many Requests')) {
-            setKeyError('המפתח תקין אך חרגת ממכסת הבקשות (Rate Limit) למודל זה. אנא נסה מודל אחר או בדוק את מצב החשבון שלך.');
-          } else {
-            setKeyError(`שגיאה בתקשורת עם ה-AI: ${errorMsg}. אנא ודא שהמפתח תקין.`);
-          }
+          const isQuotaError = errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota') || errorMsg.includes('Too Many Requests') || errorMsg.includes('GeminiOverloadError') || errorMsg.includes('RESOURCE_EXHAUSTED');
           
-          setStep(1);
-          throw new Error('AI_GENERATION_FAILED');
+          let retrySuccess = false;
+          if (isQuotaError && tempProvider === 'gemini' && !selectedModel.includes('flash')) {
+             let fallbackModel = availableModels.includes('gemini-2.5-flash') ? 'gemini-2.5-flash' : 
+                                 (availableModels.includes('gemini-1.5-flash') ? 'gemini-1.5-flash' : null);
+             if (fallbackModel) {
+                 showToast({ type: 'warning', message: `שגיאת מכסה במודל ${selectedModel}. מנסה שוב אוטומטית עם מודל חינמי (${fallbackModel})...` });
+                 setSelectedModel(fallbackModel);
+                 setAllGeminiModels(fallbackModel);
+                 try {
+                     await generateComprehensiveTrip(
+                        profile, 
+                        form.bookings, 
+                        getProviderForTask('itinerary'), 
+                        i18n.language, 
+                        appUser.email,
+                        setGenerationProgress
+                     );
+                     retrySuccess = true;
+                     showToast({ type: 'success', message: `הטיול נוצר בהצלחה באמצעות מודל חלופי (${fallbackModel}).` });
+                 } catch(retryErr: any) {
+                     console.error("Retry failed:", retryErr);
+                     aiErr.message = `גם המודל החינמי כשל: ${retryErr?.message || String(retryErr)}`;
+                 }
+             }
+          }
+
+          if (!retrySuccess) {
+            await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
+            await deleteDoc(doc(db, 'trips', tripId, 'users', appUser.email));
+            await updateDoc(doc(db, 'users', appUser.email), {
+              trips: arrayRemove({ id: tripId, name: profile.name, destinations: profile.destinations })
+            });
+            
+            if (isQuotaError) {
+              setKeyError(`המפתח תקין אך חרגת ממכסת הבקשות (Rate Limit) למודל זה. אנא נסה מודל אחר או בדוק את מצב החשבון שלך. (${aiErr.message || String(aiErr)})`);
+            } else {
+              setKeyError(`שגיאה בתקשורת עם ה-AI: ${aiErr.message || String(aiErr)}. אנא ודא שהמפתח תקין.`);
+            }
+            
+            setStep(1);
+            throw new Error('AI_GENERATION_FAILED');
+          }
         }
       }
 
