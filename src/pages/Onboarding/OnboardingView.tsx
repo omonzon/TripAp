@@ -239,8 +239,13 @@ export default function OnboardingView() {
       }
       
       setKeySuccess(true);
-    } catch (err) {
-      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא ודא שהעתקת אותו נכון.'));
+    } catch (err: any) {
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+        setKeyError(`שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}`);
+      } else {
+        setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא ודא שהעתקת אותו נכון.'));
+      }
     } finally {
       setIsValidating(false);
     }
@@ -249,9 +254,20 @@ export default function OnboardingView() {
   const handleAISetupNext = async () => {
     if (tempApiKey.trim() || tempProvider === 'ollama') {
       setIsValidating(true);
-      const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), selectedModel);
-      if (!isConnectionValid) {
-        showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${selectedModel}). אנא ודא שהמפתח תקין או בחר מודל אחר.` });
+      try {
+        const isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), selectedModel);
+        if (!isConnectionValid) {
+          showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${selectedModel}). אנא ודא שהמפתח תקין או בחר מודל אחר.` });
+          setIsValidating(false);
+          return;
+        }
+      } catch (err: any) {
+        const errMsg = err?.message || String(err);
+        if (errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+          showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}` });
+        } else {
+          showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI (${selectedModel}). אנא ודא שהמפתח תקין.` });
+        }
         setIsValidating(false);
         return;
       }

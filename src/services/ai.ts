@@ -306,15 +306,10 @@ export function parseAIJson<T>(text: string, fallback: T): T {
 export async function validateAIConnection(providerType: AIProvider['type'], apiKey: string, model: string): Promise<boolean> {
   if (!apiKey && providerType !== 'ollama') return false;
   
-  try {
-    const reply = await callAI(
-      "החזר את הערך פאי עם 2 ספרות אחרי הנקודה ללא הסברים, רק מספר",
-      { type: providerType, apiKey, model },
-      { maxRetries: 1 }
-    );
-    return reply.includes('3.14');
-  } catch (err) {
-    console.error("AI connection validation failed:", err);
-    return false;
-  }
+  const reply = await callAI(
+    "החזר את הערך פאי עם 2 ספרות אחרי הנקודה ללא הסברים, רק מספר",
+    { type: providerType, apiKey, model },
+    { maxRetries: 1 }
+  );
+  return reply.includes('3.14');
 }

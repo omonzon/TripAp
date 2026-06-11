@@ -72,8 +72,13 @@ export default function WelcomeSetupScreen() {
       }
       
       setKeySuccess(true);
-    } catch (err) {
-      setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא ודא שהעתקת אותו נכון.'));
+    } catch (err: any) {
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+        setKeyError(`שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה. ${errMsg}`);
+      } else {
+        setKeyError(t('onboarding.keyInvalid', 'המפתח אינו חוקי או שחיבור ה-AI נכשל. אנא ודא שהעתקת אותו נכון.'));
+      }
     } finally {
       setIsValidating(false);
     }
