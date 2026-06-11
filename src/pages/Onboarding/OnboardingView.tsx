@@ -86,7 +86,7 @@ export default function OnboardingView() {
     isOpen: boolean;
     errorMsg: string;
     fallbackModel: string;
-    isValidationOnly: boolean;
+    onApprove: () => void;
   } | null>(null);
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
   const [generatedTripId, setGeneratedTripId] = useState<string | null>(null);
@@ -255,10 +255,10 @@ export default function OnboardingView() {
               isOpen: true,
               errorMsg: errMsg,
               fallbackModel: fallbackModel,
-              isValidationOnly: true
+              onApprove: () => handleValidateKey()
             });
-            modelToTest = fallbackModel;
-            isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+            setIsValidating(false);
+            return;
           } else {
             throw err;
           }
@@ -310,21 +310,10 @@ export default function OnboardingView() {
               isOpen: true,
               errorMsg: errMsg,
               fallbackModel: fallbackModel,
-              isValidationOnly: true
+              onApprove: () => handleAISetupNext()
             });
-            finalModel = fallbackModel;
-            try {
-              isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), finalModel);
-              if (!isConnectionValid) {
-                showToast({ type: 'error', message: `שגיאה בתקשורת עם ה-AI גם במודל החינמי (${finalModel}).` });
-                setIsValidating(false);
-                return;
-              }
-            } catch(e) {
-               showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה גם במודל החינמי.` });
-               setIsValidating(false);
-               return;
-            }
+            setIsValidating(false);
+            return;
           } else {
              showToast({ type: 'error', message: `שגיאת מכסה (Quota/Rate Limit): החשבון הגיע למגבלה.` });
              setIsValidating(false);
@@ -616,7 +605,7 @@ export default function OnboardingView() {
                    isOpen: true,
                    errorMsg: aiErr.message || String(aiErr),
                    fallbackModel: fallbackModel,
-                   isValidationOnly: false
+                   onApprove: () => createTrip()
                  });
                  // Stop generating, let user decide via modal
                  setGenerating(false);
@@ -1219,10 +1208,9 @@ export default function OnboardingView() {
             <div className="flex flex-col gap-3">
               <button 
                 onClick={() => {
+                  const onApprove = downgradePrompt.onApprove;
                   setDowngradePrompt(null);
-                  if (!downgradePrompt.isValidationOnly) {
-                    createTrip();
-                  }
+                  if (onApprove) onApprove();
                 }}
                 className="btn-primary w-full py-3"
               >
