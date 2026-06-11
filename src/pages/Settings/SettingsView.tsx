@@ -1299,7 +1299,7 @@ export default function SettingsView() {
             </div>
             {agentImage && (
               <div className="relative inline-block mt-2">
-                <img src={agentImage} alt="Attachment" className="h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+                <img src={agentImage.startsWith('data:') ? agentImage : `data:image/jpeg;base64,${agentImage}`} alt="Attachment" className="h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
                 <button onClick={() => setAgentImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
                   <Trash2 size={12} />
                 </button>
@@ -1328,7 +1328,7 @@ export default function SettingsView() {
                     </div>
                     <p className="text-slate-700 dark:text-slate-300 font-medium mb-1 line-clamp-2" dir="auto">{cmd.requestText}</p>
                     {cmd.images?.length > 0 && (
-                      <img src={cmd.images[0]} alt="Attached" className="h-10 object-cover rounded my-1 border" />
+                      <img src={cmd.images[0].startsWith('data:') ? cmd.images[0] : `data:image/jpeg;base64,${cmd.images[0]}`} alt="Attached" className="h-10 object-cover rounded my-1 border" />
                     )}
                     {cmd.response && (
                       <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
