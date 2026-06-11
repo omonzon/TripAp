@@ -254,6 +254,8 @@ export default function ItineraryView() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
   const [editItemText, setEditItemText] = useState('');
   const [editItemType, setEditItemType] = useState('map');
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
@@ -982,13 +984,41 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                           }
                         }
                       }}
-                      onTouchStart={() => {
+                      onTouchStart={(e) => {
+                        swipeStartX.current = e.touches[0].clientX;
+                        swipeStartY.current = e.touches[0].clientY;
                         touchTimer.current = setTimeout(() => {
                           setActionMenuId(item.id);
                         }, 500);
                       }}
-                      onTouchEnd={() => { if (touchTimer.current) clearTimeout(touchTimer.current); }}
-                      onTouchMove={() => { if (touchTimer.current) clearTimeout(touchTimer.current); }}
+                      onTouchEnd={(e) => { 
+                        if (touchTimer.current) clearTimeout(touchTimer.current); 
+                        if (swipeStartX.current !== null && swipeStartY.current !== null) {
+                          const deltaX = e.changedTouches[0].clientX - swipeStartX.current;
+                          const deltaY = e.changedTouches[0].clientY - swipeStartY.current;
+                          // If swiped mostly horizontally and distance is > 40px
+                          if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                            // Toggle action menu on horizontal swipe
+                            setActionMenuId(actionMenuId === item.id ? null : item.id);
+                          }
+                        }
+                        swipeStartX.current = null;
+                        swipeStartY.current = null;
+                      }}
+                      onTouchMove={(e) => { 
+                        if (touchTimer.current) {
+                          // Cancel long press if finger moves significantly
+                          if (swipeStartX.current !== null && swipeStartY.current !== null) {
+                            const dx = e.touches[0].clientX - swipeStartX.current;
+                            const dy = e.touches[0].clientY - swipeStartY.current;
+                            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                              clearTimeout(touchTimer.current);
+                            }
+                          } else {
+                            clearTimeout(touchTimer.current);
+                          }
+                        }
+                      }}
                       className={`bubble flex items-start gap-3 group p-3 sm:p-4 mb-3 transition-all cursor-pointer relative overflow-visible ${
                         isDragging ? 'opacity-30 scale-95' : ''
                       } ${isOver ? 'border-t-2 border-brand-500' : ''}`}

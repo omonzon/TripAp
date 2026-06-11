@@ -281,6 +281,55 @@ export default function SettingsView() {
     setTimeout(() => setSaved(false), 3000);
   };
 
+  const sendInviteEmail = async (email: string) => {
+    const tripName = tripProfile?.name || 'הטיול שלנו';
+    const inviterName = appUser?.name || appUser?.email?.split('@')[0] || '';
+    const appLink = window.location.origin;
+    
+    const isHebrew = t('app.direction', 'rtl') === 'rtl';
+    
+    const subject = isHebrew 
+      ? `הזמנה להצטרף לטיול "${tripName}"! ✈️` 
+      : `You're invited to join the trip "${tripName}"! ✈️`;
+      
+    const body = isHebrew
+      ? `היי!\n\n${inviterName} מזמין/ה אותך להצטרף לארגון הטיול "${tripName}" באפליקציית הטיולים שלנו.\nהגיע הזמן להתחיל לארוז (או לפחות להעמיד פנים שאנחנו מתכננים משהו)! 😉\n\nלחץ/י כאן כדי להתחבר לטיול:\n${appLink}\n\nנתראה שם!\n${inviterName}`
+      : `Hey!\n\n${inviterName} invites you to join the planning for the trip "${tripName}" on our travel app.\nIt's time to start packing (or at least pretend we're planning something)! 😉\n\nClick here to join the trip:\n${appLink}\n\nSee you there!\n${inviterName}`;
+
+    let emailSent = false;
+    if (emailjsConfig?.serviceId && emailjsConfig?.inviteTemplateId && emailjsConfig?.publicKey) {
+      try {
+        const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: emailjsConfig.serviceId,
+            template_id: emailjsConfig.inviteTemplateId,
+            user_id: emailjsConfig.publicKey,
+            template_params: {
+              to_email: email,
+              subject: subject,
+              message: body
+            }
+          })
+        });
+        if (res.ok) {
+          emailSent = true;
+          showToast({ type: 'success', message: 'הזמנה נשלחה במייל (דרך EmailJS)!' });
+        } else {
+          console.error("EmailJS returned error:", await res.text());
+        }
+      } catch (e) {
+        console.error("EmailJS failed to send invite:", e);
+      }
+    }
+
+    if (!emailSent) {
+      const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoLink;
+    }
+  };
+
   const addUser = async () => {
     if (!newUserEmail.trim() || !currentTripId) return;
     setAddingUser(true);
@@ -314,49 +363,7 @@ export default function SettingsView() {
     }
 
     if (successCount > 0) {
-      const tripName = tripProfile?.name || 'הטיול שלנו';
-      const inviterName = appUser?.name || appUser?.email?.split('@')[0] || '';
-      const appLink = window.location.origin;
-      
-      const isHebrew = t('app.direction', 'rtl') === 'rtl';
-      
-      const subject = isHebrew 
-        ? `הזמנה להצטרף לטיול "${tripName}"! ✈️` 
-        : `You're invited to join the trip "${tripName}"! ✈️`;
-        
-      const body = isHebrew
-        ? `היי!\n\n${inviterName} מזמין/ה אותך להצטרף לארגון הטיול "${tripName}" באפליקציית הטיולים שלנו.\nהגיע הזמן להתחיל לארוז (או לפחות להעמיד פנים שאנחנו מתכננים משהו)! 😉\n\nלחץ/י כאן כדי להתחבר לטיול:\n${appLink}\n\nנתראה שם!\n${inviterName}`
-        : `Hey!\n\n${inviterName} invites you to join the planning for the trip "${tripName}" on our travel app.\nIt's time to start packing (or at least pretend we're planning something)! 😉\n\nClick here to join the trip:\n${appLink}\n\nSee you there!\n${inviterName}`;
-
-      let emailSent = false;
-      if (emailjsConfig?.serviceId && emailjsConfig?.inviteTemplateId && emailjsConfig?.publicKey) {
-        try {
-          await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              service_id: emailjsConfig.serviceId,
-              template_id: emailjsConfig.inviteTemplateId,
-              user_id: emailjsConfig.publicKey,
-              template_params: {
-                to_email: cleanEmail,
-                subject: subject,
-                message: body
-              }
-            })
-          });
-          emailSent = true;
-          showToast({ type: 'success', message: 'הזמנה נשלחה במייל (דרך EmailJS)!' });
-        } catch (e) {
-          console.error("EmailJS failed to send invite:", e);
-        }
-      }
-
-      if (!emailSent) {
-        const mailtoLink = `mailto:${cleanEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoLink;
-      }
-
+      await sendInviteEmail(cleanEmail);
       setNewUserEmail('');
       showToast({ type: 'success', message: t('settings.userAdded') });
     }
@@ -522,6 +529,135 @@ export default function SettingsView() {
         <Settings size={22} className="text-brand-500" />
         {t('settings.title')}
       </h2>
+
+      {/* ── User Management (Admin only) ────────────────────────────────── */}
+      {isAdmin && (
+        <section className="card p-5 space-y-4">
+          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Users size={18} className="text-brand-500" />
+            {t('settings.userManagement')}
+            <span className="text-xs font-normal text-slate-500 ms-auto">{tripProfile?.name}</span>
+          </h3>
+          <div className="space-y-2">
+            <input
+              id="add-user-email"
+              type="email"
+              value={newUserEmail}
+              onChange={e => setNewUserEmail(e.target.value)}
+              placeholder="user@email.com"
+              className="input-base w-full text-sm"
+              dir="ltr"
+            />
+            <div className="flex gap-2">
+              <select
+                value={newUserRole}
+                onChange={e => setNewUserRole(e.target.value as any)}
+                className="input-base text-sm flex-1"
+              >
+                <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
+                <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
+                <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
+              </select>
+              <button
+                id="btn-add-user"
+                onClick={addUser}
+                disabled={addingUser || !newUserEmail.trim()}
+                className="btn-primary flex items-center justify-center gap-2 px-6 shrink-0"
+              >
+                {addingUser ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                {t('settings.addUser')}
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">{t('settings.addUserHelp')}</p>
+          
+          {/* List of participants */}
+          <div className="space-y-3 mt-6 border-t border-slate-200 dark:border-slate-800 pt-4">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-white">Trip Participants</h4>
+            {participants.map(p => (
+              <div key={p.email} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900 dark:text-brand-300 flex items-center justify-center font-bold text-sm shrink-0">
+                      {p.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="text-sm font-semibold text-slate-800 dark:text-white truncate">{p.name}</div>
+                        <input
+                          type="text"
+                          value={p.nickname || ''}
+                          onChange={(e) => updateParticipant(p.email, { nickname: e.target.value })}
+                          placeholder={t('settings.nickname', 'Nickname')}
+                          className="input-base text-xs py-0.5 px-2 h-6 w-full sm:w-28 shrink-0"
+                        />
+                      </div>
+                      <div className="text-xs text-slate-500 truncate" dir="ltr">{p.email}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                    <select 
+                      value={p.role}
+                      onChange={(e) => updateParticipant(p.email, { role: e.target.value })}
+                      className="input-base text-xs py-1 px-2 shrink-0 w-full sm:w-auto"
+                    >
+                      <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
+                      <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
+                      <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
+                    </select>
+                    {isAdmin && p.email !== appUser?.email && (
+                      <>
+                        <button 
+                          onClick={() => sendInviteEmail(p.email)}
+                          className="text-brand-500 hover:text-brand-600 p-1.5 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-colors shrink-0 border border-transparent hover:border-brand-200 dark:hover:border-brand-800"
+                          title={t('settings.resendInvite', 'שלח הזמנה מחדש')}
+                        >
+                          <Mail size={16} />
+                        </button>
+                        <button 
+                          onClick={() => removeParticipant(p.email)}
+                          className="text-red-500 hover:text-red-600 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0 border border-transparent hover:border-red-200 dark:hover:border-red-800"
+                          title={t('settings.removeUser', 'הסר משתמש')}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                {p.role !== 'admin' && (
+                  <div className="border-t border-slate-200 dark:border-slate-800 pt-2">
+                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Visible Tabs</div>
+                    <div className="flex flex-wrap gap-2">
+                      {TAB_DEFS.map(tab => {
+                        const isVisible = p.allowedTabs?.[tab.id] !== false;
+                        const Icon = tab.icon;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => updateParticipant(p.email, { 
+                              allowedTabs: { ...(p.allowedTabs || {}), [tab.id]: !isVisible } 
+                            })}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                              isVisible 
+                                ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-800 dark:text-brand-300' 
+                                : 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700'
+                            }`}
+                          >
+                            <Icon size={12} className={isVisible ? 'text-brand-500' : 'text-slate-400'} />
+                            <span>{t(tab.labelKey)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── AI Provider ────────────────────────────────────────────────── */}
       <section className="card p-5 space-y-4">
@@ -764,124 +900,7 @@ export default function SettingsView() {
         </div>
       </section>
 
-      {/* ── User Management (Admin only) ────────────────────────────────── */}
-      {isAdmin && (
-        <section className="card p-5 space-y-4">
-          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Users size={18} className="text-brand-500" />
-            {t('settings.userManagement')}
-          </h3>
-          <div className="space-y-2">
-            <input
-              id="add-user-email"
-              type="email"
-              value={newUserEmail}
-              onChange={e => setNewUserEmail(e.target.value)}
-              placeholder="user@email.com"
-              className="input-base w-full text-sm"
-              dir="ltr"
-            />
-            <div className="flex gap-2">
-              <select
-                value={newUserRole}
-                onChange={e => setNewUserRole(e.target.value as any)}
-                className="input-base text-sm flex-1"
-              >
-                <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
-                <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
-                <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
-              </select>
-              <button
-                id="btn-add-user"
-                onClick={addUser}
-                disabled={addingUser || !newUserEmail.trim()}
-                className="btn-primary flex items-center justify-center gap-2 px-6 shrink-0"
-              >
-                {addingUser ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                {t('settings.addUser')}
-              </button>
-            </div>
-          </div>
-          <p className="text-xs text-slate-400">{t('settings.addUserHelp')}</p>
-          
-          {/* List of participants */}
-          <div className="space-y-3 mt-6 border-t border-slate-200 dark:border-slate-800 pt-4">
-            <h4 className="text-sm font-bold text-slate-800 dark:text-white">Trip Participants</h4>
-            {participants.map(p => (
-              <div key={p.email} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900 dark:text-brand-300 flex items-center justify-center font-bold text-sm shrink-0">
-                      {p.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <div className="text-sm font-semibold text-slate-800 dark:text-white truncate">{p.name}</div>
-                        <input
-                          type="text"
-                          value={p.nickname || ''}
-                          onChange={(e) => updateParticipant(p.email, { nickname: e.target.value })}
-                          placeholder={t('settings.nickname', 'Nickname')}
-                          className="input-base text-xs py-0.5 px-2 h-6 w-full sm:w-28 shrink-0"
-                        />
-                      </div>
-                      <div className="text-xs text-slate-500 truncate" dir="ltr">{p.email}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                    <select 
-                      value={p.role}
-                      onChange={(e) => updateParticipant(p.email, { role: e.target.value })}
-                      className="input-base text-xs py-1 px-2 shrink-0 w-full sm:w-auto"
-                    >
-                      <option value="viewer">{t('settings.roleViewer', 'Viewer')}</option>
-                      <option value="editor">{t('settings.roleEditor', 'Editor')}</option>
-                      <option value="admin">{t('settings.roleAdmin', 'Admin')}</option>
-                    </select>
-                    {isAdmin && p.email !== appUser?.email && (
-                      <button 
-                        onClick={() => removeParticipant(p.email)}
-                        className="text-red-500 hover:text-red-600 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0 border border-transparent hover:border-red-200 dark:hover:border-red-800"
-                        title={t('settings.removeUser', 'הסר משתמש')}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                {p.role !== 'admin' && (
-                  <div className="border-t border-slate-200 dark:border-slate-800 pt-2">
-                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Visible Tabs</div>
-                    <div className="flex flex-wrap gap-2">
-                      {TAB_DEFS.map(tab => {
-                        const isVisible = p.allowedTabs?.[tab.id] !== false;
-                        const Icon = tab.icon;
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => updateParticipant(p.email, { 
-                              allowedTabs: { ...(p.allowedTabs || {}), [tab.id]: !isVisible } 
-                            })}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
-                              isVisible 
-                                ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-800 dark:text-brand-300' 
-                                : 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700'
-                            }`}
-                          >
-                            <Icon size={12} className={isVisible ? 'text-brand-500' : 'text-slate-400'} />
-                            <span>{t(tab.labelKey)}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+
 
       {/* ── Affiliate Links (Super Admin only) ────────────────────────── */}
       {isSuperAdmin && (

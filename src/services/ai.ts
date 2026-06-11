@@ -106,6 +106,8 @@ async function callGemini(
        if (tripStore.currentTripId) {
          window.dispatchEvent(new CustomEvent('change-tab', { detail: 'settings' }));
        }
+    } else if (res.status === 429 || res.status === 503 || errText.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error(`GeminiOverloadError: ${errText}`);
     }
     throw new Error(`Gemini API error: ${res.status} ${errText}`);
   }

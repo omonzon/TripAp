@@ -252,6 +252,18 @@ export default function OnboardingView() {
       setProvider(tempProvider);
       setApiKey(tempApiKey.trim());
       setAllGeminiModels(selectedModel);
+      
+      // Sync model and key to user settings
+      if (appUser?.email) {
+        await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), {
+          aiSettings: {
+            providerType: tempProvider,
+            apiKey: tempApiKey.trim(),
+            models: useAIStore.getState().models
+          }
+        }, { merge: true });
+      }
+
       setSkipAI(false);
       next();
     } else {
@@ -674,7 +686,7 @@ export default function OnboardingView() {
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      היכנסו לאתר <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline font-semibold">Google AI Studio</a> (התחברו עם חשבון גוגל).
+                      היכנסו לאתר <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline font-semibold">Google AI Studio</a> (התחברו עם חשבון גוגל). ודאו שיש לכם פרויקט ב-Google Cloud (אם אין, צרו אחד).
                     </p>
                   </div>
                   

@@ -160,9 +160,32 @@ export default function AIAssistantView() {
       const systemInstruction = `You are a helpful travel assistant for the trip. 
 ${getUnifiedContext()}
 Answer questions based on the trip context. Keep responses concise and formatted in markdown.
+If you are suggesting or creating an actionable task for the user, include the exact syntax "[TASK: task description]" in your response. The system will automatically parse this and create a task.
 Reply in the following language: ${language}`;
 
       const reply = await callAI(history, getProviderForTask('chat'), { systemInstruction, maxRetries: 1 });
+      
+      // Auto-extract and create tasks
+      const taskMatches = reply.match(/\[TASK:\s*(.+?)\]/gi);
+      if (taskMatches && currentTripId && !targetSession.isPrivate) {
+        for (const match of taskMatches) {
+          const taskDesc = match.replace(/\[TASK:\s*/i, '').replace(/\]$/, '').trim();
+          if (taskDesc) {
+            const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            try {
+              await setDoc(doc(db, 'trips', currentTripId, 'tasks', taskId), {
+                 id: taskId,
+                 title: taskDesc,
+                 status: 'pending',
+                 createdAt: Date.now()
+              });
+              showToast({ type: 'success', message: `Task auto-created: ${taskDesc}` });
+            } catch (e) {
+              console.error("Failed to auto-create task:", e);
+            }
+          }
+        }
+      }
       
       if (targetSession.isPrivate) {
         addMessageToPrivateSession(targetSessionId, { role: 'assistant', text: reply });
@@ -170,8 +193,31 @@ Reply in the following language: ${language}`;
         const updatedNewMessages = [...history, { role: 'assistant', text: reply }];
         await updateDoc(doc(db, 'trips', currentTripId!, 'aiChats', targetSessionId), { messages: updatedNewMessages, updatedAt: Date.now() });
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error(err);
+      if (err.message && err.message.includes('GeminiOverloadError')) {
+        showToast({ type: 'warning', message: t('ai.overloadError', 'The AI service is currently overloaded. Please try again in a moment.'), duration: 5000 });
+        setInput(userMsg.text);
+        
+        // Remove the user message we just added
+        if (targetSession.isPrivate) {
+           useAIStore.setState((s) => {
+             const sess = s.privateChatSessions[targetSessionId];
+             if (!sess) return s;
+             return {
+               privateChatSessions: {
+                 ...s.privateChatSessions,
+                 [targetSessionId]: { ...sess, messages: sess.messages.slice(0, -1) }
+               }
+             };
+           });
+        } else {
+           if (currentTripId) {
+             const restoredMessages = targetSession.messages; // the original before adding userMsg
+             await updateDoc(doc(db, 'trips', currentTripId, 'aiChats', targetSessionId), { messages: restoredMessages, updatedAt: Date.now() }).catch(console.error);
+           }
+        }
+      }
     } finally {
       setIsLoading(false);
     }

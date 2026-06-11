@@ -150,6 +150,17 @@ export default function WelcomeSetupScreen() {
             }
           }, { merge: true });
         }
+
+        // Save AI settings
+        if (appUser?.email) {
+          await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), {
+            aiSettings: {
+              providerType: tempProvider,
+              apiKey: tempApiKey.trim(),
+              models: useAIStore.getState().models
+            }
+          }, { merge: true });
+        }
         
         setIsValidating(false);
       }
