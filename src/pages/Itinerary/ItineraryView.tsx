@@ -791,14 +791,14 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
             <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-3 text-sm">
               <Sparkles size={16} className="text-brand-500" /> {t('itinerary.aiAdd')}
             </h3>
-            <form onSubmit={handleAiAdd} className="flex gap-2 items-center">
-              <div className="flex flex-1 gap-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 items-center">
+            <form onSubmit={handleAiAdd} className="flex gap-2 items-center w-full">
+              <div className="flex flex-1 min-w-0 gap-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 items-center">
                 <input
                   id="ai-add-input"
                   value={aiInput}
                   onChange={e => setAiInput(e.target.value)}
                   placeholder={t('itinerary.aiPlaceholder')}
-                  className="flex-1 bg-transparent py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none"
+                  className="flex-1 min-w-0 bg-transparent py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none"
                   disabled={isAiLoading}
                   dir="auto"
                 />
@@ -808,7 +808,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                 type="submit"
                 id="btn-ai-add"
                 disabled={!aiInput.trim() || isAiLoading}
-                className="btn-primary flex items-center gap-2 py-2.5"
+                className="btn-primary shrink-0 flex items-center gap-2 py-2.5"
               >
                 {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {!isAiLoading && <span className="hidden sm:inline">{t('itinerary.aiAdd')}</span>}
