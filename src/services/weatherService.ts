@@ -63,6 +63,8 @@ export const getTripWeather = async (
   const geoCache: Record<string, { lat: number, lng: number } | null> = {};
   const weatherCache: Record<string, any> = {};
 
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   // Sort days by date just in case
   const sortedDays = [...days].sort((a, b) => a.isoDate.localeCompare(b.isoDate));
   
@@ -86,6 +88,7 @@ export const getTripWeather = async (
     // 2. Geocode if not cached
     if (geoCache[dayLocation] === undefined) {
       try {
+        await delay(250); // Rate limit spacing
         const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(dayLocation)}&count=1&language=en&format=json`);
         const geoData = await geoRes.json();
         if (geoData.results && geoData.results.length > 0) {
@@ -105,6 +108,7 @@ export const getTripWeather = async (
     const coordKey = `${coords.lat},${coords.lng}`;
     if (!weatherCache[coordKey]) {
       try {
+        await delay(250); // Rate limit spacing
         const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=16`);
         weatherCache[coordKey] = await weatherRes.json();
       } catch (err) {

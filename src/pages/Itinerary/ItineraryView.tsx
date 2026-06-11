@@ -7,7 +7,7 @@ import {
   orderBy, setDoc, where, getDocs,
 } from 'firebase/firestore';
 import {
-  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User
+  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User, ExternalLink
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -910,6 +910,16 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                     )}
                   </div>
                 </div>
+                <a 
+                  href={`https://www.google.com/search?q=${encodeURIComponent('weather ' + (weather.locationName || '') + (weather.isForecast ? ' ' + weather.date : ''))}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-2 -mr-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  title={t('itinerary.viewWeather', 'צפה בתחזית המלאה')}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink size={16} />
+                </a>
               </div>
             )}
 
