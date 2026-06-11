@@ -406,7 +406,19 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
                     {canWrite && (
                       <td className="p-3">
                         <div className="flex gap-1">
-                          <button onClick={() => { setForm({ store: ex.store, amount: String(ex.amount), currency: ex.currency, category: ex.category, amountConverted: String(ex.amountConverted), notes: ex.notes }); setEditingId(ex.id); setShowForm(true); }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-colors"><Edit2 size={14} /></button>
+                          <button onClick={() => { 
+                            setForm({ 
+                              store: ex.store || '', 
+                              amount: String(ex.amount || ''), 
+                              currency: ex.currency || 'USD', 
+                              category: ex.category || 'other', 
+                              amountConverted: String(ex.amountConverted || ''), 
+                              notes: ex.notes || '' 
+                            }); 
+                            setEditingId(ex.id); 
+                            setShowForm(true); 
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }} className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg transition-colors"><Edit2 size={14} /></button>
                           <button onClick={async () => { if (currentTripId) await deleteDoc(doc(db, 'trips', currentTripId, 'expenses', ex.id)); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><Trash2 size={14} /></button>
                         </div>
                       </td>
