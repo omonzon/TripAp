@@ -13,13 +13,11 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.token.email.lower() == email.lower() || request.auth.token.email.lower() == 'omonzon@gmail.com');
       allow create: if request.auth != null && (
         request.auth.token.email.lower() == email.lower() ||
-        request.auth.token.email.lower() == 'omonzon@gmail.com' ||
-        request.resource.data.keys().hasOnly(['trips'])
+        request.auth.token.email.lower() == 'omonzon@gmail.com'
       );
       allow update: if request.auth != null && (
         request.auth.token.email.lower() == email.lower() ||
-        request.auth.token.email.lower() == 'omonzon@gmail.com' ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trips'])
+        request.auth.token.email.lower() == 'omonzon@gmail.com'
       );
       allow delete: if request.auth != null && (request.auth.token.email.lower() == email.lower() || request.auth.token.email.lower() == 'omonzon@gmail.com');
 
@@ -39,9 +37,15 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.token.email.lower() == 'omonzon@gmail.com';
     }
 
+    // Feedback collection
     match /feedback/{doc} {
       allow create: if request.auth != null;
       allow read: if request.auth != null && request.auth.token.email.lower() == 'omonzon@gmail.com';
+    }
+
+    // Collection Group rule for user membership across all trips
+    match /{path=**}/users/{userEmail} {
+      allow read: if request.auth != null && request.auth.token.email.lower() == userEmail.lower();
     }
 
     // Multi-tenant trip data — strict isolation

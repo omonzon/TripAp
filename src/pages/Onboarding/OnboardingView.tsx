@@ -157,9 +157,6 @@ export default function OnboardingView() {
             role: 'admin',
           });
           await setDoc(doc(db, 'users', appUser.email, 'settings', 'app'), { activeTripId: tId }, { merge: true });
-          await setDoc(doc(db, 'users', appUser.email), {
-            trips: arrayUnion({ id: tId, name: profile.name, destinations: profile.destinations })
-          }, { merge: true });
           setTempTripId(tId);
         } else {
           await setDoc(doc(db, 'trips', tId, 'profile', 'main'), profile, { merge: true });
@@ -190,9 +187,6 @@ export default function OnboardingView() {
       try {
         await deleteDoc(doc(db, 'trips', tempTripId, 'profile', 'main'));
         await deleteDoc(doc(db, 'trips', tempTripId, 'users', appUser.email));
-        await updateDoc(doc(db, 'users', appUser.email), {
-          trips: arrayRemove({ id: tempTripId, name: form.name || 'My Trip', destinations: form.destinations.split(',').map((d) => d.trim()).filter(Boolean) })
-        });
       } catch (e) {
         console.error("Failed to cleanup trip", e);
       } finally {
@@ -635,9 +629,6 @@ export default function OnboardingView() {
 
           await deleteDoc(doc(db, 'trips', tripId, 'profile', 'main'));
           await deleteDoc(doc(db, 'trips', tripId, 'users', appUser.email));
-          await updateDoc(doc(db, 'users', appUser.email), {
-            trips: arrayRemove({ id: tripId, name: profile.name, destinations: profile.destinations })
-          });
           
           if (isQuotaError) {
             setKeyError(`המפתח תקין אך חרגת ממכסת הבקשות (Rate Limit) למודל זה. אנא נסה מודל אחר או בדוק את מצב החשבון שלך. (${aiErr.message || String(aiErr)})`);

@@ -516,19 +516,6 @@ export default function SettingsView() {
       showToast({ type: 'error', message: 'Permission error adding to trip: ' + e.message });
     }
 
-    if (successCount === 1 && tripProfile) {
-      try {
-        await setDoc(doc(db, 'users', cleanEmail), {
-          trips: arrayUnion({ id: currentTripId, name: tripProfile.name, destinations: tripProfile.destinations })
-        }, { merge: true });
-        console.log("Successfully wrote to global users document");
-        successCount++;
-      } catch (e: any) {
-        console.error("Error writing to global users document:", e);
-        showToast({ type: 'error', message: 'Permission error updating user profile: ' + e.message });
-      }
-    }
-
     if (successCount > 0) {
       await sendInviteEmail(cleanEmail);
       setNewUserEmail('');

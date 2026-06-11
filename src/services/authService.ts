@@ -10,7 +10,7 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import {
-  doc, getDoc, setDoc, onSnapshot
+  doc, getDoc, setDoc, onSnapshot, collectionGroup, query, where
 } from 'firebase/firestore';
 import { auth, googleProvider, db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -25,6 +25,7 @@ export function initFirebaseAuth() {
 
     if (!firebaseUser) {
       if ((window as any)._userUnsub) { (window as any)._userUnsub(); }
+      if ((window as any)._tripsUnsub) { (window as any)._tripsUnsub(); }
       setFirebaseUser(null);
       setAppUser(null);
       setAuthLoading(false);
@@ -40,69 +41,63 @@ export function initFirebaseAuth() {
     // For now, check if a global user doc exists under users/{email}
     const userRef = doc(db, 'users', firebaseUser.email!);
     
-    if ((window as any)._userUnsub) { (window as any)._userUnsub(); }
-    
     (window as any)._userUnsub = onSnapshot(userRef, async (userSnap) => {
       if (!userSnap.exists() || !(userSnap.data() as AppUser).email) {
-        // First-time user (or user who was invited and only has a 'trips' array)
         const newUser: AppUser = {
           email: firebaseUser.email!,
           name: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
-          role: 'admin', // First user to sign in becomes admin
+          role: 'admin',
           createdAt: Date.now(),
           ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
         };
-        // Merge so we don't overwrite the existing 'trips' array if they were invited
         await setDoc(userRef, newUser, { merge: true });
         
         const existingData = userSnap.exists() ? userSnap.data() : {};
         const mergedUser = { ...existingData, ...newUser } as AppUser;
         setAppUser(mergedUser);
-        
-        if ((mergedUser as any).trips) {
-          useTripStore.getState().setAvailableTrips((mergedUser as any).trips);
-        } else {
-          useTripStore.getState().setAvailableTrips([]);
-        }
       } else {
         const data = userSnap.data() as AppUser;
         if (data.isBlocked) {
           showToast({ type: 'error', message: 'Your account has been blocked by the administrator.' });
-          // Do NOT signOut here, let App.tsx render the BlockedScreen
         }
-        
         setAppUser(data);
-        const dataWithTrips = data as any;
-        if (dataWithTrips && dataWithTrips.trips) {
-          useTripStore.getState().setAvailableTrips(dataWithTrips.trips);
-        } else {
-          useTripStore.getState().setAvailableTrips([]);
-        }
       }
+    });
+
+    // Collection Group Query for Trips
+    const tripsQuery = query(collectionGroup(db, 'users'), where('email', '==', firebaseUser.email!));
+    if ((window as any)._tripsUnsub) { (window as any)._tripsUnsub(); }
+    
+    (window as any)._tripsUnsub = onSnapshot(tripsQuery, async (snap) => {
+      const tripsPromises = snap.docs.map(async (d) => {
+        if (d.ref.parent.parent && d.ref.parent.parent.parent.id === 'trips') {
+          const tripId = d.ref.parent.parent.id;
+          const profileSnap = await getDoc(doc(db, 'trips', tripId, 'profile', 'main'));
+          if (profileSnap.exists()) {
+            return { 
+              id: tripId, 
+              name: profileSnap.data().name || 'Unknown',
+              destinations: profileSnap.data().destinations || []
+            };
+          }
+        }
+        return null;
+      });
+      
+      const tripsResults = await Promise.all(tripsPromises);
+      const availableTrips = tripsResults.filter(t => t !== null) as {id: string, name: string, destinations: string[]}[];
+      useTripStore.getState().setAvailableTrips(availableTrips);
     });
 
     const profileRef = doc(db, 'users', firebaseUser.email!, 'settings', 'app');
     const profileSnap = await getDoc(profileRef);
-    const userDoc = await getDoc(userRef);
-    const userTrips = userDoc.data()?.trips || [];
-
+    
     if (profileSnap.exists()) {
       const data = profileSnap.data();
       const savedTripId = data?.activeTripId as string | undefined;
       
       if (savedTripId) {
-        const hasAccess = userTrips.some((t: any) => t.id === savedTripId);
-        if (hasAccess) {
-          useTripStore.getState().setCurrentTrip(savedTripId);
-        } else if (userTrips.length > 0) {
-          useTripStore.getState().setCurrentTrip(userTrips[0].id);
-        } else {
-          useTripStore.getState().setCurrentTrip(null);
-        }
-      } else if (userTrips.length > 0) {
-        useTripStore.getState().setCurrentTrip(userTrips[0].id);
-      } else {
-        useTripStore.getState().setCurrentTrip(null);
+        useTripStore.getState().setCurrentTrip(savedTripId);
       }
       
       // Sync global settings from cloud
@@ -124,12 +119,6 @@ export function initFirebaseAuth() {
       }
       if (data.aiSetupDismissed !== undefined) {
          useAuthStore.getState().setAiSetupDismissed(data.aiSetupDismissed);
-      }
-    } else {
-      if (userTrips.length > 0) {
-        useTripStore.getState().setCurrentTrip(userTrips[0].id);
-      } else {
-        useTripStore.getState().setCurrentTrip(null);
       }
     }
 

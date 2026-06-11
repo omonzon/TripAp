@@ -1,4 +1,4 @@
-import { collection, doc, deleteDoc, getDocs, getDoc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, doc, deleteDoc, getDocs, getDoc, updateDoc, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from './firebase';
 
 /**
@@ -41,17 +41,13 @@ export async function deleteTripCompletely(tripId: string) {
  * Deletes all trips created by the user, and removes the user from trips they don't own.
  */
 export async function deleteAllUserTrips(userEmail: string) {
-  const userRef = doc(db, 'users', userEmail);
-  const userSnap = await getDocs(query(collection(db, 'users'), where('email', '==', userEmail))); // Or getDoc if ID is email
-  // Assuming doc ID is email:
-  const snap = await getDoc(userRef);
-  if (!snap.exists()) return;
+  const tripsQuery = query(collectionGroup(db, 'users'), where('email', '==', userEmail));
+  const tripsSnap = await getDocs(tripsQuery);
   
-  const userData = snap.data();
-  const trips = userData.trips || [];
-  
-  for (const trip of trips) {
-    const tripId = trip.id;
+  for (const tripDoc of tripsSnap.docs) {
+    if (!tripDoc.ref.parent.parent || tripDoc.ref.parent.parent.parent.id !== 'trips') continue;
+    
+    const tripId = tripDoc.ref.parent.parent.id;
     try {
       const profileRef = doc(db, 'trips', tripId, 'profile', 'main');
       const profileSnap = await getDoc(profileRef);
