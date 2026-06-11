@@ -252,7 +252,7 @@ export default function OnboardingView() {
             setSelectedModel(fallbackModel);
             setDowngradePrompt({
               isOpen: true,
-              errorMsg: errMsg,
+              errorMsg: isQuotaError ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
               fallbackModel: fallbackModel,
               onApprove: () => handleValidateKey()
             });
@@ -306,7 +306,7 @@ export default function OnboardingView() {
             setSelectedModel(fallbackModel);
             setDowngradePrompt({
               isOpen: true,
-              errorMsg: errMsg,
+              errorMsg: isQuotaError ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
               fallbackModel: fallbackModel,
               onApprove: () => handleAISetupNext()
             });
@@ -600,7 +600,7 @@ export default function OnboardingView() {
                  setAllGeminiModels(fallbackModel);
                  setDowngradePrompt({
                    isOpen: true,
-                   errorMsg: aiErr.message || String(aiErr),
+                   errorMsg: isQuotaError ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
                    fallbackModel: fallbackModel,
                    onApprove: () => createTrip()
                  });

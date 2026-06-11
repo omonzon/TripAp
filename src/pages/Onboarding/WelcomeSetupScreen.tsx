@@ -84,7 +84,7 @@ export default function WelcomeSetupScreen() {
             setSelectedModel(fallbackModel);
             setDowngradePrompt({
               isOpen: true,
-              errorMsg: errMsg,
+              errorMsg: isQuotaError ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
               fallbackModel: fallbackModel
             });
             // Stop validating, let user decide via modal
@@ -159,7 +159,7 @@ export default function WelcomeSetupScreen() {
                 setSelectedModel(fallbackModel);
                 setDowngradePrompt({
                   isOpen: true,
-                  errorMsg: errMsg,
+                  errorMsg: (errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Overload') || errMsg.includes('RESOURCE_EXHAUSTED')) ? 'חרגת ממכסת השימוש המותרת למודל זה (Rate Limit/Quota).' : 'שגיאה בתקשורת מול שרתי ה-AI.',
                   fallbackModel: fallbackModel
                 });
                 setIsValidating(false);
