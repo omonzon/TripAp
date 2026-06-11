@@ -33,7 +33,8 @@ export interface DocumentExtractionResult {
 const DOCUMENT_ANALYZER_PROMPT = `You are an expert data extraction AI.
 Analyze the provided document (receipt, invoice, booking confirmation, or text).
 Extract:
-1. Itinerary Events (e.g., flight times, tour dates). Map them to YYYY-MM-DD.
+1. Itinerary Events (e.g., flight times, tour dates). Map them to YYYY-MM-DD. 
+   **CRITICAL**: Group ALL details of a single event (e.g. Tour Name, Meeting Point, Time, Provider, Passengers) into ONE single itinerary item. Do NOT create multiple separate items for the same event. Use HTML formatting inside the 'text' field to organize the details (e.g. <strong>Tour Name</strong><br/>Time: 10:00<br/>Meeting Point: X).
 2. Prepaid Expenses (e.g., the cost of the booking/receipt).
 3. Document References (e.g., Booking PNRs, ticket numbers).
 4. Full Text: Transcribe the complete text from the document.

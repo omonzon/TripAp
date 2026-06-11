@@ -1105,7 +1105,7 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                           </>
                         )}
                       </div>
-                      {canWrite && editingItemId !== item.id && !item.fixed && (
+                      {canWrite && editingItemId !== item.id && (
                         <div className={`flex flex-wrap sm:flex-nowrap items-center gap-1 transition-opacity shrink-0 mt-1 w-16 sm:w-auto justify-end ${actionMenuId === item.id ? 'opacity-100' : 'opacity-0 sm:group-hover:opacity-100 hidden sm:flex'}`}>
                           <button
                             onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditItemText(item.text); setEditItemType(item.type || 'map'); setActionMenuId(null); }}
