@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info, Camera, Plus } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Globe, Key, FileText, Info, Camera, Plus, Copy } from 'lucide-react';
 import { doc, setDoc, arrayUnion, deleteDoc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -820,7 +820,28 @@ export default function OnboardingView() {
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      לחצו על הכפתור הכחול <span className="font-semibold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">Create API key</span>.
+                      אם יש לכם מפתח בטבלה, לחצו על כפתור ההעתקה (<Copy size={14} className="inline text-brand-600 dark:text-brand-400 mb-0.5" />).
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      אם אין לכם, לחצו על הכפתור הכחול <span className="font-semibold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">Create API key</span> (ימין למעלה), אשרו "Create key", ובחרו "Copy key".
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">4</div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      חזרו לכאן והדביקו (Ctrl+V) בשורה למטה (מפתח API).
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">5</div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      לחצו על "אמת מפתח" למטה. <span className="text-xs text-brand-600 dark:text-brand-400 font-medium block mt-1">אם יש לכם מפתח ללא אמצעי תשלום, המערכת תבחר במודל חינמי. לקבלת תוצאות חכמות יותר, תמיד עדיף להשתמש במודל מתקדם עם תשלום סמלי.</span>
                     </p>
                   </div>
                 </div>
