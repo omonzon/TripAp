@@ -85,9 +85,14 @@ export function AuthScreen() {
 
       {/* Sign in card */}
       <div className="glass rounded-3xl p-8 max-w-sm w-full animate-slide-up text-center relative z-10 backdrop-blur-xl bg-white/10 dark:bg-black/30 border border-white/20 shadow-2xl">
-        <div className="flex items-center justify-center gap-2 mb-2 text-white">
-          <Shield size={16} className="text-brand-300" />
-          <span className="text-sm text-brand-200">Secured by Google Firebase</span>
+        <div className="flex flex-col items-center justify-center gap-1 mb-2 text-white">
+          <div className="flex items-center gap-2">
+            <Shield size={16} className="text-brand-300" />
+            <span className="text-sm text-brand-200">Secured by Google Firebase</span>
+          </div>
+          <p className="text-[10px] text-slate-300 px-2 leading-tight">
+            {t('auth.secureNote', 'All data is encrypted and securely transmitted via HTTPS to Google Firebase.')}
+          </p>
         </div>
         <Sparkles className="w-8 h-8 text-brand-300 mx-auto mb-4" />
         <h2 className="text-white font-bold text-xl mb-2">{t('auth.title')}</h2>

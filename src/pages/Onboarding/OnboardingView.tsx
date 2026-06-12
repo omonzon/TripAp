@@ -25,7 +25,11 @@ export default function OnboardingView() {
   const { setCurrentTrip, setTripProfile } = useTripStore();
   const { getProviderForTask, updateTripGraph, apiKey, setApiKey, setAllGeminiModels, setProvider, isApiKeyInvalid, setApiKeyInvalid } = useAIStore();
 
-  const [step, setStep] = useState(useAIStore.getState().apiKey ? 3 : 1);
+  const currentUser = useAuthStore.getState().appUser;
+  const isNewUser = currentUser?.createdAt 
+    ? (Date.now() - currentUser.createdAt < 5 * 60 * 1000) 
+    : false;
+  const [step, setStep] = useState((useAIStore.getState().apiKey && !isNewUser) ? 3 : 1);
   const [tempProvider, setTempProvider] = useState<AIProvider['type']>(useAIStore.getState().providerType);
   const [skipAI, setSkipAI] = useState(false);
   const [showTos, setShowTos] = useState(false);

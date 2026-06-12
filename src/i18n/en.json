@@ -50,6 +50,7 @@
         "desc": "Full airplane mode support"
       }
     },
+    "secureNote": "All data is encrypted and securely transmitted via HTTPS to Google Firebase.",
     "tosTitle": "Terms of Service & Liability Waiver",
     "tosText1": "The app is provided 'AS IS'. The creator is not liable for any direct, indirect, incidental, or consequential damages, including but not limited to loss of data, financial losses, or physical harm.",
     "tosText2": "AI Limitations: AI suggestions (itineraries, tasks, tips) are generated automatically and may be inaccurate or unsafe. You must verify all information independently. The creator bears no responsibility for AI errors.",
