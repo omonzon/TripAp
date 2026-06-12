@@ -324,16 +324,24 @@ export default function TasksView() {
 
   return (
     <div className="space-y-5 animate-fade-in max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          {t('tasks.title')}
-          {!canWrite && <span className="text-xs font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">מצב צפייה</span>}
-        </h2>
-        <div className="flex gap-2 text-xs font-medium items-center">
-          <div className="flex gap-1 me-2 hidden sm:flex">
-            <button onClick={() => expandAll(tasks.map(t => t.id))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.expandAll', 'הרחב הכל')}><ChevronsDown size={14} /></button>
-            <button onClick={() => collapseAll(tasks.map(t => t.id))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.collapseAll', 'כווץ הכל')}><ChevronsUp size={14} /></button>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            {t('tasks.title')}
+            {!canWrite && <span className="text-xs font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">מצב צפייה</span>}
+          </h2>
+          <div className="flex gap-2">
+            <button onClick={() => expandAll(tasks.map(t => t.id))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
+              <ChevronsDown size={14} />
+              <span>{t('app.expandAll', 'הרחב הכל')}</span>
+            </button>
+            <button onClick={() => collapseAll(tasks.map(t => t.id))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
+              <ChevronsUp size={14} />
+              <span>{t('app.collapseAll', 'כווץ הכל')}</span>
+            </button>
           </div>
+        </div>
+        <div className="flex gap-2 text-xs font-medium items-center">
           <span className="badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">{pending} {t('tasks.pending')}</span>
           <span className="badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">{done} {t('tasks.completed')}</span>
         </div>

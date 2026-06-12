@@ -795,11 +795,17 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
   return (
     <div className="space-y-4 animate-fade-in max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
-          <div className="flex gap-1 hidden sm:flex">
-            <button onClick={() => expandAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.expandAll', 'הרחב הכל')}><ChevronsDown size={14} /></button>
-            <button onClick={() => collapseAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.collapseAll', 'כווץ הכל')}><ChevronsUp size={14} /></button>
+          <div className="flex gap-2">
+            <button onClick={() => expandAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
+              <ChevronsDown size={14} />
+              <span>{t('app.expandAll', 'הרחב הכל')}</span>
+            </button>
+            <button onClick={() => collapseAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
+              <ChevronsUp size={14} />
+              <span>{t('app.collapseAll', 'כווץ הכל')}</span>
+            </button>
           </div>
         </div>
         {canWrite && (
@@ -1117,45 +1123,52 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                             </div>
                           </div>
                         ) : (
-                          <>
-                            <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content" dangerouslySetInnerHTML={{ __html: item.text }} />
-                            {<div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 w-max px-2 py-0.5 rounded">
-                              {(item.authorName || 'AI') === 'AI' ? <Sparkles size={10} className="text-brand-500" /> : <User size={10} />}
-                              {item.authorName || 'AI'}
-                            </div>}
-                            {['map', 'ticket', 'food', 'hotel', 'location', 'poi'].includes(item.type || '') && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
-                                className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-                              >
-                                <Info size={10} />
-                                {t('itinerary.expand', 'Expand')}
-                              </button>
-                            )}
-                            {item.fixed && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-1.5 py-0.5 rounded mt-1 mb-1">
-                                <Lock size={9} /> {t('itinerary.fixed')}
-                              </span>
-                            )}
-                            <div className="mt-2">
+                          <div className="flex flex-col sm:flex-row justify-between gap-3 w-full items-start">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content" dangerouslySetInnerHTML={{ __html: item.text }} />
+                              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded">
+                                  {(item.authorName || 'AI') === 'AI' ? <Sparkles size={10} className="text-brand-500" /> : <User size={10} />}
+                                  {item.authorName || 'AI'}
+                                </div>
+                                {['map', 'ticket', 'food', 'hotel', 'location', 'poi'].includes(item.type || '') && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                                  >
+                                    <Info size={10} />
+                                    {t('itinerary.expand', 'Expand')}
+                                  </button>
+                                )}
+                                {item.fixed && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-1.5 py-0.5 rounded">
+                                    <Lock size={9} /> {t('itinerary.fixed')}
+                                  </span>
+                                )}
+                              </div>
+                              {item.type === 'flight' && (
+                                <div className="mt-2"><FlightWidget item={item} dayDocId={day.docId} days={days} /></div>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-row sm:flex-col flex-wrap justify-end items-end gap-2 shrink-0">
+                              {canWrite && !item.aiRecommendation && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleSolveItineraryItem(day.docId, item.id, item.text); }}
+                                  disabled={item.isSolving}
+                                  title={t('itinerary.smartSolve', 'Smart Solve')}
+                                  className="px-2 py-1 text-brand-500 hover:text-brand-600 rounded bg-slate-100 dark:bg-slate-800/50 transition-colors flex items-center gap-1 text-[10px] font-medium"
+                                >
+                                  {item.isSolving ? <Loader2 size={12} className="animate-spin" /> : <>AI <Wand2 size={12} /></>}
+                                </button>
+                              )}
                               <ServiceLinks item={item} isoDate={day.isoDate || day.date} participantsCount={tripProfile?.participants?.length || 2} tripName={tripProfile?.name || ''} isLastDay={idx === days.length - 1} city={tripProfile?.destinations?.[0] || ''} />
                             </div>
-                            {item.type === 'flight' && (
-                              <FlightWidget item={item} dayDocId={day.docId} days={days} />
-                            )}
-                          </>
+                          </div>
                         )}
                       </div>
                       {canWrite && editingItemId !== item.id && (
                         <div className={`flex flex-wrap sm:flex-nowrap items-center gap-1 transition-opacity shrink-0 mt-1 w-16 sm:w-auto justify-end ${actionMenuId === item.id ? 'opacity-100' : 'opacity-0 sm:group-hover:opacity-100 hidden sm:flex'}`}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleSolveItineraryItem(day.docId, item.id, item.text); }}
-                            disabled={item.isSolving}
-                            title={t('itinerary.smartSolve', 'Smart Solve')}
-                            className="p-1.5 text-brand-500 hover:text-brand-600 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
-                          >
-                            {item.isSolving ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditItemText(item.text); setEditItemType(item.type || 'map'); setActionMenuId(null); }}
                             className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
