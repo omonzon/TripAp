@@ -6,8 +6,9 @@ import {
   doc, query, orderBy,
 } from 'firebase/firestore';
 import {
-  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X, Lock, Users, Edit2, Check, Wand2
+  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X, Lock, Users, Edit2, Check, Wand2, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp
 } from 'lucide-react';
+import { useExpandedAI } from '@/hooks/useExpandedAI';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, useUserRole } from '@/store/useTripStore';
@@ -123,6 +124,7 @@ export default function TasksView() {
 
   const userRole = useUserRole();
   const canWrite = userRole === 'admin' || userRole === 'editor';
+  const { expandedAIs, toggleExpand, expandAll, collapseAll } = useExpandedAI();
 
   useEffect(() => {
     if (!currentTripId) return;
@@ -327,7 +329,11 @@ export default function TasksView() {
           {t('tasks.title')}
           {!canWrite && <span className="text-xs font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">מצב צפייה</span>}
         </h2>
-        <div className="flex gap-2 text-xs font-medium">
+        <div className="flex gap-2 text-xs font-medium items-center">
+          <div className="flex gap-1 me-2 hidden sm:flex">
+            <button onClick={() => expandAll(tasks.map(t => t.id))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.expandAll', 'הרחב הכל')}><ChevronsDown size={14} /></button>
+            <button onClick={() => collapseAll(tasks.map(t => t.id))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.collapseAll', 'כווץ הכל')}><ChevronsUp size={14} /></button>
+          </div>
           <span className="badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">{pending} {t('tasks.pending')}</span>
           <span className="badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">{done} {t('tasks.completed')}</span>
         </div>
@@ -512,13 +518,18 @@ export default function TasksView() {
                     {task.aiRecommendation && (
                       <div className="ms-10 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative">
                         <Sparkles size={16} className="absolute top-4 right-4 text-brand-500 opacity-50" />
-                        <MarkdownRenderer content={task.aiRecommendation} />
-                        {getProviderForTask('chat')?.model?.includes('flash') && (
+                        <div className={expandedAIs[task.id] !== false ? '' : 'line-clamp-2 overflow-hidden'}>
+                          <MarkdownRenderer content={task.aiRecommendation} />
+                        </div>
+                        {getProviderForTask('chat')?.model?.includes('flash') && expandedAIs[task.id] !== false && (
                           <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex gap-2 items-start">
                             <span>⚠️</span>
                             <span>{t('tasks.freeModelWarning', 'הערה: ה-AI החינמי עשוי להיות מוגבל בחיפוש חי ברשת ומתבסס על ידע נרחב קיים.')}</span>
                           </div>
                         )}
+                        <button onClick={() => toggleExpand(task.id)} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 mt-2 text-xs flex items-center gap-1 font-medium bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded w-max">
+                          {expandedAIs[task.id] !== false ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
+                        </button>
                       </div>
                     )}
                   </div>

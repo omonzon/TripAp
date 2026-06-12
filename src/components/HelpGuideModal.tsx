@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase, CheckSquare, Navigation, Languages, Image, Bot, Type } from 'lucide-react';
+import { X, HelpCircle, User, Shield, Eye, Map, BookOpen, Settings, List, FileText, Camera, Link, MapPin, Receipt, MessageSquare, Briefcase, CheckSquare, Navigation, Languages, Image, Bot, Type, Wand2, Sparkles } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useUserRole } from '@/store/useTripStore';
@@ -129,6 +129,20 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
                     <p className="text-sm text-slate-600 dark:text-slate-400">בתחתית מסך המסלול קיימת שורת פקודה לעוזר ה-AI. ניתן לבקש ממנו בשפה חופשית להוסיף, להסיר, או לשנות פריטים במסלול והוא יעדכן את לוח הזמנים באופן אוטומטי.</p>
                   </div>
                 </div>
+                <div className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <Wand2 className="text-slate-400 mt-0.5 shrink-0" size={18} />
+                  <div>
+                    <h4 className="font-bold text-sm">פתרון חכם עם בינה מלאכותית (כפתור הקסם)</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">ליד משימות ואירועים במסלול תמצאו כפתור מטה קסם (🪄). לחיצה עליו תבקש מה-AI לפתור את המשימה או להרחיב על הפעילות במסלול (למשל, להציע מסעדה קרובה) ולהציג המלצה מפורטת.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <Sparkles className="text-slate-400 mt-0.5 shrink-0" size={18} />
+                  <div>
+                    <h4 className="font-bold text-sm">יצירת משימות ופתרונות חכמים</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">במסך המשימות, לחיצה על "יצירת משימות חכמות AI" תנתח את המסלול שלכם ותוסיף באופן אוטומטי משימות הנדרשות, וגם תפעיל את מטה הקסם לפתרון חכם ברקע של משימות פתוחות.</p>
+                  </div>
+                </div>
               </div>
             </section>
           )}
@@ -169,6 +183,10 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
               <li className="flex items-start gap-2">
                 <span className="text-brand-500 mt-1">•</span> 
                 <span>מעבר בין טיולים מתבצע דרך התפריט העליון. לכל טיול יש מסלול, הוצאות, משימות ותוכן משלו המופרדים לחלוטין מטיולים אחרים בחשבון.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-500 mt-1">•</span> 
+                <span>ה<b>תדריך היומי</b> זמין במסך המסלול בראש כל יום נוכחי, בלחיצה על תחזית מזג האוויר תקבלו סיכום של היום כולל מזג אוויר ומשימות.</span>
               </li>
             </ul>
           </section>

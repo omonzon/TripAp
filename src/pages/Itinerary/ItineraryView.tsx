@@ -7,8 +7,9 @@ import {
   orderBy, setDoc, where, getDocs,
 } from 'firebase/firestore';
 import {
-  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User, ExternalLink, Wand2
+  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User, ExternalLink, Wand2, ChevronsDown, ChevronsUp
 } from 'lucide-react';
+import { useExpandedAI } from '@/hooks/useExpandedAI';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTripStore, useUserRole, type ItineraryDay, type ItineraryItem } from '@/store/useTripStore';
@@ -286,6 +287,7 @@ export default function ItineraryView() {
   const todayIso = new Date().toISOString().split('T')[0];
   const userRole = useUserRole();
   const canWrite = userRole === 'admin' || userRole === 'editor';
+  const { expandedAIs, toggleExpand, expandAll, collapseAll } = useExpandedAI();
 
   // ── Firestore listener ────────────────────────────────────────────────────
   useEffect(() => {
@@ -793,7 +795,13 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
   return (
     <div className="space-y-4 animate-fade-in max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
+          <div className="flex gap-1 hidden sm:flex">
+            <button onClick={() => expandAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.expandAll', 'הרחב הכל')}><ChevronsDown size={14} /></button>
+            <button onClick={() => collapseAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="p-1 rounded bg-slate-100 text-slate-500 hover:text-brand-600 dark:bg-slate-800" title={t('app.collapseAll', 'כווץ הכל')}><ChevronsUp size={14} /></button>
+          </div>
+        </div>
         {canWrite && (
           <div className="flex items-center gap-2">
             <button onClick={handleScanReferrals} disabled={isScanningReferrals} title="סריקה חכמה לאיתור קישורי הזמנה חסרים (טיסות, מלונות) לפריטי המסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
@@ -1189,13 +1197,18 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                     {item.aiRecommendation && (
                       <div className="w-full mt-[-10px] ms-11 mb-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative z-0">
                         <Sparkles size={16} className="absolute top-4 right-4 text-brand-500 opacity-50" />
-                        <MarkdownRenderer content={item.aiRecommendation} />
-                        {getProviderForTask('chat')?.model?.includes('flash') && (
+                        <div className={expandedAIs[item.id] !== false ? '' : 'line-clamp-2 overflow-hidden'}>
+                          <MarkdownRenderer content={item.aiRecommendation} />
+                        </div>
+                        {getProviderForTask('chat')?.model?.includes('flash') && expandedAIs[item.id] !== false && (
                           <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex gap-2 items-start">
                             <span>⚠️</span>
                             <span>{t('tasks.freeModelWarning', 'הערה: ה-AI החינמי עשוי להיות מוגבל בחיפוש חי ברשת ומתבסס על ידע נרחב קיים.')}</span>
                           </div>
                         )}
+                        <button onClick={() => toggleExpand(item.id)} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 mt-2 text-xs flex items-center gap-1 font-medium bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded w-max">
+                          {expandedAIs[item.id] !== false ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
+                        </button>
                       </div>
                     )}
                     </div>
