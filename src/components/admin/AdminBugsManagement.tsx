@@ -267,7 +267,7 @@ Instructions:
       </div>
 
       {/* Main Detail View */}
-      <div className={`flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 ${!selectedBug ? 'hidden md:flex items-center justify-center' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 ${!selectedBug ? 'hidden md:flex items-center pt-24' : 'flex'}`}>
         {!selectedBug ? (
           <div className="text-center space-y-4">
             <div className="w-24 h-24 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto">
