@@ -6,7 +6,7 @@ import {
   doc, query, orderBy,
 } from 'firebase/firestore';
 import {
-  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X, Lock, Users, Edit2, Check
+  CheckSquare, Square, Trash2, Plus, Loader2, Bell, Sparkles, X, Lock, Users, Edit2, Check, Wand2
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -16,6 +16,8 @@ import { generateTripTasks } from '@/engine/taskGenerator';
 import { DictationButton } from '@/components/features/DictationButton';
 import { showToast } from '@/components/ui/Toast';
 import { sendLocalNotification } from '@/utils/notifications';
+import { solveTaskOrItineraryItem } from '@/engine/taskSolver';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 interface Task {
   id: string;
@@ -29,6 +31,8 @@ interface Task {
   reminderDate?: string;
   reminderLocation?: { lat: number; lng: number; name: string };
   reminderSent?: boolean;
+  aiRecommendation?: string;
+  isSolving?: boolean;
 }
 
 const PRIORITIES = { low: { color: 'text-slate-400 bg-slate-100 dark:bg-slate-700' }, medium: { color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30' }, high: { color: 'text-red-600 bg-red-50 dark:bg-red-900/30' } };
@@ -222,11 +226,42 @@ export default function TasksView() {
     try {
       const existingTaskTexts = tasks.map(t => t.text);
       await generateTripTasks(tripProfile, getProviderForTask('chat'), language, appUser.email, existingTaskTexts);
-      showToast({ type: 'success', message: t('tasks.smartTasksGenerated', 'Smart tasks generated!') });
+      
+      // Now find unresolved tasks and solve them
+      const unresolved = tasks.filter(t => !t.aiRecommendation);
+      for (const t of unresolved) {
+        handleSolveTask(t);
+      }
+      
+      showToast({ type: 'success', message: t('tasks.smartTasksGenerated', 'Smart tasks generated and solving in background!') });
     } catch {
       showToast({ type: 'error', message: t('app.error') });
     } finally {
       setGeneratingTasks(false);
+    }
+  };
+
+  const handleSolveTask = async (task: Task) => {
+    if (!currentTripId || !tripProfile) return;
+    try {
+      // Mark as solving
+      await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { isSolving: true });
+      
+      const solution = await solveTaskOrItineraryItem(
+        task.text, 
+        tripProfile, 
+        useTripStore.getState().days, 
+        getProviderForTask('chat'), 
+        language
+      );
+      
+      await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { 
+        aiRecommendation: solution,
+        isSolving: false 
+      });
+    } catch (err) {
+      console.error('Failed to solve task', err);
+      await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { isSolving: false });
     }
   };
 
@@ -389,10 +424,11 @@ export default function TasksView() {
                 <div key={group.id} className="space-y-2">
                   <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 ms-2">{group.label}</h4>
                   {groupTasks.map(task => (
-                    <div key={task.id} className={`card p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
-                      <button onClick={() => toggle(task)} disabled={!canWrite} className={`shrink-0 text-brand-600 dark:text-brand-400 transition-transform ${canWrite ? 'hover:scale-110 cursor-pointer' : 'cursor-default opacity-50'}`}>
-                        {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
-                      </button>
+                    <div key={task.id} className="flex flex-col gap-2">
+                      <div className={`card p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 group transition-all ${task.completed ? 'opacity-60' : ''} ${task.priority === 'high' ? '!bg-red-50/80 dark:!bg-red-950/20 !border-red-200 dark:!border-red-900/50 shadow-md shadow-red-100 dark:shadow-none' : ''}`}>
+                        <button onClick={() => toggle(task)} disabled={!canWrite} className={`shrink-0 text-brand-600 dark:text-brand-400 transition-transform ${canWrite ? 'hover:scale-110 cursor-pointer' : 'cursor-default opacity-50'}`}>
+                          {task.completed ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-300 dark:text-slate-600" />}
+                        </button>
                       
                       {editingTaskId === task.id ? (
                         <div className="flex-1 flex gap-2">
@@ -447,6 +483,9 @@ export default function TasksView() {
                       <span className={`badge text-[10px] ${PRIORITIES[task.priority || 'medium']?.color}`}>{t(`tasks.${task.priority || 'medium'}`)}</span>
                       {canWrite && (
                         <div className="flex items-center gap-1 shrink-0">
+                          <button onClick={() => handleSolveTask(task)} disabled={task.isSolving} title={t('tasks.solveTask', 'Solve Task')} className="p-1.5 text-brand-500 hover:text-brand-600 rounded-lg transition-all hover:bg-brand-50 dark:hover:bg-brand-900/30">
+                            {task.isSolving ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                          </button>
                           <button onClick={() => {
                             setEditingTaskId(task.id);
                             setEditTaskText(task.text);
@@ -470,7 +509,20 @@ export default function TasksView() {
                         </div>
                       )}
                     </div>
-                  ))}
+                    {task.aiRecommendation && (
+                      <div className="ms-10 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative">
+                        <Sparkles size={16} className="absolute top-4 right-4 text-brand-500 opacity-50" />
+                        <MarkdownRenderer content={task.aiRecommendation} />
+                        {getProviderForTask('chat')?.model?.includes('flash') && (
+                          <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex gap-2 items-start">
+                            <span>⚠️</span>
+                            <span>{t('tasks.freeModelWarning', 'הערה: ה-AI החינמי עשוי להיות מוגבל בחיפוש חי ברשת ומתבסס על ידע נרחב קיים.')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
                 </div>
               );
             })}

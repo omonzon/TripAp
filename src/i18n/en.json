@@ -113,7 +113,10 @@
     "priority": "Priority",
     "category": "Category",
     "reminder": "Reminder",
-    "locationReminder": "Location-based reminder"
+    "locationReminder": "Location-based reminder",
+    "freeModelWarning": "Note: Free AI might be limited in live web searches and relies on extensive built-in knowledge.",
+    "solveTask": "Smart Solve",
+    "smartTasksGenerated": "Tasks generated and solving in background!"
   },
   "chat": {
     "title": "Group Chat",

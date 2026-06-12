@@ -7,7 +7,7 @@ import {
   orderBy, setDoc, where, getDocs,
 } from 'firebase/firestore';
 import {
-  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User, ExternalLink
+  GripVertical, Plus, Trash2, Edit2, Check, X, Plane, Car, Hotel, Clock, AlertTriangle, AlertCircle, Sparkles, Navigation, Link, Lock, Save, MapPin, Sun, Cloud, Loader2, RefreshCcw, Camera, FileText, ChevronUp, ChevronDown, Info, MessageCircle, MoreVertical, ShieldCheck, User, ExternalLink, Wand2
 } from 'lucide-react';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -23,6 +23,8 @@ import LocationInfoModal from '@/components/LocationInfoModal';
 import DailyBriefingModal from '@/components/DailyBriefingModal';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
 import { getTripWeather, getWeatherMeta, type WeatherInfo } from '@/services/weatherService';
+import { solveTaskOrItineraryItem } from '@/engine/taskSolver';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, { color: string; emoji: string }> = {
@@ -570,6 +572,34 @@ ${daysStr}`;
     await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: newItems });
   };
 
+  const handleSolveItineraryItem = async (dayDocId: string, itemId: string, text: string) => {
+    const day = days.find(d => d.docId === dayDocId);
+    if (!day || !day.items || !currentTripId || !tripProfile) return;
+    
+    // Mark as solving locally in Firestore
+    const newItems = day.items.map(i => i.id === itemId ? { ...i, isSolving: true } : i);
+    await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: newItems });
+    
+    try {
+      const solution = await solveTaskOrItineraryItem(
+        text,
+        tripProfile,
+        days,
+        getProviderForTask('chat'),
+        useAuthStore.getState().language
+      );
+      
+      const solvedItems = day.items.map(i => i.id === itemId ? { ...i, aiRecommendation: solution, isSolving: false } : i);
+      await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: solvedItems });
+      showToast({ type: 'success', message: t('itinerary.smartSolveSuccess', 'Smart solve successful!') });
+    } catch (err) {
+      console.error('Failed to solve itinerary item', err);
+      const revertedItems = day.items.map(i => i.id === itemId ? { ...i, isSolving: false } : i);
+      await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: revertedItems });
+      showToast({ type: 'error', message: t('app.error') });
+    }
+  };
+
   const handleScanDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !tripProfile || !appUser) return;
@@ -977,9 +1007,9 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                   const isOver = draggedDayId === day.docId && dragOverIdx === idx && draggedIdx !== idx;
 
                   return (
-                    <div
-                      key={item.id}
-                      draggable={canWrite && editingItemId !== item.id}
+                    <div key={item.id} className="flex flex-col relative">
+                      <div
+                        draggable={canWrite && editingItemId !== item.id}
                       onDragStart={() => { setDraggedDayId(day.docId); setDraggedIdx(idx); }}
                       onDragEnter={() => { if (draggedDayId === day.docId) setDragOverIdx(idx); }}
                       onDragOver={e => e.preventDefault()}
@@ -1111,6 +1141,14 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                       {canWrite && editingItemId !== item.id && (
                         <div className={`flex flex-wrap sm:flex-nowrap items-center gap-1 transition-opacity shrink-0 mt-1 w-16 sm:w-auto justify-end ${actionMenuId === item.id ? 'opacity-100' : 'opacity-0 sm:group-hover:opacity-100 hidden sm:flex'}`}>
                           <button
+                            onClick={(e) => { e.stopPropagation(); handleSolveItineraryItem(day.docId, item.id, item.text); }}
+                            disabled={item.isSolving}
+                            title={t('itinerary.smartSolve', 'Smart Solve')}
+                            className="p-1.5 text-brand-500 hover:text-brand-600 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
+                          >
+                            {item.isSolving ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                          </button>
+                          <button
                             onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditItemText(item.text); setEditItemType(item.type || 'map'); setActionMenuId(null); }}
                             className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg bg-slate-100 dark:bg-slate-800 sm:bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
                           >
@@ -1147,6 +1185,19 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                           )}
                         </div>
                       )}
+                    </div>
+                    {item.aiRecommendation && (
+                      <div className="w-full mt-[-10px] ms-11 mb-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative z-0">
+                        <Sparkles size={16} className="absolute top-4 right-4 text-brand-500 opacity-50" />
+                        <MarkdownRenderer content={item.aiRecommendation} />
+                        {getProviderForTask('chat')?.model?.includes('flash') && (
+                          <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex gap-2 items-start">
+                            <span>⚠️</span>
+                            <span>{t('tasks.freeModelWarning', 'הערה: ה-AI החינמי עשוי להיות מוגבל בחיפוש חי ברשת ומתבסס על ידע נרחב קיים.')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     </div>
                   );
                 })

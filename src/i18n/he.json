@@ -112,7 +112,10 @@
     "priority": "עדיפות",
     "category": "קטגוריה",
     "reminder": "תזכורת",
-    "locationReminder": "תזכורת מבוססת מיקום"
+    "locationReminder": "תזכורת מבוססת מיקום",
+    "freeModelWarning": "הערה: ה-AI החינמי עשוי להיות מוגבל בחיפוש חי ברשת ומתבסס על ידע נרחב קיים.",
+    "solveTask": "פתרון חכם",
+    "smartTasksGenerated": "המשימות נוצרו ומתבצע פתרון חכם ברקע!"
   },
   "chat": {
     "title": "צ'אט קבוצתי",

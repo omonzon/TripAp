@@ -61,6 +61,8 @@ export interface ItineraryItem {
   fixed?: boolean;
   flightData?: FlightData;
   referrals?: ReferralLink[];
+  aiRecommendation?: string;
+  isSolving?: boolean;
 }
 
 export interface FlightData {
