@@ -261,9 +261,23 @@ export default function TasksView() {
         aiRecommendation: solution,
         isSolving: false 
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to solve task', err);
       await updateDoc(doc(db, 'trips', currentTripId, 'tasks', task.id), { isSolving: false });
+      const errorMsg = err?.message || String(err) || '';
+      if (errorMsg.includes('403') || err?.status === 403) {
+        showToast({ type: 'error', message: t('settings.apiKeyInvalid', 'API Key error (403). Please check your Gemini API key in Settings.') });
+      } else if (errorMsg.includes('429') || errorMsg.includes('Quota') || errorMsg.includes('quota')) {
+        const retryMatch = errorMsg.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
+        if (retryMatch) {
+          const secs = Math.ceil(parseFloat(retryMatch[1]));
+          showToast({ type: 'warning', message: t('app.rateLimitRetry', `מגבלת בקשות למודל זה. אנא המתן ${secs} שניות ונסה שוב.`) });
+        } else {
+          showToast({ type: 'error', message: t('app.quotaExceeded', 'מכסת השימוש ב-API חרגה. אנא בדוק את המפתח או החלף מודל בהגדרות.') });
+        }
+      } else {
+        showToast({ type: 'error', message: t('app.error', 'משהו השתבש, נסה שוב.') });
+      }
     }
   };
 

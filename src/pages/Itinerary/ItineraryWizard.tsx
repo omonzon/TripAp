@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Sparkles, ChevronRight, X, MapPin, Coffee, Utensils, Hotel, Car } from 'lucide-react';
+import { Loader2, Sparkles, ChevronRight, X, MapPin, Coffee, Utensils, Hotel, Car, Wand2 } from 'lucide-react';
 import { useTripStore } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import {
@@ -32,6 +32,8 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
     origin: '', regions: '', sites: '', food: '', hotels: '', transport: ''
   });
   const [isGeneratingFinal, setIsGeneratingFinal] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [generatedDaysCount, setGeneratedDaysCount] = useState(0);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -86,8 +88,8 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
           });
           await batch.commit();
           setDays(days); // Update store locally for immediate feedback
-          showToast({ type: 'success', message: 'Itinerary generated successfully!' });
-          onClose();
+          setGeneratedDaysCount(days.length);
+          setIsSuccess(true);
         } else {
           showToast({ type: 'error', message: 'Failed to generate itinerary. Please try again.' });
         }
@@ -95,6 +97,14 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
         const errorMsg = err?.message || String(err) || '';
         if (errorMsg.includes('403') || err?.status === 403) {
           showToast({ type: 'error', message: t('settings.apiKeyInvalid', 'API Key error (403). Please check your Gemini API key in Settings.') });
+        } else if (errorMsg.includes('429') || errorMsg.includes('Quota') || errorMsg.includes('quota')) {
+          const retryMatch = errorMsg.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
+          if (retryMatch) {
+            const secs = Math.ceil(parseFloat(retryMatch[1]));
+            showToast({ type: 'warning', message: t('app.rateLimitRetry', `מגבלת בקשות למודל זה. אנא המתן ${secs} שניות ונסה שוב.`) });
+          } else {
+            showToast({ type: 'error', message: t('app.quotaExceeded', 'מכסת השימוש ב-API חרגה. אנא בדוק את המפתח או החלף מודל בהגדרות.') });
+          }
         } else {
           showToast({ type: 'error', message: t('app.error', 'An error occurred during generation.') });
         }
@@ -103,6 +113,40 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
       }
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-center items-center px-4 pb-4 pt-20 sm:pt-24 bg-slate-900/50 backdrop-blur-sm animate-fade-in" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+        <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col transition-transform duration-75 ease-out animate-scale-up">
+          <div className="p-8 text-center space-y-6">
+            <div className="w-20 h-20 bg-brand-100 dark:bg-brand-900/50 rounded-full flex items-center justify-center mx-auto">
+              <Sparkles className="w-10 h-10 text-brand-500" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-3">
+                {t('wizard.successTitle', 'הקסם הושלם! 🧙‍♂️')}
+              </h2>
+              <p className="text-slate-600 dark:text-slate-300 mb-4 leading-relaxed font-medium">
+                {t('wizard.successText1', `תפרנו לך מסלול של ${generatedDaysCount} ימים, מלא בחוויות, מקומות שווים, והרבה כיף.`)}
+              </p>
+              <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800/50 text-indigo-800 dark:text-indigo-300 text-sm">
+                <span className="font-bold flex items-center justify-center gap-1.5 mb-2 text-indigo-900 dark:text-indigo-200">
+                  <Wand2 size={16} /> {t('wizard.successTipTitle', 'טיפ של אלופים:')}
+                </span>
+                {t('wizard.successText2', 'כדי להפוך את הטיול למושלם, השתמש בלחצן "מטה הקסם" (AI) שנמצא ליד כל פריט במסלול. ה-AI שלנו ימצא עבורך את המלונות, המסעדות, והאטרקציות המדויקות ביותר ויחסוך לך שעות של חיפושים!')}
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="btn-primary w-full py-3 text-lg mt-4 shadow-lg shadow-brand-500/20"
+            >
+              {t('wizard.letsGo', 'יאללה, בואו נתחיל!')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-start px-4 pb-4 pt-20 sm:pt-24 bg-slate-900/50 backdrop-blur-sm animate-fade-in overflow-y-auto" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>

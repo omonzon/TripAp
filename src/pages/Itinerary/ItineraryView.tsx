@@ -594,11 +594,24 @@ ${daysStr}`;
       const solvedItems = day.items.map(i => i.id === itemId ? { ...i, aiRecommendation: solution, isSolving: false } : i);
       await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: solvedItems });
       showToast({ type: 'success', message: t('itinerary.smartSolveSuccess', 'Smart solve successful!') });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to solve itinerary item', err);
       const revertedItems = day.items.map(i => i.id === itemId ? { ...i, isSolving: false } : i);
       await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: revertedItems });
-      showToast({ type: 'error', message: t('app.error') });
+      const errorMsg = err?.message || String(err) || '';
+      if (errorMsg.includes('403') || err?.status === 403) {
+        showToast({ type: 'error', message: t('settings.apiKeyInvalid', 'API Key error (403). Please check your Gemini API key in Settings.') });
+      } else if (errorMsg.includes('429') || errorMsg.includes('Quota') || errorMsg.includes('quota')) {
+        const retryMatch = errorMsg.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
+        if (retryMatch) {
+          const secs = Math.ceil(parseFloat(retryMatch[1]));
+          showToast({ type: 'warning', message: t('app.rateLimitRetry', `מגבלת בקשות למודל זה. אנא המתן ${secs} שניות ונסה שוב.`) });
+        } else {
+          showToast({ type: 'error', message: t('app.quotaExceeded', 'מכסת השימוש ב-API חרגה. אנא בדוק את המפתח או החלף מודל בהגדרות.') });
+        }
+      } else {
+        showToast({ type: 'error', message: t('app.error', 'משהו השתבש, נסה שוב.') });
+      }
     }
   };
 
@@ -1085,7 +1098,19 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                           <GripVertical size={16} />
                         </div>
                       )}
-                      <div className="mt-1 text-xl shrink-0 w-8 text-center">{iconInfo.emoji}</div>
+                      <div className="mt-1 flex flex-col items-center gap-1.5 shrink-0 w-8">
+                        <div className="text-xl text-center">{iconInfo.emoji}</div>
+                        <div className="text-[8px] sm:text-[9px] text-slate-400 flex flex-col items-center justify-center gap-0.5 font-medium bg-slate-50 dark:bg-slate-800/50 px-0.5 py-0.5 rounded w-full overflow-hidden">
+                          {(item.authorName || 'AI') === 'AI' ? <Sparkles size={8} className="text-brand-500 shrink-0" /> : <User size={8} className="shrink-0" />}
+                          <span className="truncate w-full text-center max-w-[28px]">{(item.authorName || 'AI') === 'AI' ? 'AI' : item.authorName}</span>
+                        </div>
+                        {item.fixed && (
+                          <div className="text-[8px] sm:text-[9px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-0.5 py-0.5 rounded w-full flex flex-col items-center justify-center gap-0.5 overflow-hidden">
+                            <Lock size={8} className="shrink-0" /> 
+                            <span className="truncate w-full text-center max-w-[28px]">{t('itinerary.fixed')}</span>
+                          </div>
+                        )}
+                      </div>
                       <div className="flex-1 mt-1">
                         {editingItemId === item.id ? (
                           <div className="space-y-2 mt-2">
@@ -1127,24 +1152,6 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                             <div className="flex-1 min-w-0">
                               <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed itinerary-html-content" dangerouslySetInnerHTML={{ __html: item.text }} />
                               <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded">
-                                  {(item.authorName || 'AI') === 'AI' ? <Sparkles size={10} className="text-brand-500" /> : <User size={10} />}
-                                  {item.authorName || 'AI'}
-                                </div>
-                                {['map', 'ticket', 'food', 'hotel', 'location', 'poi'].includes(item.type || '') && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setInfoLocation(item.text.replace(/<[^>]*>?/gm, '').trim()); }}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-                                  >
-                                    <Info size={10} />
-                                    {t('itinerary.expand', 'Expand')}
-                                  </button>
-                                )}
-                                {item.fixed && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-1.5 py-0.5 rounded">
-                                    <Lock size={9} /> {t('itinerary.fixed')}
-                                  </span>
-                                )}
                               </div>
                               {item.type === 'flight' && (
                                 <div className="mt-2"><FlightWidget item={item} dayDocId={day.docId} days={days} /></div>
