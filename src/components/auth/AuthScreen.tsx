@@ -21,7 +21,7 @@ export function AuthScreen() {
       <div className="absolute inset-0 bg-slate-900/50 dark:bg-slate-950/70 backdrop-blur-[2px]" />
 
       {/* Top right controls */}
-      <div className="absolute top-4 right-4 flex gap-2 z-20">
+      <div className="absolute top-4 right-4 flex gap-2 z-20" dir="ltr">
         <button
           onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
           className="btn-ghost text-white hover:bg-white/20 p-2"
