@@ -8,6 +8,13 @@ service cloud.firestore {
         request.auth.token.email_verified == true;
     }
 
+    match /bugs/{doc} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && 
+        (request.auth.token.email.lower() == 'omonzon@gmail.com' || request.auth.token.email.lower() == 'omon.test.mail@gmail.com') && 
+        request.auth.token.email_verified == true;
+    }
+
     // Global user registry (email-keyed)
     match /users/{email} {
       allow read: if request.auth != null && (request.auth.token.email.lower() == email.lower() || request.auth.token.email.lower() == 'omonzon@gmail.com');
