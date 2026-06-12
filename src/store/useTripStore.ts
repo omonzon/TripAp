@@ -65,6 +65,9 @@ export interface ItineraryItem {
   isSolving?: boolean;
   lat?: number;
   lng?: number;
+  time?: string;
+  locationNameEn?: string;
+  completed?: boolean;
 }
 
 export interface FlightData {

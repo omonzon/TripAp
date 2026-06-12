@@ -18,6 +18,7 @@ import { DictationButton } from '@/components/features/DictationButton';
 import { showToast } from '@/components/ui/Toast';
 import { sendLocalNotification } from '@/utils/notifications';
 import { solveTaskOrItineraryItem } from '@/engine/taskSolver';
+import { callAI, parseAIJson } from '@/services/ai';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 interface Task {

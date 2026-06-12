@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Sparkles, Send, Loader2, Trash2, Brain, Menu, Plus, Pencil, Check, X, MessageSquare, Lock, Users
 } from 'lucide-react';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { useAIStore, type ChatSession } from '@/store/useAIStore';
 import { useTripStore } from '@/store/useTripStore';
@@ -281,7 +281,7 @@ Reply in the following language: ${language}`;
       }
       
       const dayDoc = snap.docs[0];
-      const items = dayDoc.data().items || [];
+      const items: any[] = dayDoc.data().items || [];
       const newItem = {
         id: `ai_item_${Date.now()}_${Math.random().toString(36).slice(2)}`,
         type: editObj.type || 'map',

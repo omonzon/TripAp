@@ -28,8 +28,8 @@ interface BudgetEstimate {
 
 export default function AIBudgetEstimationModal({ onClose }: AIBudgetEstimationModalProps) {
   const { t } = useTranslation();
-  const { currentTripId, tripProfile } = useTripStore();
-  const { getProviderForTask, isOnline } = useAIStore();
+  const { currentTripId, tripProfile, isOnline } = useTripStore();
+  const { getProviderForTask } = useAIStore();
   
   const [style, setStyle] = useState<'budget' | 'standard' | 'luxury'>('standard');
   const [isEstimating, setIsEstimating] = useState(false);
@@ -74,7 +74,7 @@ Return ONLY valid JSON in this exact schema:
 
       const system = "You are a strict JSON API. Return ONLY valid JSON matching the schema.";
       const res = await callAI([{ role: 'user', text: prompt }], getProviderForTask('chat'), { systemInstruction: system });
-      const parsed = parseAIJson<BudgetEstimate>(res, null);
+      const parsed = parseAIJson<BudgetEstimate | null>(res, null);
       
       if (parsed && parsed.total) {
         setEstimate(parsed);
@@ -121,7 +121,7 @@ Return ONLY valid JSON in this exact schema:
                     <button
                       key={opt.id}
                       onClick={() => setStyle(opt.id as any)}
-                      className={\`flex-1 flex flex-col items-center justify-center gap-2 py-3 px-2 rounded-xl border-2 transition-all \${style === opt.id ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}\`}
+                      className={`flex-1 flex flex-col items-center justify-center gap-2 py-3 px-2 rounded-xl border-2 transition-all ${style === opt.id ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                       {opt.icon}
                       <span className="font-medium text-sm">{opt.label}</span>

@@ -264,6 +264,7 @@ export default function ItineraryView() {
   const [editItemType, setEditItemType] = useState('map');
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverDayId, setDragOverDayId] = useState<string | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [showFlightModal, setShowFlightModal] = useState(false);
   const [detailedItem, setDetailedItem] = useState<{dayDocId: string, item: ItineraryItem} | null>(null);
@@ -549,17 +550,41 @@ ${daysStr}`;
   };
 
   // ── Drag & drop ───────────────────────────────────────────────────────────
-  const handleDrop = async (dayDocId: string, currentItems: ItineraryItem[]) => {
-    if (draggedDayId !== dayDocId || draggedIdx === null || dragOverIdx === null || draggedIdx === dragOverIdx) {
-      setDraggedDayId(null); setDraggedIdx(null); setDragOverIdx(null);
+  const handleDrop = async (targetDayId: string) => {
+    if (!currentTripId || draggedDayId === null || draggedIdx === null || dragOverDayId === null || dragOverIdx === null) {
+      setDraggedDayId(null); setDraggedIdx(null); setDragOverDayId(null); setDragOverIdx(null);
       return;
     }
-    const newItems = [...currentItems];
-    const [removed] = newItems.splice(draggedIdx, 1);
-    newItems.splice(dragOverIdx, 0, removed);
-    setDraggedDayId(null); setDraggedIdx(null); setDragOverIdx(null);
-    if (!currentTripId) return;
-    await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDocId), { items: newItems });
+
+    if (draggedDayId === dragOverDayId) {
+      if (draggedIdx === dragOverIdx) {
+        setDraggedDayId(null); setDraggedIdx(null); setDragOverDayId(null); setDragOverIdx(null);
+        return;
+      }
+      const day = days.find(d => d.docId === draggedDayId);
+      if (day) {
+        const newItems = [...(day.items || [])];
+        const [removed] = newItems.splice(draggedIdx, 1);
+        newItems.splice(dragOverIdx, 0, removed);
+        await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', draggedDayId), { items: newItems });
+      }
+    } else {
+      const sourceDay = days.find(d => d.docId === draggedDayId);
+      const targetDay = days.find(d => d.docId === dragOverDayId);
+      if (sourceDay && targetDay) {
+        const sourceItems = [...(sourceDay.items || [])];
+        const [removed] = sourceItems.splice(draggedIdx, 1);
+        const targetItems = [...(targetDay.items || [])];
+        targetItems.splice(dragOverIdx, 0, removed);
+        
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'trips', currentTripId, 'itinerary', draggedDayId), { items: sourceItems });
+        batch.update(doc(db, 'trips', currentTripId, 'itinerary', dragOverDayId), { items: targetItems });
+        await batch.commit();
+      }
+    }
+
+    setDraggedDayId(null); setDraggedIdx(null); setDragOverDayId(null); setDragOverIdx(null);
   };
 
   const handleMove = async (dayDocId: string, itemIdx: number, direction: number) => {
@@ -880,7 +905,7 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
 
         if (updatedCount > 0) {
           await batch.commit();
-          showToast({ type: 'success', message: \`נמצאו ועודכנו \${updatedCount} מיקומים על המפה!\` });
+          showToast({ type: 'success', message: `נמצאו ועודכנו ${updatedCount} מיקומים על המפה!` });
         } else {
           showToast({ type: 'success', message: 'לא נמצאו מיקומים חדשים.' });
         }
@@ -891,6 +916,47 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
     } finally {
       setIsGeocoding(false);
     }
+  };
+
+  const handleExportToCalendar = () => {
+    if (!days || days.length === 0) return;
+    let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TravelPlatform//Trip//EN\n";
+    days.forEach(day => {
+      const dateParts = day.isoDate.split('-'); // YYYY-MM-DD
+      const baseDate = dateParts.join(''); // YYYYMMDD
+      
+      (day.items || []).forEach((item) => {
+         const timeStr = item.time ? item.time.replace(':', '') + '00' : '090000';
+         const startDT = baseDate + 'T' + timeStr;
+         const startHour = parseInt(timeStr.substring(0, 2), 10);
+         const endHour = (startHour + 1).toString().padStart(2, '0');
+         const endDT = baseDate + 'T' + endHour + timeStr.substring(2);
+         
+         icsContent += "BEGIN:VEVENT\n";
+         icsContent += "UID:" + item.id + "@travelplatform.com\n";
+         icsContent += "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + "Z\n";
+         icsContent += "DTSTART:" + startDT + "\n";
+         icsContent += "DTEND:" + endDT + "\n"; 
+         const summary = item.text.replace(/<[^>]+>/g, '').replace(/\r?\n/g, ' ').substring(0, 100);
+         icsContent += "SUMMARY:" + summary + "\n";
+         if (item.locationNameEn) {
+            icsContent += "LOCATION:" + item.locationNameEn.replace(/\r?\n/g, ' ') + "\n";
+         }
+         icsContent += "END:VEVENT\n";
+      });
+    });
+    icsContent += "END:VCALENDAR\n";
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tripProfile?.name || 'trip'}_itinerary.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast({ type: 'success', message: 'יומן הורד בהצלחה!' });
   };
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
@@ -914,10 +980,10 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
           <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl items-center">
-            <button onClick={() => setActiveTab('timeline')} className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-colors \${activeTab === 'timeline' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+            <button onClick={() => setActiveTab('timeline')} className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-colors ${activeTab === 'timeline' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
               רשימה
             </button>
-            <button onClick={() => setActiveTab('map')} className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-colors flex items-center gap-1 \${activeTab === 'map' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+            <button onClick={() => setActiveTab('map')} className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-colors flex items-center gap-1 ${activeTab === 'map' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
               <MapPin size={14} /> מפה
             </button>
           </div>
@@ -927,6 +993,10 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
             <button onClick={handleScanReferrals} disabled={isScanningReferrals || !isOnline} title="סריקה חכמה לאיתור קישורי הזמנה חסרים (טיסות, מלונות) לפריטי המסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3 disabled:opacity-50">
               {isScanningReferrals ? <Loader2 size={15} className="animate-spin" /> : <Link size={15} />} 
               <span className="hidden sm:inline">סרוק הפניות</span>
+            </button>
+            <button onClick={handleExportToCalendar} title="ייצוא ליומן" className="btn-secondary flex items-center gap-2 text-sm py-2 px-3 disabled:opacity-50">
+              <span className="hidden sm:inline">📅 ייצוא ליומן</span>
+              <span className="sm:hidden">📅</span>
             </button>
             <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc || !isOnline} title="העלאת מסמך או צילום מסך כדי לחלץ מידע ולשבץ אותו אוטומטית במסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3 disabled:opacity-50">
               {isScanningDoc ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />} 
@@ -1178,10 +1248,10 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
                       <div
                         draggable={canWrite && editingItemId !== item.id}
                       onDragStart={() => { setDraggedDayId(day.docId); setDraggedIdx(idx); }}
-                      onDragEnter={() => { if (draggedDayId === day.docId) setDragOverIdx(idx); }}
+                      onDragEnter={() => { setDragOverDayId(day.docId); setDragOverIdx(idx); }}
                       onDragOver={e => e.preventDefault()}
-                      onDragEnd={() => { setDraggedDayId(null); setDraggedIdx(null); setDragOverIdx(null); }}
-                      onDrop={() => handleDrop(day.docId, day.items)}
+                      onDragEnd={() => { setDraggedDayId(null); setDraggedIdx(null); setDragOverDayId(null); setDragOverIdx(null); }}
+                      onDrop={() => handleDrop(day.docId)}
                       onClick={() => {
                         if (actionMenuId === item.id) {
                           setActionMenuId(null);

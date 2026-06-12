@@ -193,8 +193,8 @@ Instructions:
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row overflow-hidden" dir="rtl">
-      
+    <div className="fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center backdrop-blur-sm md:p-6" dir="rtl">
+      <div className="bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row overflow-hidden w-full h-full max-w-7xl md:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800">
       {/* Sidebar List */}
       <div className={`w-full md:w-1/3 lg:w-1/4 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col ${selectedBug ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-brand-50/50 dark:bg-brand-900/10">
@@ -388,6 +388,7 @@ Instructions:
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );
