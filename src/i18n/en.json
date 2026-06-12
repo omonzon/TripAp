@@ -31,7 +31,25 @@
   },
   "auth": {
     "title": "Sign In",
-    "subtitle": "Organize your trips securely",
+    "subtitle": "Organize your trip effortlessly. TripAp uses Artificial Intelligence (AI) to make itinerary planning, expense management, and group tracking a smart and simple experience.",
+    "features": {
+      "itinerary": {
+        "title": "AI Itinerary Builder",
+        "desc": "Semantic trip planning from your bookings"
+      },
+      "tracking": {
+        "title": "Real-time Group Tracking",
+        "desc": "See where everyone is, instantly"
+      },
+      "expenses": {
+        "title": "Smart Expense Scanner",
+        "desc": "Scan receipts with AI precision"
+      },
+      "offline": {
+        "title": "Works Offline",
+        "desc": "Full airplane mode support"
+      }
+    },
     "tosTitle": "Terms of Service & Liability Waiver",
     "tosText1": "The app is provided 'AS IS'. The creator is not liable for any direct, indirect, incidental, or consequential damages, including but not limited to loss of data, financial losses, or physical harm.",
     "tosText2": "AI Limitations: AI suggestions (itineraries, tasks, tips) are generated automatically and may be inaccurate or unsafe. You must verify all information independently. The creator bears no responsibility for AI errors.",

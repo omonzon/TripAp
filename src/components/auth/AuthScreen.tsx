@@ -5,20 +5,23 @@ import { signInWithGoogle, signInWithTestAccount } from '@/services/authService'
 import { useAuthStore } from '@/store/useAuthStore';
 
 export function AuthScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { authLoading, loginError, isDarkMode, toggleDarkMode, language, setLanguage, fontSize, setFontSize } = useAuthStore();
 
   const features = [
-    { icon: '🗺️', title: 'AI Itinerary Builder', desc: 'Semantic trip planning from your bookings' },
-    { icon: '📍', title: 'Real-time Group Tracking', desc: 'See where everyone is, instantly' },
-    { icon: '💸', title: 'Smart Expense Scanner', desc: 'Scan receipts with AI precision' },
-    { icon: '✈️', title: 'Works Offline', desc: 'Full airplane mode support' },
+    { icon: '🗺️', title: t('auth.features.itinerary.title'), desc: t('auth.features.itinerary.desc') },
+    { icon: '📍', title: t('auth.features.tracking.title'), desc: t('auth.features.tracking.desc') },
+    { icon: '💸', title: t('auth.features.expenses.title'), desc: t('auth.features.expenses.desc') },
+    { icon: '✈️', title: t('auth.features.offline.title'), desc: t('auth.features.offline.desc') },
   ];
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col items-center justify-center px-6 py-12 relative">
+    <div className="min-h-screen bg-[url('/auth-bg.png')] bg-cover bg-center flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+      {/* Background Overlay */}
+      <div className="absolute inset-0 bg-slate-900/50 dark:bg-slate-950/70 backdrop-blur-[2px]" />
+
       {/* Top right controls */}
-      <div className="absolute top-4 right-4 flex gap-2">
+      <div className="absolute top-4 right-4 flex gap-2 z-20">
         <button
           onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
           className="btn-ghost text-white hover:bg-white/20 p-2"
@@ -53,34 +56,35 @@ export function AuthScreen() {
       </div>
 
       {/* Hero */}
-      <div className="text-center mb-10 animate-fade-in">
-        <div className="w-20 h-20 rounded-3xl gradient-brand mx-auto mb-6 flex items-center justify-center shadow-xl animate-pulse-glow">
-          <Globe className="w-10 h-10 text-white" />
+      <div className="text-center mb-8 animate-fade-in relative z-10">
+        <div className="w-24 h-24 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-2xl animate-pulse-glow overflow-hidden bg-white/10 backdrop-blur-md border border-white/20">
+          <img src="/logo.png" alt="TripAp Logo" className="w-full h-full object-cover" />
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">
-          TravelPlatform
+        <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight drop-shadow-xl">
+          TripAp
         </h1>
-        <p className="text-brand-200 text-lg md:text-xl max-w-md">
+        <p className="text-slate-100 text-lg md:text-xl max-w-md mx-auto drop-shadow-md leading-relaxed">
           {t('auth.subtitle')}
         </p>
       </div>
 
       {/* Feature grid */}
-      <div className="grid grid-cols-2 gap-3 mb-10 max-w-md w-full animate-slide-up">
+      <div className="grid grid-cols-2 gap-3 mb-10 max-w-md w-full animate-slide-up relative z-10" dir="ltr">
         {features.map((f, i) => (
           <div
             key={i}
-            className="glass rounded-2xl p-4 text-white"
+            className="glass rounded-2xl p-4 text-white hover:scale-105 transition-transform backdrop-blur-md bg-white/10 dark:bg-black/20 border border-white/20 shadow-lg"
+            dir={i18n.language === 'he' ? 'rtl' : 'ltr'}
           >
-            <div className="text-2xl mb-2">{f.icon}</div>
-            <h3 className="font-semibold text-sm mb-0.5">{f.title}</h3>
-            <p className="text-xs text-brand-200 leading-snug">{f.desc}</p>
+            <div className="text-3xl mb-2 drop-shadow-md">{f.icon}</div>
+            <h3 className="font-bold text-sm mb-1">{f.title}</h3>
+            <p className="text-xs text-slate-200 leading-snug">{f.desc}</p>
           </div>
         ))}
       </div>
 
       {/* Sign in card */}
-      <div className="glass rounded-3xl p-8 max-w-sm w-full animate-slide-up text-center">
+      <div className="glass rounded-3xl p-8 max-w-sm w-full animate-slide-up text-center relative z-10 backdrop-blur-xl bg-white/10 dark:bg-black/30 border border-white/20 shadow-2xl">
         <div className="flex items-center justify-center gap-2 mb-2 text-white">
           <Shield size={16} className="text-brand-300" />
           <span className="text-sm text-brand-200">Secured by Google Firebase</span>
