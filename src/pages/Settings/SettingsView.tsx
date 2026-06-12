@@ -77,6 +77,7 @@ export default function SettingsView() {
 
   // Bug reporting
   const [bugReport, setBugReport] = useState('');
+  const [bugType, setBugType] = useState<'bug' | 'feature'>('bug');
   const [bugImage, setBugImage] = useState<string | null>(null);
   const [sendingBug, setSendingBug] = useState(false);
   const [bugSent, setBugSent] = useState(false);
@@ -698,6 +699,7 @@ export default function SettingsView() {
       await addDoc(collection(db, 'bugs'), {
         userId: appUser.email,
         text: bugReport.trim(),
+        type: bugType,
         image: bugImage,
         createdAt: new Date(),
         userName: appUser.name,
@@ -1725,13 +1727,23 @@ export default function SettingsView() {
             (שימו לב: אף מידע אישי או פרטים על הטיולים שלכם לא נשלחים בדיווח זה. נשלח רק התוכן שתכתבו ופרטים טכניים על הדפדפן).
           </span>
         </p>
-        <textarea
-          value={bugReport}
-          onChange={(e) => setBugReport(e.target.value)}
+        <div className="flex flex-col gap-2">
+          <select 
+            value={bugType} 
+            onChange={(e) => setBugType(e.target.value as 'bug' | 'feature')}
+            className="input-base w-full md:w-1/3 text-sm"
+          >
+            <option value="bug">דיווח על תלתה/באג 🐞</option>
+            <option value="feature">הצעת ייעול / בקשת פיצ'ר 💡</option>
+          </select>
+          <textarea
+            value={bugReport}
+            onChange={(e) => setBugReport(e.target.value)}
           placeholder="מה קרה? באיזה מסך? מה חסר לך?"
           className="input-base w-full h-24 resize-none"
-          dir="auto"
-        />
+            dir="auto"
+          />
+        </div>
         <div className="flex items-center gap-2">
           <label className="btn-secondary flex items-center justify-center gap-2 cursor-pointer flex-1 py-3">
             <Camera size={16} className={bugImage ? 'text-brand-500' : ''} />

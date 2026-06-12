@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
-import { X, Search, Filter, MessageSquare, AlertTriangle, CheckCircle2, Clock, Image as ImageIcon, Send, Sparkles, Loader2, Download, ExternalLink, RefreshCw, Pen } from 'lucide-react';
+import { X, Search, Filter, MessageSquare, AlertTriangle, CheckCircle2, Clock, Image as ImageIcon, Send, Sparkles, Loader2, Download, ExternalLink, RefreshCw, Pen, Lightbulb } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { showToast } from '@/components/ui/Toast';
 
@@ -11,6 +11,7 @@ interface BugReport {
   userName?: string;
   text: string;
   image?: string;
+  type?: 'bug' | 'feature';
   createdAt: any;
   status?: 'pending' | 'in_progress' | 'done' | 'rejected';
   adminNotes?: string;
@@ -29,6 +30,7 @@ export function AdminBugsManagement({ onClose }: AdminBugsManagementProps) {
   const [selectedBug, setSelectedBug] = useState<BugReport | null>(null);
   
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('all');
   const [search, setSearch] = useState('');
 
   // Edit states for selected bug
@@ -36,6 +38,7 @@ export function AdminBugsManagement({ onClose }: AdminBugsManagementProps) {
   const [reply, setReply] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSendingAgent, setIsSendingAgent] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'bugs'), orderBy('createdAt', 'desc'));
@@ -60,7 +63,9 @@ export function AdminBugsManagement({ onClose }: AdminBugsManagementProps) {
 
   const filteredBugs = bugs.filter(b => {
     const s = b.status || 'pending';
+    const t = b.type || 'bug';
     if (filterStatus !== 'all' && s !== filterStatus) return false;
+    if (filterType !== 'all' && t !== filterType) return false;
     if (search && !b.text.toLowerCase().includes(search.toLowerCase()) && !b.userId.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -146,12 +151,38 @@ Make sure to apply the fix, test it, and commit. Then reply back.`;
         cmdData.images = [selectedBug.image];
       }
 
-      await addDoc(collection(db, 'agentCommands'), cmdData);
+      await addDoc(collection(db, 'agent_commands'), cmdData);
       showToast({ type: 'success', message: 'נשלח בהצלחה לטיפול הסוכן (Agent)!' });
     } catch (err) {
       showToast({ type: 'error', message: 'שגיאה בשליחה לסוכן' });
     }
     setIsSendingAgent(false);
+  };
+
+  const handleScanAndSummarize = async () => {
+    if (!appUser) return;
+    setIsScanning(true);
+    try {
+      const commandText = `Please generate a "Daily Summary Report" of all open bugs and feature requests.
+Instructions:
+1. Fetch all documents from the "bugs" collection where status is "pending" or "in_progress" (or empty).
+2. Separate them into Bugs (type: 'bug') and Feature Requests (type: 'feature').
+3. For bugs: Sort them by severity/importance and write a brief summary.
+4. For feature requests: Give a score (1-10) for each request based on usefulness, and summarize them.
+5. Send the final report as an email to ${appUser.email} using EmailJS (via the API).`;
+
+      await addDoc(collection(db, 'agent_commands'), {
+        userId: appUser.email,
+        requestText: commandText,
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      showToast({ type: 'success', message: 'בקשה לסריקה והפקת דוח נשלחה בהצלחה ל-AI Agent!' });
+    } catch (err) {
+      showToast({ type: 'error', message: 'שגיאה בשליחת הבקשה' });
+    }
+    setIsScanning(false);
   };
 
   const handleDownloadImage = (dataUrl: string, fileName: string) => {
@@ -171,9 +202,14 @@ Make sure to apply the fix, test it, and commit. Then reply back.`;
             <AlertTriangle className="text-amber-500" />
             מעקב באגים
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors md:hidden">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleScanAndSummarize} disabled={isScanning} title="הפק דוח AI לכל הפתוחים" className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-full transition-colors dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50">
+              {isScanning ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors md:hidden">
+              <X size={20} />
+            </button>
+          </div>
         </div>
         
         <div className="p-3 space-y-3 border-b border-slate-200 dark:border-slate-800">
@@ -188,7 +224,12 @@ Make sure to apply the fix, test it, and commit. Then reply back.`;
             />
           </div>
           <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
-            <button onClick={() => setFilterStatus('all')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterStatus === 'all' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>הכל</button>
+            <button onClick={() => setFilterType('all')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterType === 'all' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>הכל</button>
+            <button onClick={() => setFilterType('bug')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterType === 'bug' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-700 dark:bg-red-900/20'}`}>באגים</button>
+            <button onClick={() => setFilterType('feature')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterType === 'feature' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20'}`}>הצעות</button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1 border-t border-slate-100 dark:border-slate-800 pt-2">
+            <button onClick={() => setFilterStatus('all')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterStatus === 'all' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>כל הסטטוסים</button>
             <button onClick={() => setFilterStatus('pending')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterStatus === 'pending' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20'}`}>ממתין</button>
             <button onClick={() => setFilterStatus('in_progress')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterStatus === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-700 dark:bg-blue-900/20'}`}>בטיפול</button>
             <button onClick={() => setFilterStatus('done')} className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${filterStatus === 'done' ? 'bg-green-500 text-white' : 'bg-green-50 text-green-700 dark:bg-green-900/20'}`}>בוצע</button>
@@ -208,7 +249,10 @@ Make sure to apply the fix, test it, and commit. Then reply back.`;
                 className={`p-3 rounded-xl cursor-pointer border transition-all ${selectedBug?.id === bug.id ? 'bg-brand-50 border-brand-200 dark:bg-brand-900/20 dark:border-brand-800' : 'bg-white border-slate-200 hover:border-brand-300 dark:bg-slate-800 dark:border-slate-700'}`}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-medium text-slate-500 truncate" dir="ltr">{bug.userId}</span>
+                  <div className="flex items-center gap-1 overflow-hidden">
+                    {bug.type === 'feature' ? <Lightbulb size={12} className="text-indigo-500 flex-shrink-0" /> : <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
+                    <span className="text-xs font-medium text-slate-500 truncate" dir="ltr">{bug.userId}</span>
+                  </div>
                   {getStatusBadge(bug.status)}
                 </div>
                 <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">{bug.text}</p>
@@ -241,7 +285,10 @@ Make sure to apply the fix, test it, and commit. Then reply back.`;
                   <X size={20} />
                 </button>
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800 dark:text-white">פרטי דיווח</h3>
+                  <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                    {selectedBug.type === 'feature' ? <Lightbulb className="text-indigo-500" /> : <AlertTriangle className="text-red-500" />}
+                    {selectedBug.type === 'feature' ? 'הצעת ייעול' : 'פרטי דיווח'}
+                  </h3>
                   <p className="text-xs text-slate-500" dir="ltr">{selectedBug.userId} {selectedBug.userName ? `(${selectedBug.userName})` : ''}</p>
                 </div>
               </div>
