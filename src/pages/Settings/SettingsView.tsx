@@ -56,7 +56,7 @@ const TASK_LABELS: Record<TaskType, string> = {
 export default function SettingsView() {
   const { t } = useTranslation();
   const { appUser, isDarkMode, toggleDarkMode, language, setLanguage, autoBackupInterval, setAutoBackupInterval, emailjsConfig, setEmailjsConfig, setLastBackupTime } = useAuthStore();
-  const { currentTripId, tripProfile, availableTrips, setTripProfile } = useTripStore();
+  const { currentTripId, tripProfile, availableTrips, setTripProfile, isOnline } = useTripStore();
   const {
     providerType, apiKey, models, localUrl, localModelName,
     setProvider, setApiKey, setModel, setLocalConfig,
@@ -917,7 +917,8 @@ export default function SettingsView() {
                 value={localKey}
                 onChange={e => setLocalKey(e.target.value)}
                 placeholder="sk-... or AIza..."
-                className="flex-1 py-2.5 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none font-mono"
+                className="flex-1 py-2.5 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none font-mono disabled:opacity-50"
+                disabled={!isOnline}
               />
               <button onClick={() => setShowKey(s => !s)} className="text-slate-400 hover:text-slate-600 p-1">
                 {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -986,8 +987,8 @@ export default function SettingsView() {
                     id={`model-${task}`}
                     value={models[task]}
                     onChange={e => setModel(task, e.target.value)}
-                    className="input-base text-sm py-1.5 flex-1"
-                    disabled={providerType === 'ollama'}
+                    className="input-base text-sm py-1.5 flex-1 disabled:opacity-50"
+                    disabled={providerType === 'ollama' || !isOnline}
                   >
                     {dropdownOptions.map((m: string) => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -1000,11 +1001,11 @@ export default function SettingsView() {
         <button
           id="btn-save-ai"
           onClick={saveAISettings}
-          disabled={isValidating}
-          className="btn-primary w-full flex items-center justify-center gap-2"
+          disabled={isValidating || !isOnline}
+          className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isValidating ? <Loader2 size={16} className="animate-spin text-white" /> : saved ? <CheckCircle2 size={16} className="text-white" /> : <Key size={16} />}
-          {isValidating ? t('onboarding.validateKey', 'Validate') : saved ? t('settings.saved') : t('app.save')}
+          {isValidating ? t('onboarding.validateKey', 'Validate') : saved ? t('settings.saved') : !isOnline ? t('app.offline') : t('app.save')}
         </button>
       </section>
 

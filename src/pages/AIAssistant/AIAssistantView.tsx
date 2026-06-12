@@ -11,6 +11,47 @@ import { callAI, type AIMessage } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
 
+function ChatMessageRenderer({ text, onApplyEdit }: { text: string; onApplyEdit: (editObj: any) => void }) {
+  const { t } = useTranslation();
+  
+  // Look for [EDIT_ITINERARY: { ... }]
+  const editMatch = text.match(/\[EDIT_ITINERARY:\s*(\{.*?\})\s*\]/is);
+  let displayText = text;
+  let editObj: any = null;
+
+  if (editMatch) {
+    displayText = text.replace(editMatch[0], '');
+    try {
+      editObj = JSON.parse(editMatch[1]);
+    } catch (e) {
+      console.error("Failed to parse EDIT_ITINERARY JSON", e);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className="text-sm leading-relaxed whitespace-pre-wrap ai-chat-content min-w-0 break-words"
+        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+        dir="auto"
+      >
+        {displayText}
+      </div>
+      {editObj && (
+        <div className="mt-2 flex">
+          <button 
+            onClick={() => onApplyEdit(editObj)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-100 hover:bg-brand-200 dark:bg-brand-900/40 dark:hover:bg-brand-900/60 text-brand-700 dark:text-brand-300 rounded-lg text-xs font-medium transition-colors"
+          >
+            <Sparkles size={14} />
+            ✨ {t('ai.applyEdit', 'החל עריכה על המסלול')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AIAssistantView() {
   const { t, i18n } = useTranslation();
   const { 
@@ -18,7 +59,7 @@ export default function AIAssistantView() {
     privateChatSessions, createPrivateSession, deletePrivateSession, 
     updatePrivateSessionTitle, addMessageToPrivateSession
   } = useAIStore();
-  const { currentTripId } = useTripStore();
+  const { currentTripId, isOnline } = useTripStore();
 
   const [sharedChatSessions, setSharedChatSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -161,6 +202,9 @@ export default function AIAssistantView() {
 ${getUnifiedContext()}
 Answer questions based on the trip context. Keep responses concise and formatted in markdown.
 If you are suggesting or creating an actionable task for the user, include the exact syntax "[TASK: task description]" in your response. The system will automatically parse this and create a task.
+If you are suggesting adding an item to the user's itinerary, use exactly this JSON format at the end of your message:
+[EDIT_ITINERARY: {"date": "YYYY-MM-DD", "type": "map|food|hotel|flight", "time": "HH:MM", "text": "Activity description"}]
+Ensure 'date' matches one of the trip dates.
 Reply in the following language: ${language}`;
 
       const reply = await callAI(history, getProviderForTask('chat'), { systemInstruction, maxRetries: 1 });
@@ -220,6 +264,40 @@ Reply in the following language: ${language}`;
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleApplyEdit = async (editObj: any) => {
+    if (!currentTripId) return;
+    try {
+      // Find the day with the given isoDate
+      const q = query(collection(db, 'trips', currentTripId, 'itinerary'), where('isoDate', '==', editObj.date));
+      const { getDocs } = await import('firebase/firestore');
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        showToast({ type: 'error', message: `לא נמצא יום בתאריך ${editObj.date}` });
+        return;
+      }
+      
+      const dayDoc = snap.docs[0];
+      const items = dayDoc.data().items || [];
+      const newItem = {
+        id: `ai_item_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        type: editObj.type || 'map',
+        text: editObj.text,
+        time: editObj.time || '12:00',
+        completed: false,
+      };
+      
+      const newItems = [...items, newItem];
+      newItems.sort((a, b) => (a.time || '23:59').localeCompare(b.time || '23:59'));
+      
+      await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', dayDoc.id), { items: newItems });
+      showToast({ type: 'success', message: 'הפריט התווסף בהצלחה למסלול הטיול!' });
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'error', message: 'אירעה שגיאה בעדכון המסלול.' });
     }
   };
 
@@ -399,13 +477,7 @@ Reply in the following language: ${language}`;
                     ? 'bg-brand-600 text-white rounded-br-sm'
                     : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'
                 }`}>
-                  <div
-                    className="text-sm leading-relaxed whitespace-pre-wrap ai-chat-content min-w-0 break-words"
-                    style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                    dir="auto"
-                  >
-                    {msg.text}
-                  </div>
+                  <ChatMessageRenderer text={msg.text} onApplyEdit={handleApplyEdit} />
                 </div>
               </div>
             ))
@@ -434,18 +506,18 @@ Reply in the following language: ${language}`;
               id="ai-chat-input"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder={t('ai.placeholder')}
-              className="flex-1 py-3 min-w-0 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none"
+              placeholder={!isOnline ? t('app.offline') : t('ai.placeholder')}
+              className="flex-1 py-3 min-w-0 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none disabled:opacity-50"
               dir="auto"
-              disabled={isLoading}
+              disabled={isLoading || !isOnline}
             />
             <DictationButton onResult={t2 => setInput(p => p + (p ? ' ' : '') + t2)} />
           </div>
           <button
             type="submit"
             id="btn-ai-send"
-            disabled={!input.trim() || isLoading}
-            className="btn-primary w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 p-0 shadow-md"
+            disabled={!input.trim() || isLoading || !isOnline}
+            className="btn-primary w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 p-0 shadow-md disabled:opacity-50"
           >
             {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </button>

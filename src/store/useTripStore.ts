@@ -63,6 +63,8 @@ export interface ItineraryItem {
   referrals?: ReferralLink[];
   aiRecommendation?: string;
   isSolving?: boolean;
+  lat?: number;
+  lng?: number;
 }
 
 export interface FlightData {

@@ -15,6 +15,7 @@ import { TabBar } from '@/components/layout/TabBar';
 import { Toast } from '@/components/ui/Toast';
 import { ToSModal } from '@/components/ToSModal';
 import { BlockedScreen } from '@/components/auth/BlockedScreen';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { createFullBackup } from '@/services/backupService';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/services/firebase';
@@ -224,6 +225,7 @@ export default function App() {
       return (
         <div className="min-h-screen flex flex-col pb-20 md:pb-0">
           <AppHeader showTabs={true} activeTab="settings" />
+          <OfflineBanner />
           <main className="flex-1 w-full max-w-7xl mx-auto md:p-4">
             <Suspense fallback={<PageLoader />}>
               <SettingsView />
@@ -236,6 +238,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col">
         <AppHeader showTabs={false} />
+        <OfflineBanner />
         <main className="max-w-2xl mx-auto px-4 py-8 w-full">
           <Suspense fallback={<PageLoader />}>
             <OnboardingView />
@@ -250,6 +253,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col">
         <AppHeader showTabs={false} />
+        <OfflineBanner />
         <main className="max-w-2xl mx-auto px-4 py-8 w-full">
           <Suspense fallback={<PageLoader />}>
             <WelcomeSetupScreen />
@@ -264,14 +268,7 @@ export default function App() {
   return (
     <div className="min-h-[100dvh] md:h-[100dvh] flex flex-col md:overflow-hidden">
       <AppHeader showTabs activeTab={activeTab} />
-
-      {/* Offline banner */}
-      {!isOnline && (
-        <div className="bg-amber-500 text-white text-sm px-4 py-2 flex items-center gap-2 justify-center sticky top-0 z-40">
-          <WifiOff size={14} />
-          {t('app.offline')} — {t('errors.networkError')}
-        </div>
-      )}
+      <OfflineBanner />
 
       {/* Tab bar (desktop sidebar + mobile bottom) */}
       <div className="flex flex-1 overflow-hidden">

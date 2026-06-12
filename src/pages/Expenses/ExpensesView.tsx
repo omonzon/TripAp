@@ -14,6 +14,8 @@ import { showToast } from '@/components/ui/Toast';
 import { DictationButton } from '@/components/features/DictationButton';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
 import ExpenseAnalysisReviewModal from '@/components/expenses/ExpenseAnalysisReviewModal';
+import AIBudgetEstimationModal from '@/components/expenses/AIBudgetEstimationModal';
+import { Wand2 } from 'lucide-react';
 
 interface Expense {
   id: string;
@@ -49,6 +51,7 @@ export default function ExpensesView() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -319,23 +322,32 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
 
       {/* Action buttons */}
       {canWrite && (
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-1 gap-3">
+            <button
+              onClick={() => fileRef.current.click()}
+              disabled={isScanning}
+              id="btn-scan-receipt"
+              className="btn-primary flex items-center gap-2 flex-1 justify-center"
+            >
+              {isScanning ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+              {t('expenses.scan')}
+            </button>
+            <input ref={fileRef} type="file" accept="*/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if(f) processFile(f); }} />
+            <button
+              onClick={() => { setForm({ store: '', amount: '', currency: 'USD', category: 'other', amountConverted: '', notes: '' }); setEditingId(null); setShowForm(true); }}
+              id="btn-add-expense"
+              className="btn-secondary flex items-center gap-2 flex-1 justify-center"
+            >
+              <Plus size={18} /> {t('expenses.addManual')}
+            </button>
+          </div>
           <button
-            onClick={() => fileRef.current.click()}
-            disabled={isScanning}
-            id="btn-scan-receipt"
-            className="btn-primary flex items-center gap-2 flex-1"
+            onClick={() => setShowBudgetModal(true)}
+            className="btn-primary flex items-center gap-2 sm:flex-none justify-center bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700"
           >
-            {isScanning ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
-            {t('expenses.scan')}
-          </button>
-          <input ref={fileRef} type="file" accept="*/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if(f) processFile(f); }} />
-          <button
-            onClick={() => { setForm({ store: '', amount: '', currency: 'USD', category: 'other', amountConverted: '', notes: '' }); setEditingId(null); setShowForm(true); }}
-            id="btn-add-expense"
-            className="btn-secondary flex items-center gap-2 flex-1"
-          >
-            <Plus size={18} /> {t('expenses.addManual')}
+            <Wand2 size={18} className="text-yellow-300" />
+            הערכת תקציב AI
           </button>
         </div>
       )}
@@ -448,6 +460,10 @@ ${textContent ? `Document text:\n${textContent}` : ''}`;
           onConfirm={confirmPendingExpenses}
           onCancel={() => setPendingExpenses(null)}
         />
+      )}
+
+      {showBudgetModal && (
+        <AIBudgetEstimationModal onClose={() => setShowBudgetModal(false)} />
       )}
     </div>
   );

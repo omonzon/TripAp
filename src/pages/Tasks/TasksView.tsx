@@ -101,7 +101,7 @@ function AddressAutocomplete({ onSelect }: { onSelect: (lat: string, lng: string
 export default function TasksView() {
   const { t } = useTranslation();
   const { appUser, emailjsConfig, language } = useAuthStore();
-  const { currentTripId, tripProfile } = useTripStore();
+  const { currentTripId, tripProfile, isOnline } = useTripStore();
   const { getProviderForTask } = useAIStore();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -238,6 +238,51 @@ export default function TasksView() {
       showToast({ type: 'success', message: t('tasks.smartTasksGenerated', 'Smart tasks generated and solving in background!') });
     } catch {
       showToast({ type: 'error', message: t('app.error') });
+    } finally {
+      setGeneratingTasks(false);
+    }
+  };
+
+  const handleGeneratePackingList = async () => {
+    if (!currentTripId || !appUser || !tripProfile) return;
+    setGeneratingTasks(true);
+    try {
+      const prompt = `You are an expert travel assistant. Generate a comprehensive packing list for a trip. Translate the packing items to Hebrew.
+Trip Destinations: ${tripProfile.destinations.join(', ')}
+Dates: ${tripProfile.startDate} to ${tripProfile.endDate}
+Participants: ${tripProfile.participants.length}
+
+Return ONLY valid JSON in this exact schema:
+{
+  "tasks": [
+    {
+      "text": "מעיל חם",
+      "priority": "high"
+    }
+  ]
+}`;
+      const system = "You are a strict JSON API. Return ONLY valid JSON matching the schema.";
+      const res = await callAI([{ role: 'user', text: prompt }], getProviderForTask('chat'), { systemInstruction: system });
+      const parsed = parseAIJson<{ tasks: { text: string; priority: 'low'|'medium'|'high' }[] }>(res, { tasks: [] });
+
+      if (parsed && parsed.tasks) {
+        let added = 0;
+        for (const item of parsed.tasks) {
+           if (!tasks.some(t => t.text.includes(item.text))) {
+              await addDoc(collection(db, 'trips', currentTripId, 'tasks'), {
+                text: `🎒 ${item.text}`, completed: false, category: 'packing', priority: item.priority || 'medium',
+                authorEmail: appUser.email, visibility: 'shared', createdAt: Date.now(),
+              });
+              added++;
+           }
+        }
+        showToast({ type: 'success', message: `נוספו ${added} פריטי אריזה לרשימת המטלות!` });
+      } else {
+        throw new Error("Invalid format returned by AI.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'error', message: 'שגיאה ביצירת רשימת אריזה.' });
     } finally {
       setGeneratingTasks(false);
     }
@@ -403,9 +448,13 @@ export default function TasksView() {
                   {visibility === 'private' ? <Lock size={16} /> : <Users size={16} />}
                 </button>
                 
-                <button onClick={handleGenerateSmartTasks} disabled={generatingTasks} type="button" className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 transition-all">
+                <button onClick={handleGenerateSmartTasks} disabled={generatingTasks || !isOnline} type="button" className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 transition-all disabled:opacity-50">
                   {generatingTasks ? <Loader2 size={12} className="animate-spin text-brand-500" /> : <Sparkles size={12} className="text-amber-500" />}
-                  {t('tasks.generateSmart', 'AI Smart Tasks')}
+                  {!isOnline ? t('app.offline') : t('tasks.generateSmart', 'AI Smart Tasks')}
+                </button>
+                <button onClick={handleGeneratePackingList} disabled={generatingTasks || !isOnline} type="button" className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 transition-all disabled:opacity-50">
+                  {generatingTasks ? <Loader2 size={12} className="animate-spin text-indigo-500" /> : <Sparkles size={12} className="text-indigo-500" />}
+                  {!isOnline ? t('app.offline') : 'רשימת אריזה AI'}
                 </button>
                 
                 <button type="submit" id="btn-add-task" disabled={!newTask.trim()} className="btn-primary flex items-center gap-1 text-sm py-1.5 px-3 rounded-lg">
@@ -438,11 +487,12 @@ export default function TasksView() {
             {[
               { id: 'planning', label: t('tasks.catPlanning', 'תכנון') },
               { id: 'pre_trip', label: t('tasks.catPreTrip', 'הכנות לנסיעה') },
+              { id: 'packing', label: 'לאריזה' },
               { id: 'during_trip', label: t('tasks.catDuringTrip', 'בזמן הטיול') },
               { id: 'general', label: t('tasks.catGeneral', 'כללי') }
             ].map(group => {
               const groupTasks = filtered.filter(t => {
-                if (group.id === 'general') return !['planning', 'pre_trip', 'during_trip'].includes(t.category || '');
+                if (group.id === 'general') return !['planning', 'pre_trip', 'packing', 'during_trip'].includes(t.category || '');
                 return t.category === group.id;
               });
               
@@ -489,6 +539,7 @@ export default function TasksView() {
                           >
                             <option value="planning">{t('tasks.catPlanning', 'תכנון')}</option>
                             <option value="pre_trip">{t('tasks.catPreTrip', 'הכנות לנסיעה')}</option>
+                            <option value="packing">לאריזה</option>
                             <option value="during_trip">{t('tasks.catDuringTrip', 'בזמן הטיול')}</option>
                             <option value="general">{t('tasks.catGeneral', 'כללי')}</option>
                           </select>
@@ -511,7 +562,7 @@ export default function TasksView() {
                       <span className={`badge text-[10px] ${PRIORITIES[task.priority || 'medium']?.color}`}>{t(`tasks.${task.priority || 'medium'}`)}</span>
                       {canWrite && (
                         <div className="flex items-center gap-1 shrink-0">
-                          <button onClick={() => handleSolveTask(task)} disabled={task.isSolving} title={t('tasks.solveTask', 'Solve Task')} className="p-1.5 text-brand-500 hover:text-brand-600 rounded-lg transition-all hover:bg-brand-50 dark:hover:bg-brand-900/30">
+                          <button onClick={() => handleSolveTask(task)} disabled={task.isSolving || !isOnline} title={!isOnline ? t('app.offline') : t('tasks.solveTask', 'Solve Task')} className="p-1.5 text-brand-500 hover:text-brand-600 rounded-lg transition-all hover:bg-brand-50 dark:hover:bg-brand-900/30 disabled:opacity-50 disabled:cursor-not-allowed">
                             {task.isSolving ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
                           </button>
                           <button onClick={() => {

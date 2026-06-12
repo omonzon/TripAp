@@ -26,6 +26,7 @@ import { compressImageToBase64 } from '@/utils/imageCompressor';
 import { getTripWeather, getWeatherMeta, type WeatherInfo } from '@/services/weatherService';
 import { solveTaskOrItineraryItem } from '@/engine/taskSolver';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { LeafletMap, type MapPoint } from '@/components/ui/LeafletMap';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, { color: string; emoji: string }> = {
@@ -248,7 +249,7 @@ const SCAN_LOADING_PHRASES = [
 export default function ItineraryView() {
   const { t } = useTranslation();
   const { appUser } = useAuthStore();
-  const { currentTripId, tripProfile, days, setDays } = useTripStore();
+  const { currentTripId, tripProfile, days, setDays, isOnline } = useTripStore();
   const { getProviderForTask } = useAIStore();
 
   const [loading, setLoading] = useState(true);
@@ -278,6 +279,8 @@ export default function ItineraryView() {
   const [showDailyBriefing, setShowDailyBriefing] = useState(false);
   const [briefingTasks, setBriefingTasks] = useState<any[]>([]);
   const [isScanningReferrals, setIsScanningReferrals] = useState(false);
+  const [activeTab, setActiveTab] = useState<'timeline' | 'map'>('timeline');
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [todayItems, setTodayItems] = useState<ItineraryItem[]>([]);
   const [weatherMap, setWeatherMap] = useState<Record<string, WeatherInfo>>({});
   const [weatherAlerts, setWeatherAlerts] = useState<WeatherInfo[]>([]);
@@ -803,35 +806,133 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
     }
   };
 
+  const handleGeocodeItinerary = async () => {
+    if (!currentTripId || !tripProfile || !days.length) return;
+    const apiKey = useAIStore.getState().apiKey;
+    if (!apiKey) {
+      showToast({ type: 'warning', message: t('itinerary.missingApiKey', 'Please set your Gemini API key in Settings first.') });
+      return;
+    }
+
+    setIsGeocoding(true);
+    showToast({ type: 'info', message: 'מאתר מיקומים על המפה...' });
+
+    try {
+      const itemsToGeocode = days.flatMap(d => d.items.filter(i => i.type !== 'note' && i.type !== 'flight' && (!i.lat || !i.lng)).map(i => ({
+        dayId: d.docId,
+        id: i.id,
+        text: i.text,
+        type: i.type
+      })));
+
+      if (itemsToGeocode.length === 0) {
+        showToast({ type: 'success', message: 'כל המיקומים מעודכנים!' });
+        setIsGeocoding(false);
+        return;
+      }
+
+      const prompt = `You are an expert mapping and geocoding AI.
+Trip Destinations: ${tripProfile.destinations.join(', ')}.
+We need precise geographic coordinates (latitude and longitude) for the following itinerary activities.
+Identify the most likely real-world location for each activity text.
+If it's a general activity (e.g. "Dinner", "Rest"), return null for lat and lng.
+
+Return ONLY valid JSON matching this exact schema:
+{
+  "results": [
+    {
+      "id": "item_id_here",
+      "lat": 48.8566,
+      "lng": 2.3522
+    }
+  ]
+}
+
+Items to process:
+${JSON.stringify(itemsToGeocode, null, 2)}`;
+
+      const system = `You are a strict JSON API. Return ONLY valid JSON.`;
+      
+      const response = await callAI([{ role: 'user', text: prompt }], getProviderForTask('chat'), { systemInstruction: system });
+      const parsed = parseAIJson<{ results: { id: string; lat: number | null; lng: number | null }[] }>(response, { results: [] });
+      
+      if (parsed && parsed.results) {
+        const batch = writeBatch(db);
+        let updatedCount = 0;
+
+        days.forEach(day => {
+          let dayChanged = false;
+          const newItems = day.items.map(item => {
+            const geocoded = parsed.results.find(r => r.id === item.id);
+            if (geocoded && geocoded.lat && geocoded.lng) {
+              dayChanged = true;
+              updatedCount++;
+              return { ...item, lat: geocoded.lat, lng: geocoded.lng };
+            }
+            return item;
+          });
+
+          if (dayChanged) {
+            const ref = doc(db, 'trips', currentTripId, 'itinerary', day.docId);
+            batch.update(ref, { items: newItems });
+          }
+        });
+
+        if (updatedCount > 0) {
+          await batch.commit();
+          showToast({ type: 'success', message: \`נמצאו ועודכנו \${updatedCount} מיקומים על המפה!\` });
+        } else {
+          showToast({ type: 'success', message: 'לא נמצאו מיקומים חדשים.' });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'error', message: 'שגיאה באיתור מיקומים.' });
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
+
+  const allMapPoints: MapPoint[] = days.flatMap((day, dayIndex) => 
+    day.items
+      .filter(item => item.lat && item.lng)
+      .map(item => ({
+        id: item.id,
+        lat: item.lat!,
+        lng: item.lng!,
+        title: item.text.replace(/<[^>]*>?/gm, '').split(/[,.-]/)[0].trim(),
+        description: day.date,
+        dayIndex
+      }))
+  );
 
   return (
     <div className="space-y-4 animate-fade-in max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('itinerary.title')}</h2>
-          <div className="flex gap-2">
-            <button onClick={() => expandAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
-              <ChevronsDown size={14} />
-              <span>{t('app.expandAll', 'הרחב הכל')}</span>
+          <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl items-center">
+            <button onClick={() => setActiveTab('timeline')} className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-colors \${activeTab === 'timeline' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+              רשימה
             </button>
-            <button onClick={() => collapseAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
-              <ChevronsUp size={14} />
-              <span>{t('app.collapseAll', 'כווץ הכל')}</span>
+            <button onClick={() => setActiveTab('map')} className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-colors flex items-center gap-1 \${activeTab === 'map' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+              <MapPin size={14} /> מפה
             </button>
           </div>
         </div>
-        {canWrite && (
+        {activeTab === 'timeline' && canWrite && (
           <div className="flex items-center gap-2">
-            <button onClick={handleScanReferrals} disabled={isScanningReferrals} title="סריקה חכמה לאיתור קישורי הזמנה חסרים (טיסות, מלונות) לפריטי המסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
+            <button onClick={handleScanReferrals} disabled={isScanningReferrals || !isOnline} title="סריקה חכמה לאיתור קישורי הזמנה חסרים (טיסות, מלונות) לפריטי המסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3 disabled:opacity-50">
               {isScanningReferrals ? <Loader2 size={15} className="animate-spin" /> : <Link size={15} />} 
               <span className="hidden sm:inline">סרוק הפניות</span>
             </button>
-            <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc} title="העלאת מסמך או צילום מסך כדי לחלץ מידע ולשבץ אותו אוטומטית במסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
+            <button onClick={() => fileRef.current?.click()} disabled={isScanningDoc || !isOnline} title="העלאת מסמך או צילום מסך כדי לחלץ מידע ולשבץ אותו אוטומטית במסלול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3 disabled:opacity-50">
               {isScanningDoc ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />} 
               <span className="hidden sm:inline">{t('itinerary.scanDoc', 'Scan Doc')}</span>
             </button>
-            <input ref={fileRef} type="file" accept="application/pdf, image/*" capture="environment" className="hidden" onChange={handleScanDocument} />
+            <input ref={fileRef} type="file" accept="application/pdf, image/*" capture="environment" className="hidden" onChange={handleScanDocument} disabled={!isOnline} />
             <button onClick={handleAddDay} title="הוספת יום חדש וריק למסלול הטיול." className="btn-secondary flex items-center gap-2 text-sm py-2 px-3">
               <Plus size={15} /> <span className="hidden sm:inline">{t('itinerary.newDay')}</span>
             </button>
@@ -839,8 +940,47 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
         )}
       </div>
 
-      {/* Weather removed from here, moving to day cards */}
+      {activeTab === 'timeline' && canWrite && (
+        <div className="flex justify-end gap-2 mb-2">
+          <button onClick={() => expandAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
+            <ChevronsDown size={14} />
+            <span>{t('app.expandAll', 'הרחב הכל')}</span>
+          </button>
+          <button onClick={() => collapseAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
+            <ChevronsUp size={14} />
+            <span>{t('app.collapseAll', 'כווץ הכל')}</span>
+          </button>
+        </div>
+      )}
 
+      {activeTab === 'map' ? (
+        <div className="space-y-4">
+          <div className="card p-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-2 border-brand-100 dark:border-brand-900/30">
+            <div>
+              <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                <MapPin className="text-brand-500" />
+                מפת המסלול
+              </h3>
+              <p className="text-sm text-slate-500">
+                המפה מציגה את הנקודות העיקריות במסלול שזזוהו אוטומטית. הצבעים מייצגים ימים שונים.
+              </p>
+            </div>
+            {canWrite && isOnline && (
+              <button 
+                onClick={handleGeocodeItinerary} 
+                disabled={isGeocoding}
+                className="btn-primary flex items-center gap-2 whitespace-nowrap bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700"
+              >
+                {isGeocoding ? <Loader2 size={16} className="animate-spin text-white" /> : <Wand2 size={16} className="text-yellow-300" />}
+                סרוק ואתר מיקומים על המפה
+              </button>
+            )}
+          </div>
+          
+          <LeafletMap points={allMapPoints} height="600px" />
+        </div>
+      ) : (
+        <>
       {/* AI add bar */}
       {canWrite && (
         <div className="bg-gradient-to-r from-brand-600 to-indigo-700 p-0.5 rounded-2xl shadow-md">
@@ -854,9 +994,9 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                   id="ai-add-input"
                   value={aiInput}
                   onChange={e => setAiInput(e.target.value)}
-                  placeholder={t('itinerary.aiPlaceholder')}
-                  className="flex-1 min-w-0 bg-transparent py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none"
-                  disabled={isAiLoading}
+                  placeholder={!isOnline ? t('app.offline') : t('itinerary.aiPlaceholder')}
+                  className="flex-1 min-w-0 bg-transparent py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none disabled:opacity-50"
+                  disabled={isAiLoading || !isOnline}
                   dir="auto"
                 />
                 <DictationButton onResult={t2 => setAiInput(p => p + (p ? ' ' : '') + t2)} />
@@ -864,8 +1004,8 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
               <button
                 type="submit"
                 id="btn-ai-add"
-                disabled={!aiInput.trim() || isAiLoading}
-                className="btn-primary shrink-0 flex items-center gap-2 py-2.5"
+                disabled={!aiInput.trim() || isAiLoading || !isOnline}
+                className="btn-primary shrink-0 flex items-center gap-2 py-2.5 disabled:opacity-50"
               >
                 {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {!isAiLoading && <span className="hidden sm:inline">{t('itinerary.aiAdd')}</span>}
@@ -1162,9 +1302,9 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
                               {canWrite && !item.aiRecommendation && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleSolveItineraryItem(day.docId, item.id, item.text); }}
-                                  disabled={item.isSolving}
-                                  title={t('itinerary.smartSolve', 'Smart Solve')}
-                                  className="px-2 py-1 text-brand-500 hover:text-brand-600 rounded bg-slate-100 dark:bg-slate-800/50 transition-colors flex items-center gap-1 text-[10px] font-medium"
+                                  disabled={item.isSolving || !isOnline}
+                                  title={!isOnline ? t('app.offline') : t('itinerary.smartSolve', 'Smart Solve')}
+                                  className="px-2 py-1 text-brand-500 hover:text-brand-600 rounded bg-slate-100 dark:bg-slate-800/50 transition-colors flex items-center gap-1 text-[10px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {item.isSolving ? <Loader2 size={12} className="animate-spin" /> : <>AI <Wand2 size={12} /></>}
                                 </button>
@@ -1334,8 +1474,10 @@ ${JSON.stringify(itemsPayload, null, 2)}`;
           }} 
         />
       )}
+      </>
+      )}
 
-      {/* Document Scanning Review Modal */}
+      {/* ── Document Review Modal ── */}
       {scannedDocumentData && (
         <DocumentAnalysisReviewModal
           data={scannedDocumentData}

@@ -24,7 +24,7 @@ const STAGES: { id: WizardStage; icon: React.ReactNode }[] = [
 
 export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
   const { t, i18n } = useTranslation();
-  const { currentTripId, tripProfile, setDays } = useTripStore();
+  const { currentTripId, tripProfile, setDays, isOnline } = useTripStore();
   const { getProviderForTask } = useAIStore();
 
   const [currentStageIdx, setCurrentStageIdx] = useState(0);
@@ -41,15 +41,6 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
   const position = useDraggable(handleRef, modalRef);
 
   const currentStage = STAGES[currentStageIdx];
-
-  useEffect(() => {
-    if (categoriesContainerRef.current) {
-      const activeBtn = categoriesContainerRef.current.children[currentStageIdx] as HTMLElement;
-      if (activeBtn) {
-        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
-  }, [currentStageIdx]);
 
   useEffect(() => {
     if (categoriesContainerRef.current) {
@@ -206,21 +197,21 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
             <button onClick={handleBack} disabled={currentStageIdx === 0 || isGeneratingFinal} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm font-medium px-4 py-2 disabled:opacity-50">
               {t('wizard.back')}
             </button>
-            <button onClick={handleNext} disabled={isGeneratingFinal} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm font-medium px-4 py-2">
+            <button onClick={handleNext} disabled={isGeneratingFinal || !isOnline} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm font-medium px-4 py-2 disabled:opacity-50">
               {t('wizard.skip')}
             </button>
           </div>
           
           <button 
             onClick={handleNext}
-            disabled={isGeneratingFinal}
-            className="btn-primary flex items-center gap-2"
+            disabled={isGeneratingFinal || !isOnline}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50"
           >
-            {isGeneratingFinal ? (
+            {!isOnline ? t('app.offline') : (isGeneratingFinal ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> {t('wizard.building')}</>
             ) : (
               <>{currentStageIdx === STAGES.length - 1 ? t('wizard.build') : t('wizard.next')} <ChevronRight size={16} /></>
-            )}
+            ))}
           </button>
         </div>
       </div>
