@@ -565,6 +565,12 @@ export default function OnboardingView() {
 
       // Ensure profile is fully updated
       await setDoc(doc(db, 'trips', tripId, 'profile', 'main'), profile, { merge: true });
+      // Ensure user is added as admin to avoid permission errors
+      await setDoc(doc(db, 'trips', tripId, 'users', appUser.email), {
+        email: appUser.email,
+        name: appUser.name || appUser.email.split('@')[0],
+        role: 'admin',
+      }, { merge: true });
 
       const tripGraph = useAIStore.getState().tripGraph;
       if (tripGraph && tripGraph.nodes.length > 0) {

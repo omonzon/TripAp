@@ -59,7 +59,9 @@ service cloud.firestore {
     // Collection Group rule for user membership across all trips
     match /{path=**}/users/{userEmail} {
       allow read: if request.auth != null && (
+        request.auth.token.email == userEmail ||
         request.auth.token.email.lower() == userEmail.lower() ||
+        (resource.data.email != null && request.auth.token.email == resource.data.email) ||
         (resource.data.email != null && request.auth.token.email.lower() == resource.data.email.lower()) ||
         request.auth.token.email.lower() == 'omonzon@gmail.com' ||
         request.auth.token.email.lower() == 'omon.test.mail@gmail.com'
