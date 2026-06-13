@@ -145,14 +145,8 @@ async function startDaemon() {
       await updateDoc(task.ref, { status: 'acknowledged', updatedAt: new Date() });
       pendingTasks.delete(task.id);
       
-      // Print the magic string that wakes up the Agent!
-      console.log(`\n================================`);
-      console.log(`AGENT_COMMAND_RECEIVED`);
-      console.log(JSON.stringify({
-        id: task.id,
-        requestText: data.requestText
-      }));
-      console.log(`================================\n`);
+      console.log(`[Daemon] Acknowledged task ${task.id}. Exiting to wake up the Agent IDE...`);
+      process.exit(0);
       
     } catch (e) {
       console.error("[Daemon] Failed to update task status:", e);

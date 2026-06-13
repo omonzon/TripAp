@@ -107,7 +107,7 @@ export default function ItineraryWizard({ onClose }: { onClose: () => void }) {
 
   if (isSuccess) {
     return (
-      <div className="fixed inset-0 z-50 flex justify-center items-center px-4 pb-4 pt-20 sm:pt-24 bg-slate-900/50 backdrop-blur-sm animate-fade-in" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+      <div className="fixed inset-0 z-50 flex justify-center items-start px-4 pb-4 pt-20 sm:pt-24 bg-slate-900/50 backdrop-blur-sm animate-fade-in overflow-y-auto" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
         <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col transition-transform duration-75 ease-out animate-scale-up">
           <div className="p-8 text-center space-y-6">
             <div className="w-20 h-20 bg-brand-100 dark:bg-brand-900/50 rounded-full flex items-center justify-center mx-auto">
