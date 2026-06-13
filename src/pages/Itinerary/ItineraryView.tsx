@@ -103,7 +103,7 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
     if (!currentTripId) return;
     setRefreshing(true);
     try {
-      const prompt = `You are a flight tracker. Predict live tracking info for this flight context. Return ONLY valid JSON: {"status":"On Time","terminal":"3","gate":"A12","checkin":"Desk 4","time":"14:00"}. Context: "${item.text}"`;
+      const prompt = `You are a flight tracker. Predict live tracking info for this flight context. Return ONLY valid JSON: {"status":"On Time","terminal":"3","gate":"A12","checkin":"Desk 4","time":"14:00","arrivalTime":"18:30","arrivalOffset":"+2h"}. Context: "${item.text}"`;
       const text = await callAI(prompt, getProviderForTask('chat'), { isJson: true });
       const parsed = parseAIJson<Record<string, string>>(text, {});
       const cleanParsed = JSON.parse(JSON.stringify(parsed));
@@ -121,27 +121,28 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
   };
 
   return (
-    <div className="mt-2 p-3 bg-blue-50 dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-slate-700">
-      <div className="flex items-center justify-between mb-2 pb-2 border-b border-blue-100 dark:border-slate-700">
-        <h4 className="font-bold text-xs text-blue-800 dark:text-blue-400 flex items-center gap-1">
-          <Plane size={12} /> {t('itinerary.flightTracker')}
+    <div className="mt-2 p-2 bg-blue-50 dark:bg-slate-900 rounded-lg border border-blue-100 dark:border-slate-700">
+      <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-blue-100 dark:border-slate-700">
+        <h4 className="font-bold text-[10px] sm:text-xs text-blue-800 dark:text-blue-400 flex items-center gap-1">
+          <Plane size={10} /> {t('itinerary.flightTracker')}
         </h4>
         {canWrite && (
-          <button onClick={refresh} disabled={refreshing} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded flex items-center gap-1 transition-colors">
-            {refreshing ? <Loader2 size={11} className="animate-spin" /> : <RefreshCcw size={11} />}
+          <button onClick={refresh} disabled={refreshing} className="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors">
+            {refreshing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCcw size={10} />}
             {t('itinerary.sync')}
           </button>
         )}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 text-[10px]">
         {[
           { label: t('itinerary.flight.time'), val: item.flightData?.time ?? '--:--' },
+          { label: t('itinerary.flight.arrivalTime', 'נחיתה'), val: `${item.flightData?.arrivalTime ?? '--:--'} ${item.flightData?.arrivalOffset ? `(${item.flightData.arrivalOffset})` : ''}` },
           { label: t('itinerary.flight.status'), val: item.flightData?.status ?? '-', highlight: true },
           { label: t('itinerary.flight.terminalGate'), val: document.documentElement.dir === 'rtl' ? `${item.flightData?.gate ?? '-'}${item.flightData?.terminal ? `/T${item.flightData.terminal}` : ''}` : `${item.flightData?.terminal ? `T${item.flightData.terminal}/` : ''}${item.flightData?.gate ?? '-'}` },
           { label: t('itinerary.flight.checkin'), val: item.flightData?.checkin ?? '-' },
-        ].map(({ label, val, highlight }) => (
-          <div key={label} className="bg-white dark:bg-slate-800 p-2 rounded shadow-sm text-center">
-            <span className="block text-slate-400 mb-1">{label}</span>
+        ].map(({ label, val, highlight }, i) => (
+          <div key={i} className="bg-white dark:bg-slate-800 p-1.5 rounded shadow-sm text-center">
+            <span className="block text-slate-400 mb-0.5">{label}</span>
             <strong className={highlight && val.toLowerCase().includes('delay') ? 'text-red-500' : highlight ? 'text-green-500' : 'text-slate-800 dark:text-white'}>
               {val}
             </strong>
@@ -216,7 +217,7 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
   if (item.type === 'flight') {
     return (
       <div className="flex flex-col gap-1.5 mt-2 sm:mt-0 items-end">
-        <a href={`https://www.google.com/travel/flights?q=${encodeURIComponent('Flights ' + shortSearchTerm)}%20on%20${isoDate}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
+        <a href={`https://www.google.com/search?q=${encodeURIComponent('Flight ' + shortSearchTerm)}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
           <Plane size={10} /> Google Flights
         </a>
       </div>
