@@ -22,6 +22,9 @@ export interface TripProfile {
   photoAlbums?: string[];
   generatedMapUrl?: string;
   tripStyle?: string[]; // e.g. diving, trekking, food, etc.
+  originCountry?: string;
+  originCity?: string;
+  travelWarnings?: { destination: string; severity: 'low' | 'medium' | 'high'; message: string; sourceLink?: string }[];
   phase: TripPhase;
   createdBy?: string;
 }

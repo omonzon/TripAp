@@ -32,6 +32,12 @@ export interface ComprehensiveOutput {
     referenceNumber: string;
     notes?: string;
   }[];
+  travelWarnings?: {
+    destination: string;
+    severity: 'low' | 'medium' | 'high';
+    message: string;
+    sourceLink?: string;
+  }[];
 }
 
 const COMPREHENSIVE_PROMPT = `You are an expert travel planner AI and data extraction engine.
@@ -42,6 +48,7 @@ Your job is to generate a MASSIVE comprehensive trip JSON with 4 sections:
 2. "tasks": A list of 10-15 smart tasks. Use ONLY these EXACT categories for the category field: "planning", "pre_trip", "during_trip".
 3. "expenses": Extract any prepaid expenses from the documents (e.g., flight cost, hotel cost). Provide "store", "amount" (number), "currency" (USD, EUR, ILS, etc.), and "category" (transportation|hotel|food|other).
 4. "documents": Extract any booking reference numbers, PNRs, or confirmation codes.
+5. "travelWarnings": Generate official travel warnings for the destinations based on the origin location. If the origin country has official warnings against traveling to any of the destinations, list them here. Provide "destination", "severity" (low|medium|high), "message" (the warning details), and "sourceLink" (URL to the official government travel advisory site of the origin country). If there are no warnings, return an empty array.
 
 Language rule: Translate all generated text (itinerary descriptions, task texts, document titles) into the requested language (Hebrew or English).
 The keys of the JSON must remain in English.
@@ -86,6 +93,14 @@ Return ONLY valid JSON matching this exact schema:
       "referenceNumber": "String",
       "notes": "String (optional)"
     }
+  ],
+  "travelWarnings": [
+    {
+      "destination": "String",
+      "severity": "low|medium|high",
+      "message": "String",
+      "sourceLink": "String (optional)"
+    }
   ]
 }
 
@@ -104,9 +119,10 @@ export async function generateComprehensiveTrip(
   language: string = 'he',
   authorEmail: string,
   onProgress?: (msg: string) => void
-): Promise<void> {
+): Promise<ComprehensiveOutput['travelWarnings']> {
   let context = `
 Trip Name: ${tripProfile.name}
+Origin Location: ${tripProfile.originCity || 'Unknown'}, ${tripProfile.originCountry || 'Unknown'}
 Destinations: ${tripProfile.destinations.join(', ')}
 Dates: ${tripProfile.startDate} to ${tripProfile.endDate}
 Pace: ${tripProfile.pace}
@@ -155,7 +171,7 @@ ${documentsText}
 
     if (onProgress) onProgress(language === 'he' ? 'מפענח את התוצאות...' : 'Parsing results...');
     const parsed = parseAIJson<ComprehensiveOutput>(result, {
-      itinerary: [], tasks: [], expenses: [], documents: []
+      itinerary: [], tasks: [], expenses: [], documents: [], travelWarnings: []
     });
 
     // Tag items with AI author
@@ -247,7 +263,15 @@ ${documentsText}
       });
     }
 
+    // 5. Travel Warnings (Save to profile)
+    if (parsed.travelWarnings && Array.isArray(parsed.travelWarnings) && parsed.travelWarnings.length > 0) {
+      promises.push(setDoc(doc(db, 'trips', tripProfile.id, 'profile', 'main'), {
+        travelWarnings: parsed.travelWarnings
+      }, { merge: true }));
+    }
+
     await Promise.all(promises);
+    return parsed.travelWarnings || [];
   } catch (error) {
     console.error('Error generating comprehensive trip:', error);
     throw error;

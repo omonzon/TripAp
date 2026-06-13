@@ -51,6 +51,8 @@ export default function OnboardingView() {
     preferences: string;
     bookings: string;
     tripStyle: string[];
+    originCountry?: string;
+    originCity?: string;
   }
 
   const [form, setForm] = useState<OnboardingForm>(() => {
@@ -69,6 +71,8 @@ export default function OnboardingView() {
       preferences: '',
       bookings: '',
       tripStyle: [] as string[],
+      originCountry: '',
+      originCity: '',
     };
   });
 
@@ -94,6 +98,7 @@ export default function OnboardingView() {
   } | null>(null);
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
   const [generatedTripId, setGeneratedTripId] = useState<string | null>(null);
+  const [generatedTravelWarnings, setGeneratedTravelWarnings] = useState<NonNullable<TripProfile['travelWarnings']>>([]);
 
   const loadingPhrases = [
     t('onboarding.loadingPhrase1', 'קורא מסמכים ותוהה למה אנשים מדפיסים כרטיסי טיסה...'),
@@ -148,6 +153,8 @@ export default function OnboardingView() {
           pace: form.pace,
           preferences: form.preferences,
           tripStyle: form.tripStyle,
+          originCountry: form.originCountry,
+          originCity: form.originCity,
           participants: [{ email: appUser.email, name: appUser.name || appUser.email.split('@')[0], role: 'admin' }],
           phase: 'pre',
           createdBy: appUser.email,
@@ -376,6 +383,31 @@ export default function OnboardingView() {
     next();
   };
 
+  const handleGeolocation = () => {
+    if (!navigator.geolocation) {
+      showToast({ type: 'error', message: 'שירותי מיקום אינם נתמכים בדפדפן שלך.' });
+      return;
+    }
+    showToast({ type: 'info', message: 'מאתר מיקום...' });
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=he,en`);
+        const data = await res.json();
+        if (data && data.address) {
+          const country = data.address.country || '';
+          const city = data.address.city || data.address.town || data.address.village || '';
+          setForm(prev => ({ ...prev, originCountry: country, originCity: city }));
+          showToast({ type: 'success', message: `מיקום נשמר: ${city}, ${country}` });
+        }
+      } catch (err) {
+        showToast({ type: 'error', message: 'נכשל בניסיון להשיג מיקום.' });
+      }
+    }, (err) => {
+      showToast({ type: 'error', message: 'אנא אשר גישה למיקום.' });
+    });
+  };
+
   const handleAddTextSegment = async () => {
     if (!currentSegmentText.trim() || skipAI) return;
     setExtracting(true);
@@ -601,7 +633,7 @@ export default function OnboardingView() {
           
           showToast({ type: 'info', message: t('onboarding.bgTaskGeneration', 'AI is building your comprehensive trip data...') });
           setGenerationProgress(t('onboarding.startingGeneration', 'מתחיל ניתוח...'));
-          await generateComprehensiveTrip(
+          const warnings = await generateComprehensiveTrip(
             profile, 
             form.bookings, 
             getProviderForTask('itinerary'), 
@@ -609,6 +641,7 @@ export default function OnboardingView() {
             appUser.email,
             setGenerationProgress
           );
+          setGeneratedTravelWarnings(warnings);
 
         } catch (aiErr: any) {
           console.error("AI Generation failed:", aiErr);
@@ -730,11 +763,42 @@ export default function OnboardingView() {
            <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-4">
              המסלול שלכם מוכן! 🎉
            </h2>
+
+           {generatedTravelWarnings && generatedTravelWarnings.length > 0 && (
+             <div className={`mb-6 p-4 rounded-xl border text-right rtl ${
+               generatedTravelWarnings.some(w => w.severity === 'high') ? 'bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800' :
+               generatedTravelWarnings.some(w => w.severity === 'medium') ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800' :
+               'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/30 dark:border-yellow-800'
+             }`}>
+               <h3 className="font-bold flex items-center gap-2 mb-2 text-slate-900 dark:text-white">
+                 <AlertTriangle size={18} className={
+                   generatedTravelWarnings.some(w => w.severity === 'high') ? 'text-red-600 dark:text-red-400' :
+                   generatedTravelWarnings.some(w => w.severity === 'medium') ? 'text-orange-600 dark:text-orange-400' :
+                   'text-yellow-600 dark:text-yellow-400'
+                 }/>
+                 אזהרות מסע - מידע חשוב
+               </h3>
+               <div className="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+                 {generatedTravelWarnings.map((w, idx) => (
+                   <div key={idx}>
+                     <strong>{w.destination}:</strong> {w.message}
+                     {w.sourceLink && (
+                       <a href={w.sourceLink} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline block mt-1 text-xs">
+                         מקור רשמי &larr;
+                       </a>
+                     )}
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
+
            <p className="text-slate-600 dark:text-slate-300 mb-6 text-lg leading-relaxed text-right" dir="rtl">
              הטיול תוכנן, המשימות ארוזות יפה והכל מחכה לכם. עכשיו זה הזמן שלכם:<br/><br/>
              ✨ <strong>לעבור על המסלול</strong> ולשנות אותו איך שבא לכם<br/>
              💬 <strong>לדבר עם העוזר האישי</strong> שלנו ולבקש בקשות מיוחדות<br/>
              🏨 <strong>להתחיל להזמין</strong> טיסות, מלונות ואטרקציות<br/>
+             🪄 <strong>הכי כדאי לכם להשתמש במקל הקסמים</strong> לקבלת פרטים והדרכה אישית על פרטי המסלול השונים.<br/>
              ✈️ והכי חשוב - <strong>להתכונן להרפתקה המדהימה</strong> שתכננתם!
            </p>
            <button 
@@ -955,6 +1019,21 @@ export default function OnboardingView() {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('onboarding.destinations')}</label>
               <input id="trip-destinations" className="input-base" value={form.destinations} onChange={(e) => setForm({ ...form, destinations: e.target.value })} placeholder={t('onboarding.destinationsPlaceholder')} />
               <p className="text-xs text-slate-400 mt-1">{t('onboarding.destinationsHelp')}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">מדינת מוצא</label>
+                <input id="trip-origin-country" className="input-base" value={form.originCountry || ''} onChange={(e) => setForm({ ...form, originCountry: e.target.value })} placeholder="לדוגמה: Israel" />
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">עיר מוצא</label>
+                <div className="flex gap-2">
+                  <input id="trip-origin-city" className="input-base flex-1" value={form.originCity || ''} onChange={(e) => setForm({ ...form, originCity: e.target.value })} placeholder="לדוגמה: Tel Aviv" />
+                  <button onClick={handleGeolocation} className="btn-ghost px-3 text-brand-600 bg-brand-50 dark:bg-brand-900/30 shrink-0" title="השתמש במיקום הנוכחי">
+                    📍
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="w-full max-w-full overflow-hidden">

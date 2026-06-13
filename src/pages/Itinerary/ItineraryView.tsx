@@ -1011,6 +1011,35 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
         )}
       </div>
 
+      {tripProfile?.travelWarnings && tripProfile.travelWarnings.length > 0 && (
+        <div className={`p-4 rounded-xl border text-right rtl ${
+          tripProfile.travelWarnings.some(w => w.severity === 'high') ? 'bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800' :
+          tripProfile.travelWarnings.some(w => w.severity === 'medium') ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800' :
+          'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/30 dark:border-yellow-800'
+        }`}>
+          <h3 className="font-bold flex items-center gap-2 mb-2 text-slate-900 dark:text-white">
+            <AlertTriangle size={18} className={
+              tripProfile.travelWarnings.some(w => w.severity === 'high') ? 'text-red-600 dark:text-red-400' :
+              tripProfile.travelWarnings.some(w => w.severity === 'medium') ? 'text-orange-600 dark:text-orange-400' :
+              'text-yellow-600 dark:text-yellow-400'
+            }/>
+            אזהרות מסע ליעדי הטיול
+          </h3>
+          <div className="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+            {tripProfile.travelWarnings.map((w, idx) => (
+              <div key={idx}>
+                <strong>{w.destination}:</strong> {w.message}
+                {w.sourceLink && (
+                  <a href={w.sourceLink} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline block mt-1 text-xs">
+                    למידע נוסף באתר הרשמי &larr;
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'timeline' && canWrite && (
         <div className="flex justify-end gap-2 mb-2">
           <button onClick={() => expandAll(days.flatMap(d => d.items?.map(i => i.id) || []))} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 transition-colors text-xs font-medium">
@@ -1125,21 +1154,37 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
             } catch {}
           }
           
+          let dayWarnings: NonNullable<TripProfile['travelWarnings']> = [];
+          if (tripProfile?.travelWarnings && tripProfile.travelWarnings.length > 0) {
+            dayWarnings = tripProfile.travelWarnings.filter(w => {
+              const destRegex = new RegExp(w.destination, 'i');
+              return day.items.some(item => destRegex.test(item.text) || destRegex.test(item.locationNameEn || '')) || destRegex.test(day.title);
+            });
+          }
+
           return (
           <div
             key={day.id}
             data-day-id={day.id}
             ref={el => { dayRefs.current[day.id] = el; }}
-            className={`card overflow-hidden scroll-mt-24 ${isToday ? 'ring-2 ring-brand-500 shadow-brand-500/20 dark:shadow-brand-500/10' : ''}`}
+            className={`card overflow-hidden scroll-mt-24 ${isToday ? 'ring-2 ring-brand-500 shadow-brand-500/20 dark:shadow-brand-500/10' : ''} ${dayWarnings.length > 0 ? (dayWarnings.some(w => w.severity === 'high') ? 'ring-2 ring-red-500/50' : dayWarnings.some(w => w.severity === 'medium') ? 'ring-2 ring-orange-500/50' : 'ring-2 ring-yellow-500/50') : ''}`}
           >
             {/* Day header */}
-            <div className={`px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between ${isToday ? 'bg-brand-50 dark:bg-brand-900/40' : 'bg-slate-50 dark:bg-slate-900/60'}`}>
-              <h3 className="font-bold text-slate-800 dark:text-white">
-                {day.title}
-                {day.items?.some(i => i.fixed) && (
-                  <Lock size={12} className="inline ms-2 text-brand-500" aria-label="Contains fixed bookings" />
+            <div className={`px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between ${isToday ? 'bg-brand-50 dark:bg-brand-900/40' : 'bg-slate-50 dark:bg-slate-900/60'}`}>
+              <div className="flex flex-col gap-1">
+                <h3 className="font-bold text-slate-800 dark:text-white">
+                  {day.title}
+                  {day.items?.some(i => i.fixed) && (
+                    <Lock size={12} className="inline ms-2 text-brand-500" aria-label="Contains fixed bookings" />
+                  )}
+                </h3>
+                {dayWarnings.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 dark:text-red-400 rtl">
+                    <AlertTriangle size={14} />
+                    <span>אזהרת מסע ל{dayWarnings.map(w => w.destination).join(', ')} ביום זה</span>
+                  </div>
                 )}
-              </h3>
+              </div>
               <div className="flex items-center gap-2">
                 {dayOfWeek && (
                   <span className="text-sm font-medium text-slate-500 dark:text-slate-400 me-1">
