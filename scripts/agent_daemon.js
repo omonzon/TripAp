@@ -116,12 +116,26 @@ async function startDaemon() {
     const latestMtime = getLatestMtime(srcDir);
     const now = Date.now();
     const timeSinceLastEdit = now - latestMtime;
-    const requiredDelay = agentListenIntervalMinutes * 60 * 1000;
+    // Reduce waiting time to 1 minute max for activity check
+    const requiredDelay = 1 * 60 * 1000;
 
     if (timeSinceLastEdit < requiredDelay) {
-      // User is active, delay
+      // User or Agent is active, delay
       const remainingMinutes = Math.ceil((requiredDelay - timeSinceLastEdit) / 60000);
-      console.log(`[Daemon] Task ${task.id} pending. User active recently. Waiting ~${remainingMinutes}m.`);
+      console.log(`[Daemon] Task ${task.id} pending. Activity detected recently. Waiting ~${remainingMinutes}m.`);
+      
+      // Notify Super Admin if not already notified
+      if (!data.notifiedActive) {
+        try {
+          await updateDoc(task.ref, { 
+            response: 'המערכת מזהה פעילות קוד פעילה כרגע (הסוכן עובד). המשימה התקבלה ותבוצע מיד כשהפעילות תסתיים!',
+            notifiedActive: true,
+            updatedAt: new Date()
+          });
+        } catch (e) {
+          console.error("[Daemon] Failed to notify active state:", e);
+        }
+      }
       return;
     }
 
