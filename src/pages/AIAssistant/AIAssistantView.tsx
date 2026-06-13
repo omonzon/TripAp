@@ -201,7 +201,8 @@ export default function AIAssistantView() {
       const systemInstruction = `You are a helpful travel assistant for the trip. 
 ${getUnifiedContext()}
 Answer questions based on the trip context. Keep responses concise and formatted in markdown.
-If you are suggesting or creating an actionable task for the user, include the exact syntax "[TASK: task description]" in your response. The system will automatically parse this and create a task.
+If you are suggesting or creating an actionable task for the user, use exactly this JSON format at the end of your message:
+[ADD_TASK: {"text": "Task description", "category": "planning|pre_trip|packing|during_trip|general", "priority": "low|medium|high"}]
 If you are suggesting adding an item to the user's itinerary, use exactly this JSON format at the end of your message:
 [EDIT_ITINERARY: {"date": "YYYY-MM-DD", "type": "map|food|hotel|flight", "time": "HH:MM", "text": "Activity description"}]
 Ensure 'date' matches one of the trip dates.
@@ -210,25 +211,27 @@ Reply in the following language: ${language}`;
       const reply = await callAI(history, getProviderForTask('chat'), { systemInstruction, maxRetries: 1 });
       
       // Auto-extract and create tasks
-      const taskMatches = reply.match(/\[TASK:\s*(.+?)\]/gi);
+      const taskMatches = reply.match(/\[ADD_TASK:\s*({.+?})\]/gi);
       if (taskMatches && currentTripId && !targetSession.isPrivate) {
         for (const match of taskMatches) {
-          const taskDesc = match.replace(/\[TASK:\s*/i, '').replace(/\]$/, '').trim();
-          if (taskDesc) {
-            const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            try {
+          try {
+            const jsonStr = match.replace(/\[ADD_TASK:\s*/i, '').replace(/\]$/, '').trim();
+            const taskData = JSON.parse(jsonStr);
+            
+            if (taskData.text) {
+              const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
               await setDoc(doc(db, 'trips', currentTripId, 'tasks', taskId), {
                  id: taskId,
-                 text: taskDesc,
+                 text: taskData.text,
                  completed: false,
-                 category: 'general',
-                 priority: 'medium',
+                 category: ['planning', 'pre_trip', 'packing', 'during_trip', 'general'].includes(taskData.category) ? taskData.category : 'general',
+                 priority: ['low', 'medium', 'high'].includes(taskData.priority) ? taskData.priority : 'medium',
                  createdAt: Date.now()
               });
-              showToast({ type: 'success', message: `Task auto-created: ${taskDesc}` });
-            } catch (e) {
-              console.error("Failed to auto-create task:", e);
+              showToast({ type: 'success', message: `Task auto-created: ${taskData.text}` });
             }
+          } catch (e) {
+            console.error("Failed to parse/auto-create task:", e);
           }
         }
       }
