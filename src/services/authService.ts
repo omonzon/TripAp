@@ -5,7 +5,7 @@
 
 import {
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
@@ -149,16 +149,10 @@ export async function signInWithGoogle() {
   setLoginError(null);
   try {
     googleProvider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(auth, googleProvider);
+    await signInWithRedirect(auth, googleProvider);
   } catch (err: any) {
     console.error("Google sign in error:", err);
-    if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
-      // User intentionally closed the popup, don't show an error, just reset
-      setLoginError(null);
-    } else {
-      setLoginError(err?.message || 'Sign in failed');
-    }
-  } finally {
+    setLoginError(err?.message || 'Sign in failed');
     setAuthLoading(false);
   }
 }
