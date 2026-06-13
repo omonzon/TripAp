@@ -170,11 +170,11 @@ export default function HelpGuideModal({ onClose }: HelpGuideModalProps) {
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-brand-500 mt-1">•</span> 
-                <span>לחיצה על כפתור <b>(i)</b> ליד אתר במסלול תפתח מידע מורחב על המקום.</span>
+                <span>לחיצה על <b>כרטיס הפעילות</b> במסלול או על כפתור <b>מטה הקסם (🪄)</b> תפתח חלון עם מידע מורחב, ניווט ואפשרויות נוספות.</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-brand-500 mt-1">•</span> 
-                <span>בתפריט הצידי ניתן ללחוץ על <b>הדפסה (Export to PDF)</b> כדי לייצר קובץ מסודר של המסלול המלא.</span>
+                <span>ניתן לייצר קובץ מסודר של המסלול המלא (PDF/HTML/CSV) דרך תפריט <b>הגדרות</b> &lt; <b>ייצוא מסלול ונתונים</b>.</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-brand-500 mt-1">•</span> 
