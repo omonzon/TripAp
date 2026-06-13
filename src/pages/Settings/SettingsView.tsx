@@ -190,6 +190,7 @@ export default function SettingsView() {
         images: agentImage ? [agentImage] : [],
         status: 'pending',
         response: '',
+        version: APP_VERSION,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });

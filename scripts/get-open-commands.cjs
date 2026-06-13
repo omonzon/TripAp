@@ -23,7 +23,7 @@ async function run() {
     snapshot.forEach(doc => {
       const data = doc.data();
       if (data.status !== 'completed' && data.status !== 'error') {
-        commands.push({ id: doc.id, text: data.requestText, status: data.status, createdAt: data.createdAt?.toDate() });
+        commands.push({ id: doc.id, text: data.requestText, status: data.status, createdAt: data.createdAt?.toDate(), version: data.version || 'v1.0.0 (Pre-versioning)' });
       }
     });
 
