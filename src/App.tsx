@@ -236,14 +236,29 @@ export default function App() {
     }
 
     return (
-      <div className="min-h-screen flex flex-col">
-        <AppHeader showTabs={false} />
+      <div className="min-h-[100dvh] md:h-[100dvh] flex flex-col md:overflow-hidden">
+        <AppHeader showTabs={false} activeTab={activeTab} />
         <OfflineBanner />
-        <main className="max-w-2xl mx-auto px-4 py-8 w-full">
-          <Suspense fallback={<PageLoader />}>
-            <OnboardingView />
-          </Suspense>
-        </main>
+
+        <div className="flex flex-1 overflow-hidden">
+          <TabBar
+            tabs={TAB_DEFS}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            appUser={appUser}
+          />
+          <main
+            className="flex-1 overflow-y-auto px-4 py-6 md:px-6 pb-24 md:pb-6 relative"
+            dir={language === 'he' ? 'rtl' : 'ltr'}
+          >
+            <div className="max-w-2xl mx-auto w-full">
+              <Suspense fallback={<PageLoader />}>
+                <OnboardingView />
+              </Suspense>
+            </div>
+          </main>
+        </div>
+        <Toast />
       </div>
     );
   }
@@ -251,14 +266,29 @@ export default function App() {
   // Show Welcome Setup Screen for invited users who haven't completed it
   if (currentTripId && currentTripId !== 'new' && !aiSetupDismissed) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <AppHeader showTabs={false} />
+      <div className="min-h-[100dvh] md:h-[100dvh] flex flex-col md:overflow-hidden">
+        <AppHeader showTabs={false} activeTab={activeTab} />
         <OfflineBanner />
-        <main className="max-w-2xl mx-auto px-4 py-8 w-full">
-          <Suspense fallback={<PageLoader />}>
-            <WelcomeSetupScreen />
-          </Suspense>
-        </main>
+
+        <div className="flex flex-1 overflow-hidden">
+          <TabBar
+            tabs={TAB_DEFS}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            appUser={appUser}
+          />
+          <main
+            className="flex-1 overflow-y-auto px-4 py-6 md:px-6 pb-24 md:pb-6 relative"
+            dir={language === 'he' ? 'rtl' : 'ltr'}
+          >
+            <div className="max-w-2xl mx-auto w-full">
+              <Suspense fallback={<PageLoader />}>
+                <WelcomeSetupScreen />
+              </Suspense>
+            </div>
+          </main>
+        </div>
+        <Toast />
       </div>
     );
   }
