@@ -68,23 +68,8 @@ export function AuthScreen() {
         </p>
       </div>
 
-      {/* Feature grid */}
-      <div className="grid grid-cols-2 gap-3 mb-10 max-w-md w-full animate-slide-up relative z-10" dir="ltr">
-        {features.map((f, i) => (
-          <div
-            key={i}
-            className="glass rounded-2xl p-4 text-white hover:scale-105 transition-transform backdrop-blur-md bg-white/10 dark:bg-black/20 border border-white/20 shadow-lg"
-            dir={i18n.language === 'he' ? 'rtl' : 'ltr'}
-          >
-            <div className="text-3xl mb-2 drop-shadow-md">{f.icon}</div>
-            <h3 className="font-bold text-sm mb-1">{f.title}</h3>
-            <p className="text-xs text-slate-200 leading-snug">{f.desc}</p>
-          </div>
-        ))}
-      </div>
-
       {/* Sign in card */}
-      <div className="glass rounded-3xl p-8 max-w-sm w-full animate-slide-up text-center relative z-10 backdrop-blur-xl bg-white/10 dark:bg-black/30 border border-white/20 shadow-2xl">
+      <div className="glass rounded-3xl p-8 max-w-sm w-full animate-slide-up text-center relative z-10 backdrop-blur-xl bg-white/10 dark:bg-black/30 border border-white/20 shadow-2xl mb-10">
         <div className="flex flex-col items-center justify-center gap-1 mb-2 text-white">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-brand-300" />
@@ -122,6 +107,21 @@ export function AuthScreen() {
           )}
           {authLoading ? t('auth.signingIn') : t('auth.signIn')}
         </button>
+      </div>
+
+      {/* Feature grid */}
+      <div className="grid grid-cols-2 gap-3 max-w-md w-full animate-slide-up relative z-10" dir="ltr">
+        {features.map((f, i) => (
+          <div
+            key={i}
+            className="glass rounded-2xl p-4 text-white hover:scale-105 transition-transform backdrop-blur-md bg-white/10 dark:bg-black/20 border border-white/20 shadow-lg"
+            dir={i18n.language === 'he' ? 'rtl' : 'ltr'}
+          >
+            <div className="text-3xl mb-2 drop-shadow-md">{f.icon}</div>
+            <h3 className="font-bold text-sm mb-1">{f.title}</h3>
+            <p className="text-xs text-slate-200 leading-snug">{f.desc}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
