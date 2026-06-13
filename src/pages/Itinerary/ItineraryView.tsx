@@ -178,7 +178,7 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
 
   if (item.referrals && item.referrals.length > 0) {
     return (
-      <div className="flex flex-wrap gap-2 mt-2">
+      <div className="flex flex-col gap-1.5 mt-2 sm:mt-0 items-end">
         {customLinks}
         {item.referrals.map((ref, idx) => {
           let url = ref.url;
@@ -215,7 +215,7 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
 
   if (item.type === 'flight') {
     return (
-      <div className="flex flex-wrap gap-2 mt-2">
+      <div className="flex flex-col gap-1.5 mt-2 sm:mt-0 items-end">
         <a href={`https://www.google.com/travel/flights?q=${encodeURIComponent('Flights ' + shortSearchTerm)}%20on%20${isoDate}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors border border-sky-200 dark:border-sky-800">
           <Plane size={10} /> Google Flights
         </a>
@@ -225,7 +225,7 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
 
   // Accommodations (hotel, home)
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex flex-col gap-1.5 mt-2 sm:mt-0 items-end">
       {customLinks}
       <a href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(shortSearchTerm)}&checkin=${isoDate}&checkout=${nextIsoDate}&group_adults=${participantsCount}`} target="_blank" rel="noreferrer" onClick={handleClick} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-800">
         <Hotel size={10} /> Booking.com
