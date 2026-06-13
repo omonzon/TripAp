@@ -142,7 +142,7 @@ async function startDaemon() {
     // Process the task!
     console.log(`[Daemon] Processing task: ${task.id}`);
     try {
-      await updateDoc(task.ref, { status: 'running', updatedAt: new Date() });
+      await updateDoc(task.ref, { status: 'acknowledged', updatedAt: new Date() });
       pendingTasks.delete(task.id);
       
       // Print the magic string that wakes up the Agent!
