@@ -1284,20 +1284,6 @@ export default function SettingsView() {
             Send commands to the background AI Agent running in your local IDE.
           </p>
 
-          <div className="flex items-center gap-3 bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-100 dark:border-purple-800">
-            <label className="text-sm font-medium text-purple-700 dark:text-purple-300 flex-1">
-              Pause Listener if User Active (minutes):
-            </label>
-            <input 
-              type="number" 
-              value={agentListenInterval} 
-              onChange={e => setAgentListenInterval(parseInt(e.target.value) || 10)}
-              className="input-base w-20 text-center"
-            />
-            <button onClick={saveAgentListenInterval} className="btn-secondary whitespace-nowrap text-xs">
-              Save
-            </button>
-          </div>
 
           <div className="space-y-3 pt-3 border-t border-purple-100 dark:border-purple-800/50">
             <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">New Command</h4>

@@ -70,15 +70,15 @@ export function LeafletMap({ points, height = '400px', className = '' }: Leaflet
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        {points.map(point => {
+        {points.map((point, index) => {
           const color = DAY_COLORS[(point.dayIndex || 0) % DAY_COLORS.length];
           // We can use standard markers, but color styling needs a custom divIcon if we want to match exactly
           const customIcon = L.divIcon({
             className: 'custom-map-marker',
-            html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;"></div>`,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-            popupAnchor: [0, -12]
+            html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: bold;">${index + 1}</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+            popupAnchor: [0, -14]
           });
 
           return (
