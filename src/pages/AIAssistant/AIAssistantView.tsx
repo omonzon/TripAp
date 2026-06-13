@@ -219,8 +219,10 @@ Reply in the following language: ${language}`;
             try {
               await setDoc(doc(db, 'trips', currentTripId, 'tasks', taskId), {
                  id: taskId,
-                 title: taskDesc,
-                 status: 'pending',
+                 text: taskDesc,
+                 completed: false,
+                 category: 'general',
+                 priority: 'medium',
                  createdAt: Date.now()
               });
               showToast({ type: 'success', message: `Task auto-created: ${taskDesc}` });
