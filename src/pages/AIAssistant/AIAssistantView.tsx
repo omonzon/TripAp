@@ -211,7 +211,7 @@ Reply in the following language: ${language}`;
       const reply = await callAI(history, getProviderForTask('chat'), { systemInstruction, maxRetries: 1 });
       
       // Auto-extract and create tasks
-      const taskMatches = reply.match(/\[ADD_TASK:\s*({.+?})\]/gi);
+      const taskMatches = reply.match(/\[ADD_TASK:\s*(\{[\s\S]+?\})\]/gi);
       if (taskMatches && currentTripId && !targetSession.isPrivate) {
         for (const match of taskMatches) {
           try {

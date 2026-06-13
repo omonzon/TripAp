@@ -10,6 +10,7 @@ import { db } from '@/services/firebase';
 import { deleteAllUserTrips } from '@/services/tripService';
 import { useAuthStore, type AppUser } from '@/store/useAuthStore';
 import { useTripStore, useUserRole, type TripProfile, type Participant } from '@/store/useTripStore';
+import { APP_VERSION } from '@/config/version';
 
 interface OrphanedTrip {
   id: string;
@@ -720,7 +721,7 @@ export default function SettingsView() {
               user_id: emailjsConfig.publicKey,
               template_params: {
                 title: 'Bug Report',
-                message: `Bug Report from ${appUser.name} (${appUser.email}):\n\n${bugReport.trim()}\n\nTrip ID: ${currentTripId}\nUser Agent: ${navigator.userAgent}`,
+                message: `Bug Report from ${appUser.name} (${appUser.email}):\n\n${bugReport.trim()}\n\nVersion: ${APP_VERSION}\nTrip ID: ${currentTripId}\nUser Agent: ${navigator.userAgent}`,
                 to_email: 'omonzon@gmail.com'
               }
             })
@@ -744,9 +745,14 @@ export default function SettingsView() {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl mx-auto pb-8">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        <Settings size={22} className="text-brand-500" />
-        {t('settings.title')}
+      <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2">
+          <Settings size={22} className="text-brand-500" />
+          {t('settings.title')}
+        </span>
+        <span className="text-xs font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700">
+          v{APP_VERSION}
+        </span>
       </h2>
 
       {/* ── User Management (Admin only) ────────────────────────────────── */}

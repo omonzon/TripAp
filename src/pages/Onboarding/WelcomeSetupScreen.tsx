@@ -8,6 +8,7 @@ import { useTripStore } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, validateAIConnection, type AIProvider } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
+import { APP_VERSION } from '@/config/version';
 
 export default function WelcomeSetupScreen() {
   const { t } = useTranslation();
@@ -234,7 +235,8 @@ export default function WelcomeSetupScreen() {
 
   return (
     <div className="max-w-xl mx-auto py-12 px-4 animate-fade-in">
-      <div className="text-center mb-8">
+      <div className="text-center mb-8 relative">
+        <div className="absolute top-0 right-0 text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">v{APP_VERSION}</div>
         <img src="/logo.png" alt="TripAp Logo" className="w-20 h-20 mx-auto mb-4 object-contain drop-shadow-xl" />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">ברוכים הבאים לטיול! 👋</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2">רגע לפני שמתחילים, נשלים כמה פרטים קטנים.</p>
