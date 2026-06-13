@@ -67,7 +67,7 @@ async function generateHTML(tripId: string) {
     </head>
     <body>
       <div style="text-align: center; margin-bottom: 20px;">
-        <img src="https://trip-ap.vercel.app/logo.png" alt="TripAp" style="width: 80px; height: 80px; object-fit: contain;" />
+        <img src="https://ai-trip-ap.web.app/logo.png" alt="TripAp" style="width: 80px; height: 80px; object-fit: contain;" />
       </div>
       <h1>טיול: ${tripProfile.name}</h1>
       <p><strong>יעדים:</strong> ${(tripProfile.destinations || []).join(', ')}</p>
@@ -186,11 +186,11 @@ async function generateHTML(tripId: string) {
       </div>
 
       <div style="margin-top: 60px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 14px;">
-        <img src="https://trip-ap.vercel.app/logo.png" alt="TripAp Logo" style="width: 32px; height: 32px; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;" />
+        <img src="https://ai-trip-ap.web.app/logo.png" alt="TripAp Logo" style="width: 32px; height: 32px; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;" />
         <p style="margin: 0; font-weight: 500;">
           ${i18n.language === 'he' ? 'נוצר באהבה על ידי TripAp' : 'Created with love by TripAp'}
         </p>
-        <a href="https://trip-ap.vercel.app/" target="_blank" style="color: #2563eb; text-decoration: none; font-size: 13px;">https://trip-ap.vercel.app/</a>
+        <a href="https://ai-trip-ap.web.app/" target="_blank" style="color: #2563eb; text-decoration: none; font-size: 13px;">https://ai-trip-ap.web.app/</a>
       </div>
     </body>
     </html>

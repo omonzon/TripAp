@@ -333,7 +333,7 @@ Places visited: ${places}.
 Personal notes/journal: ${formattedJournal}.
 ${photosCtx}
 Include emojis, a warm tone, and mention our photos/videos. If image or album links are provided in the journal entries, you MUST integrate these specific links naturally into the post so that the images can be displayed.
-ALWAYS add the exact sentence at the very end (if in Hebrew): "גם אני נהנתי מהאפליקציה בטיול שלי, מוזמנים גם: https://trip-ap.vercel.app/". If in English: "I also enjoyed using the TravelPlatform app for my trip, try it out: https://trip-ap.vercel.app/"
+ALWAYS add the exact sentence at the very end (if in Hebrew): "גם אני נהנתי מהאפליקציה בטיול שלי, מוזמנים גם: https://ai-trip-ap.web.app/". If in English: "I also enjoyed using the TravelPlatform app for my trip, try it out: https://ai-trip-ap.web.app/"
 Reply strictly in ${language} using markdown formatting. DO NOT output code blocks, just raw formatted text.`;
 
       const system = `You are an expert social media copywriter. Use the context of the trip: ${getUnifiedContext()}`;
