@@ -1425,8 +1425,25 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
                       )}
                     </div>
                     {item.aiRecommendation && (
-                      <div className="w-full mt-[-10px] ms-11 mb-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative z-0">
-                        <Sparkles size={16} className="absolute top-4 right-4 text-brand-500 opacity-50" />
+                      <div className="mt-[-10px] ms-11 mb-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative z-0">
+                        <div className="absolute top-3 left-3 flex items-center gap-2">
+                          <Sparkles size={16} className="text-brand-500 opacity-50" />
+                          {canWrite && (
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!currentTripId) return;
+                                if (!confirm(t('app.confirmDelete', 'Are you sure?'))) return;
+                                const updated = day.items.map(i => i.id === item.id ? { ...i, aiRecommendation: null } : i);
+                                await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
+                              }}
+                              className="p-1 text-slate-400 hover:text-red-500 rounded bg-white/50 dark:bg-slate-800/50 transition-colors"
+                              title={t('app.delete', 'מחק את המלצת ה-AI')}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
                         <div className={expandedAIs[item.id] === true ? '' : 'line-clamp-2 overflow-hidden'}>
                           <MarkdownRenderer content={item.aiRecommendation} />
                         </div>
