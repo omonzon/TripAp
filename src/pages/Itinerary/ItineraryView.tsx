@@ -247,7 +247,7 @@ const SCAN_LOADING_PHRASES = [
 ];
 
 export default function ItineraryView() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { appUser } = useAuthStore();
   const { currentTripId, tripProfile, days, setDays, isOnline } = useTripStore();
   const { getProviderForTask } = useAIStore();
@@ -1114,6 +1114,16 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
           const weather = weatherMap[day.isoDate];
           const weatherMeta = weather ? getWeatherMeta(weather.code) : null;
           
+          let dayOfWeek = '';
+          if (day.isoDate) {
+            try {
+              const d = new Date(day.isoDate);
+              if (!isNaN(d.getTime())) {
+                dayOfWeek = new Intl.DateTimeFormat(i18n.language, { weekday: 'long' }).format(d);
+              }
+            } catch {}
+          }
+          
           return (
           <div
             key={day.id}
@@ -1130,6 +1140,11 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
                 )}
               </h3>
               <div className="flex items-center gap-2">
+                {dayOfWeek && (
+                  <span className="text-sm font-medium text-slate-500 dark:text-slate-400 me-1">
+                    {dayOfWeek}
+                  </span>
+                )}
                 {canWrite ? (
                   <input
                     type="date"
