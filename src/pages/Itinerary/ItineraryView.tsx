@@ -133,7 +133,7 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
           </button>
         )}
       </div>
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 text-[10px]">
+      <div className="flex flex-wrap gap-2 text-[10px]">
         {[
           { label: t('itinerary.flight.time'), val: item.flightData?.time ?? '--:--' },
           { label: t('itinerary.flight.arrivalTime', 'נחיתה'), val: `${item.flightData?.arrivalTime ?? '--:--'} ${item.flightData?.arrivalOffset ? `(${item.flightData.arrivalOffset})` : ''}` },
@@ -141,9 +141,9 @@ function FlightWidget({ item, dayDocId, days }: { item: ItineraryItem; dayDocId:
           { label: t('itinerary.flight.terminalGate'), val: document.documentElement.dir === 'rtl' ? `${item.flightData?.gate ?? '-'}${item.flightData?.terminal ? `/T${item.flightData.terminal}` : ''}` : `${item.flightData?.terminal ? `T${item.flightData.terminal}/` : ''}${item.flightData?.gate ?? '-'}` },
           { label: t('itinerary.flight.checkin'), val: item.flightData?.checkin ?? '-' },
         ].map(({ label, val, highlight }, i) => (
-          <div key={i} className="bg-white dark:bg-slate-800 p-1.5 rounded shadow-sm text-center">
-            <span className="block text-slate-400 mb-0.5">{label}</span>
-            <strong className={highlight && val.toLowerCase().includes('delay') ? 'text-red-500' : highlight ? 'text-green-500' : 'text-slate-800 dark:text-white'}>
+          <div key={i} className="flex-1 min-w-[70px] bg-white dark:bg-slate-800 p-1.5 rounded shadow-sm text-center">
+            <span className="block text-slate-400 mb-0.5 whitespace-nowrap">{label}</span>
+            <strong className={`block whitespace-nowrap ${highlight && val.toLowerCase().includes('delay') ? 'text-red-500' : highlight ? 'text-green-500' : 'text-slate-800 dark:text-white'}`}>
               {val}
             </strong>
           </div>

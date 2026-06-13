@@ -28,7 +28,7 @@ export function TabBar({ tabs, activeTab, onTabChange, appUser }: TabBarProps) {
     <>
       {/* Desktop sidebar */}
       <nav
-        className="hidden md:flex flex-col w-56 shrink-0 border-e border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-4 gap-1 px-2 overflow-y-auto"
+        className="hidden md:flex flex-col w-max min-w-[140px] shrink-0 border-e border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-4 gap-1 px-2 overflow-y-auto"
         aria-label="Main navigation"
       >
         {visibleTabs.map((tab) => {
