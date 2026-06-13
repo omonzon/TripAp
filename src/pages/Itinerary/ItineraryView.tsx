@@ -1487,26 +1487,28 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
                     </div>
                     {item.aiRecommendation && (
                       <div className="mt-[-10px] ms-11 mb-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative z-0">
-                        <div className="absolute top-3 end-3 flex items-center gap-2">
-                          <button onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 text-xs flex items-center gap-1 font-medium bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded w-max">
-                            {expandedAIs[item.id] === true ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
-                          </button>
+                        <div className="flex justify-between items-start mb-3">
                           <Sparkles size={16} className="text-brand-500 opacity-50" />
-                          {canWrite && (
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (!currentTripId) return;
-                                if (!confirm(t('app.confirmDelete', 'Are you sure?'))) return;
-                                const updated = day.items.map(i => i.id === item.id ? { ...i, aiRecommendation: null } : i);
-                                await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
-                              }}
-                              className="p-1 text-slate-400 hover:text-red-500 rounded bg-white/50 dark:bg-slate-800/50 transition-colors"
-                              title={t('app.delete', 'מחק את המלצת ה-AI')}
-                            >
-                              <Trash2 size={12} />
+                          <div className="flex items-center gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 text-xs flex items-center gap-1 font-medium bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded w-max">
+                              {expandedAIs[item.id] === true ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
                             </button>
-                          )}
+                            {canWrite && (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!currentTripId) return;
+                                  if (!confirm(t('app.confirmDelete', 'Are you sure?'))) return;
+                                  const updated = day.items.map(i => i.id === item.id ? { ...i, aiRecommendation: null } : i);
+                                  await updateDoc(doc(db, 'trips', currentTripId, 'itinerary', day.docId), { items: updated });
+                                }}
+                                className="p-1 text-slate-400 hover:text-red-500 rounded bg-white/50 dark:bg-slate-800/50 transition-colors"
+                                title={t('app.delete', 'מחק את המלצת ה-AI')}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className={expandedAIs[item.id] === true ? '' : 'line-clamp-2 overflow-hidden'}>
                           <MarkdownRenderer content={item.aiRecommendation} />
