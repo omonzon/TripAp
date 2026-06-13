@@ -1442,7 +1442,10 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
                     </div>
                     {item.aiRecommendation && (
                       <div className="mt-[-10px] ms-11 mb-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative z-0">
-                        <div className="absolute top-3 left-3 flex items-center gap-2">
+                        <div className="absolute top-3 end-3 flex items-center gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 text-xs flex items-center gap-1 font-medium bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded w-max">
+                            {expandedAIs[item.id] === true ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
+                          </button>
                           <Sparkles size={16} className="text-brand-500 opacity-50" />
                           {canWrite && (
                             <button
