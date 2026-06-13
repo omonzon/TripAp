@@ -6,6 +6,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
+    "site": "ai-trip-ap",
     "public": "dist",
     "ignore": [
       "firebase.json",
