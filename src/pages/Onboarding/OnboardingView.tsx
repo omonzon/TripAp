@@ -641,7 +641,7 @@ export default function OnboardingView() {
             appUser.email,
             setGenerationProgress
           );
-          setGeneratedTravelWarnings(warnings);
+          setGeneratedTravelWarnings(warnings || []);
 
         } catch (aiErr: any) {
           console.error("AI Generation failed:", aiErr);

@@ -12,7 +12,7 @@ import {
 import { useExpandedAI } from '@/hooks/useExpandedAI';
 import { db } from '@/services/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTripStore, useUserRole, type ItineraryDay, type ItineraryItem } from '@/store/useTripStore';
+import { useTripStore, useUserRole, type ItineraryDay, type ItineraryItem, type TripProfile } from '@/store/useTripStore';
 import { useAIStore } from '@/store/useAIStore';
 import { callAI, parseAIJson } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
