@@ -21,7 +21,7 @@ interface OrphanedTrip {
 }
 import { useAIStore, type TaskType } from '@/store/useAIStore';
 import { showToast } from '@/components/ui/Toast';
-import { exportTripToFile, createFullBackup } from '@/services/backupService';
+import { exportTripToFile, createFullBackup, restoreTripFromFile } from '@/services/backupService';
 import { syncUserSettingsToCloud } from '@/services/authService';
 import { exportTripToHTML, exportTripToPDF, exportTripToCSV } from '@/services/exportService';
 import { fetchGeminiModels } from '@/services/ai';
@@ -609,21 +609,7 @@ export default function SettingsView() {
     }
   };
 
-  const exportBackup = () => {
-    const data = {
-      tripProfile,
-      exportedAt: new Date().toISOString(),
-      version: '1.0',
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `travel-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast({ type: 'success', message: t('settings.backupExported') });
-  };
+
 
   const handleExportTrip = async () => {
     if (!currentTripId) return;
@@ -1411,26 +1397,24 @@ export default function SettingsView() {
             שחזר מגיבוי ענן (אוטומטי)
           </button>
           <div className="flex gap-3">
-            <button id="btn-export-backup" onClick={exportBackup} className="btn-secondary flex items-center gap-2 flex-1 justify-center">
+            <button id="btn-export-backup" onClick={handleExportTrip} disabled={!!exportingType} className="btn-secondary flex items-center gap-2 flex-1 justify-center">
               <Download size={16} /> {t('settings.exportBackup')}
             </button>
             <label className="btn-secondary flex items-center gap-2 flex-1 cursor-pointer justify-center">
             <Upload size={16} /> {t('settings.importBackup')}
-            <input type="file" accept=".json" className="hidden" onChange={e => {
+            <input type="file" accept=".json" className="hidden" onChange={async e => {
               const f = e.target.files?.[0];
-              if (!f) return;
-              const reader = new FileReader();
-              reader.onload = ev => {
-                try {
-                  const data = JSON.parse(ev.target?.result as string);
-                  showToast({ type: 'info', message: t('settings.backupLoaded', { date: data.exportedAt?.split('T')[0] ?? 'unknown date' }) });
-                } catch {
-                  showToast({ type: 'error', message: t('settings.backupError') });
-                }
-              };
-              reader.readAsText(f);
+              if (!f || !appUser) return;
+              try {
+                showToast({ type: 'info', message: t('settings.restoringBackup', 'משחזר גיבוי...') });
+                const newTripId = await restoreTripFromFile(f, appUser.email || '', appUser.name || 'User');
+                showToast({ type: 'success', message: t('settings.backupLoaded', 'הגיבוי שוחזר בהצלחה') });
+              } catch (err) {
+                console.error(err);
+                showToast({ type: 'error', message: t('settings.backupError') });
+              }
             }} />
-          </label>
+            </label>
           </div>
         </div>
         
