@@ -108,7 +108,7 @@ export default function MemoriesView() {
   }, [isGeneratingMap]);
 
   // Use generated map or fallback to destinations
-  const mapUrl = tripProfile?.generatedMapUrl || React.useMemo(() => {
+  const computedMapUrl = React.useMemo(() => {
     const dests = tripProfile?.destinations || [];
     if (dests.length === 0) return null;
     
@@ -129,6 +129,8 @@ export default function MemoriesView() {
     }
     return url;
   }, [tripProfile?.destinations]);
+
+  const mapUrl = tripProfile?.generatedMapUrl || computedMapUrl;
 
   const generateSmartMap = async () => {
     if (!currentTripId || !tripProfile) return;

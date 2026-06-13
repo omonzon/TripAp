@@ -46,7 +46,7 @@ export default function WelcomeSetupScreen() {
       if (tempProvider === 'gemini') {
         const models = await fetchGeminiModels(tempApiKey.trim());
         setAvailableModels(models);
-        let defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
+        const defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
         if (!selectedModel || !models.includes(selectedModel)) {
           setSelectedModel(defaultModel);
         }
@@ -77,7 +77,7 @@ export default function WelcomeSetupScreen() {
         }
       }
       
-      let modelToTest = selectedModel || (tempProvider === 'gemini' && availableModels.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : availableModels[0]) || 'gemini-1.5-flash';
+      const modelToTest = selectedModel || (tempProvider === 'gemini' && availableModels.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : availableModels[0]) || 'gemini-1.5-flash';
       let isConnectionValid = false;
 
       try {
@@ -87,7 +87,7 @@ export default function WelcomeSetupScreen() {
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
         if (tempProvider === 'gemini' && !modelToTest.includes('flash')) {
-          let fallbackModel = (availableModels.length > 0 && availableModels.includes('gemini-2.5-flash')) ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
+          const fallbackModel = (availableModels.length > 0 && availableModels.includes('gemini-2.5-flash')) ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
           
           if (fallbackModel) {
             setSelectedModel(fallbackModel);

@@ -97,7 +97,7 @@ IMPORTANT: Do NOT include the entire activity text in the search queries! Use co
     
     // Convert to ItineraryDay matching the store schema
     const generatedDays: ItineraryDay[] = [];
-    let currentIsoDate = new Date(profile.startDate);
+    const currentIsoDate = new Date(profile.startDate);
 
     for (let i = 0; i < parsed.days.length; i++) {
       const dayData = parsed.days[i];

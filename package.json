@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "test:auth": "playwright test tests/auth.setup.ts --headed",
     "agent:listen": "node scripts/agent_daemon.js",
-    "agent:complete": "node scripts/complete_agent_command.js"
+    "agent:complete": "node scripts/complete_agent_command.js",
+    "deploy:prod": "npm run typecheck && npm run lint && npm run build && firebase deploy"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",

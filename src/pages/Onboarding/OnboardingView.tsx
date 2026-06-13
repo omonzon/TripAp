@@ -220,7 +220,7 @@ export default function OnboardingView() {
         const models = await fetchGeminiModels(tempApiKey.trim());
         fetchedModels = models;
         setAvailableModels(models);
-        let defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
+        const defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
         if (!selectedModel || !models.includes(selectedModel)) {
           setSelectedModel(defaultModel);
         }
@@ -251,7 +251,7 @@ export default function OnboardingView() {
         }
       }
       
-      let modelToTest = selectedModel || (tempProvider === 'gemini' && availableModels.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : availableModels[0]) || 'gemini-1.5-flash';
+      const modelToTest = selectedModel || (tempProvider === 'gemini' && availableModels.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : availableModels[0]) || 'gemini-1.5-flash';
       let isConnectionValid = false;
 
       try {
@@ -261,7 +261,7 @@ export default function OnboardingView() {
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
         
         if (tempProvider === 'gemini' && !modelToTest.includes('flash')) {
-          let currentModels = fetchedModels.length > 0 ? fetchedModels : availableModels;
+          const currentModels = fetchedModels.length > 0 ? fetchedModels : availableModels;
           let fallbackModel = 'gemini-1.5-flash';
           if (currentModels.length > 0) {
             const flashModel = currentModels.find(m => m.includes('flash'));
@@ -307,7 +307,7 @@ export default function OnboardingView() {
     if (tempApiKey.trim() || tempProvider === 'ollama') {
       setIsValidating(true);
       let isConnectionValid = false;
-      let finalModel = selectedModel;
+      const finalModel = selectedModel;
       try {
         isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), finalModel);
         if (!isConnectionValid) {

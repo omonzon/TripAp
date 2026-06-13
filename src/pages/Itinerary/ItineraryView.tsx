@@ -161,10 +161,10 @@ function ServiceLinks({ item, isoDate, participantsCount, tripName, isLastDay, c
 
   const cleanText = encodeURIComponent(item.text.replace(/<[^>]*>?/gm, '').trim() || tripName);
 
-  let customLinks: React.ReactNode[] = [];
+  const customLinks: React.ReactNode[] = [];
   if (item.type === 'food') {
     const cleanHtmlText = item.text.replace(/<[^>]*>?/gm, '').trim();
-    let foodSearchText = cleanHtmlText.includes(':') 
+    const foodSearchText = cleanHtmlText.includes(':') 
       ? cleanHtmlText.split(':').pop()?.trim() 
       : cleanHtmlText.split(/[.\-]/).pop()?.trim() || cleanHtmlText;
       
