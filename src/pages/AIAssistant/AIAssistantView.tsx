@@ -104,7 +104,7 @@ export default function AIAssistantView() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, isTyping]);
+  }, [messages.length, isLoading]);
 
   const handleNewChat = async (isPrivate: boolean) => {
     if (!currentTripId) return;

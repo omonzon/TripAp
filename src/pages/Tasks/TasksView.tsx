@@ -592,17 +592,17 @@ Return ONLY valid JSON in this exact schema:
                     {task.aiRecommendation && (
                       <div className="ms-10 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative">
                         <Sparkles size={16} className="absolute top-4 right-4 text-brand-500 opacity-50" />
-                        <div className={expandedAIs[task.id] !== false ? '' : 'line-clamp-2 overflow-hidden'}>
+                        <div className={expandedAIs[task.id] === true ? '' : 'line-clamp-2 overflow-hidden'}>
                           <MarkdownRenderer content={task.aiRecommendation} />
                         </div>
-                        {getProviderForTask('chat')?.model?.includes('flash') && expandedAIs[task.id] !== false && (
+                        {getProviderForTask('chat')?.model?.includes('flash') && expandedAIs[task.id] === true && (
                           <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex gap-2 items-start">
                             <span>⚠️</span>
                             <span>{t('tasks.freeModelWarning', 'הערה: ה-AI החינמי עשוי להיות מוגבל בחיפוש חי ברשת ומתבסס על ידע נרחב קיים.')}</span>
                           </div>
                         )}
                         <button onClick={() => toggleExpand(task.id)} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 mt-2 text-xs flex items-center gap-1 font-medium bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded w-max">
-                          {expandedAIs[task.id] !== false ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
+                          {expandedAIs[task.id] === true ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
                         </button>
                       </div>
                     )}

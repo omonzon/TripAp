@@ -87,6 +87,11 @@ export function initFirebaseAuth() {
       const tripsResults = await Promise.all(tripsPromises);
       const availableTrips = tripsResults.filter(t => t !== null) as {id: string, name: string, destinations: string[]}[];
       useTripStore.getState().setAvailableTrips(availableTrips);
+
+      const currentTripId = useTripStore.getState().currentTripId;
+      if ((!currentTripId || currentTripId === 'new') && availableTrips.length > 0) {
+        useTripStore.getState().setCurrentTrip(availableTrips[0].id);
+      }
     });
 
     const profileRef = doc(db, 'users', firebaseUser.email!, 'settings', 'app');

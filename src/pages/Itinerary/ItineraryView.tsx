@@ -1427,17 +1427,17 @@ ${JSON.stringify(itemsToGeocode, null, 2)}`;
                     {item.aiRecommendation && (
                       <div className="w-full mt-[-10px] ms-11 mb-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800/50 rounded-xl animate-fade-in relative z-0">
                         <Sparkles size={16} className="absolute top-4 right-4 text-brand-500 opacity-50" />
-                        <div className={expandedAIs[item.id] !== false ? '' : 'line-clamp-2 overflow-hidden'}>
+                        <div className={expandedAIs[item.id] === true ? '' : 'line-clamp-2 overflow-hidden'}>
                           <MarkdownRenderer content={item.aiRecommendation} />
                         </div>
-                        {getProviderForTask('chat')?.model?.includes('flash') && expandedAIs[item.id] !== false && (
+                        {getProviderForTask('chat')?.model?.includes('flash') && expandedAIs[item.id] === true && (
                           <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex gap-2 items-start">
                             <span>⚠️</span>
                             <span>{t('tasks.freeModelWarning', 'הערה: ה-AI החינמי עשוי להיות מוגבל בחיפוש חי ברשת ומתבסס על ידע נרחב קיים.')}</span>
                           </div>
                         )}
                         <button onClick={() => toggleExpand(item.id)} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 mt-2 text-xs flex items-center gap-1 font-medium bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded w-max">
-                          {expandedAIs[item.id] !== false ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
+                          {expandedAIs[item.id] === true ? <><ChevronUp size={12}/> {t('app.collapse', 'כווץ')}</> : <><ChevronDown size={12}/> {t('app.expand', 'הרחב')}</>}
                         </button>
                       </div>
                     )}
