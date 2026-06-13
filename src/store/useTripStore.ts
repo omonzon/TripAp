@@ -76,6 +76,8 @@ export interface FlightData {
   gate?: string;
   checkin?: string;
   time?: string;
+  arrivalTime?: string;
+  arrivalOffset?: string;
 }
 
 export type OfflineMutation = {
