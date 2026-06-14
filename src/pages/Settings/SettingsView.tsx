@@ -440,11 +440,12 @@ export default function SettingsView() {
     return () => unsub();
   }, [currentTripId, appUser]);
 
-  const saveAISettings = async () => {
-    if (providerType === 'gemini' && localKey.trim()) {
+  const saveAISettings = async (keyParam?: string | React.MouseEvent) => {
+    const keyToSave = typeof keyParam === 'string' ? keyParam : localKey;
+    if (providerType === 'gemini' && keyToSave.trim()) {
       setIsValidating(true);
       try {
-        const fetchedModels = await fetchGeminiModels(localKey.trim());
+        const fetchedModels = await fetchGeminiModels(keyToSave.trim());
         if (fetchedModels.length > 0) {
           setAvailableGeminiModels(fetchedModels);
           // If current models are not in the fetched list, fallback
@@ -463,7 +464,7 @@ export default function SettingsView() {
       }
       setIsValidating(false);
     }
-    setApiKey(localKey.trim());
+    setApiKey(keyToSave.trim());
     if (providerType === 'ollama') {
       setLocalConfig(localUrlInput, localModelInput);
     }
@@ -917,7 +918,10 @@ export default function SettingsView() {
                 onClick={async () => {
                   try {
                     const text = await navigator.clipboard.readText();
-                    if (text) setLocalKey(text);
+                    if (text) {
+                      setLocalKey(text);
+                      saveAISettings(text);
+                    }
                   } catch (e) {
                     console.error('Failed to read clipboard', e);
                     showToast({ type: 'error', message: 'לא הצלחנו לגשת ללוח. נסה להדביק ידנית.' });

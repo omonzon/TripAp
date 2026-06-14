@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Globe, Sparkles, Shield, Moon, Sun, Languages, Type } from 'lucide-react';
 import { signInWithGoogle, signInWithTestAccount } from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
+import LanguageDropdown from '@/components/LanguageDropdown';
 
 export function AuthScreen() {
   const { t, i18n } = useTranslation();
@@ -21,14 +22,8 @@ export function AuthScreen() {
       <div className="absolute inset-0 bg-slate-900/50 dark:bg-slate-950/70 backdrop-blur-[2px]" />
 
       {/* Top right controls */}
-      <div className="absolute top-4 right-4 flex gap-2 z-20" dir="ltr">
-        <button
-          onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
-          className="btn-ghost text-white hover:bg-white/20 p-2"
-          title={language === 'he' ? 'English' : 'עברית'}
-        >
-          <Languages size={18} />
-        </button>
+      <div className="absolute top-4 right-4 flex gap-2 z-20 items-center" dir="ltr">
+        <LanguageDropdown />
         <button
           onClick={() => setFontSize(fontSize === 'small' ? 'medium' : fontSize === 'medium' ? 'large' : 'small')}
           className="btn-ghost text-white hover:bg-white/20 p-2"

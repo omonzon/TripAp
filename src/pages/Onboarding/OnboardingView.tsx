@@ -16,6 +16,7 @@ import { restoreTripFromFile } from '@/services/backupService';
 import { UploadCloud } from 'lucide-react';
 import { compressImageToBase64 } from '@/utils/imageCompressor';
 import TermsOfServiceModal from '@/components/TermsOfServiceModal';
+import LanguageDropdown from '@/components/LanguageDropdown';
 
 const STEPS = 6;
 
@@ -209,15 +210,16 @@ export default function OnboardingView() {
     setStep(1);
   };
 
-  const handleValidateKey = async () => {
-    if (!tempApiKey.trim() && tempProvider !== 'ollama') return;
+  const handleValidateKey = async (keyParam?: string | React.MouseEvent) => {
+    const keyToUse = typeof keyParam === 'string' ? keyParam : tempApiKey;
+    if (!keyToUse.trim() && tempProvider !== 'ollama') return;
     setIsValidating(true);
     setKeyError(null);
     setKeySuccess(false);
     try {
       let fetchedModels: string[] = [];
       if (tempProvider === 'gemini') {
-        const models = await fetchGeminiModels(tempApiKey.trim());
+        const models = await fetchGeminiModels(keyToUse.trim());
         fetchedModels = models;
         setAvailableModels(models);
         const defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
@@ -227,7 +229,7 @@ export default function OnboardingView() {
       } else if (tempProvider === 'openai') {
         let models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
         try {
-          const dynamicModels = await fetchOpenAIModels(tempApiKey.trim());
+          const dynamicModels = await fetchOpenAIModels(keyToUse.trim());
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch OpenAI models, using fallback", e); }
         setAvailableModels(models);
@@ -237,7 +239,7 @@ export default function OnboardingView() {
       } else if (tempProvider === 'anthropic') {
         let models = ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'];
         try {
-          const dynamicModels = await fetchAnthropicModels(tempApiKey.trim());
+          const dynamicModels = await fetchAnthropicModels(keyToUse.trim());
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch Anthropic models, using fallback", e); }
         setAvailableModels(models);
@@ -255,7 +257,7 @@ export default function OnboardingView() {
       let isConnectionValid = false;
 
       try {
-        isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+        isConnectionValid = await validateAIConnection(tempProvider, keyToUse.trim(), modelToTest);
       } catch (err: any) {
         const errMsg = err?.message || String(err);
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
@@ -814,17 +816,18 @@ export default function OnboardingView() {
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in relative pt-12">
-      {/* Top Bar with Cancel Setup */}
-      {tempTripId && (
-        <div className="absolute top-0 right-0 z-50">
+      {/* Top Bar with Cancel Setup and Language Dropdown */}
+      <div className="absolute top-0 right-0 left-0 z-50 flex justify-between items-center px-2">
+        <LanguageDropdown />
+        {tempTripId && (
           <button
             onClick={handleCancel}
-            className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-sm font-bold shadow-sm flex items-center gap-2"
+            className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-sm font-bold shadow-sm flex items-center gap-2 ml-auto"
           >
             {t('common.cancel', 'ביטול יצירת טיול')}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="text-center mb-8">
         <img src="/logo.png" alt="TripAp Logo" className="w-20 h-20 mx-auto mb-4 object-contain drop-shadow-xl" />
@@ -844,7 +847,7 @@ export default function OnboardingView() {
           <div className="space-y-6 animate-fade-in">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 flex justify-center items-center gap-2">
-                ברוכים הבאים ל-TripAp! <img src="/logo.png" className="w-6 h-6 object-contain" alt="TripAp" />
+                {t('onboarding.welcomeTripAp')} <img src="/logo.png" className="w-6 h-6 object-contain" alt="TripAp" />
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
                 {t('onboarding.aiSetupDesc')}
@@ -876,42 +879,42 @@ export default function OnboardingView() {
               <div className="card p-5 bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950/30 dark:to-indigo-950/30 border border-brand-100 dark:border-brand-800/50">
                 <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                   <Sparkles className="text-brand-500 w-5 h-5" />
-                  איך משיגים מפתח תוך דקה?
+                  {t('onboarding.howToGetKey')}
                 </h3>
                 
                 <div className="space-y-4">
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      היכנסו לאתר <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline font-semibold">Google AI Studio</a> (התחברו עם חשבון גוגל). ודאו שיש לכם פרויקט ב-Google Cloud (אם אין, צרו אחד).
+                      {t('onboarding.step1Part1')} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline font-semibold">Google AI Studio</a> {t('onboarding.step1Part2')}
                     </p>
                   </div>
                   
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      אם יש לכם מפתח בטבלה, לחצו על כפתור ההעתקה (<Copy size={14} className="inline text-brand-600 dark:text-brand-400 mb-0.5" />).
+                      {t('onboarding.step2Text')} (<Copy size={14} className="inline text-brand-600 dark:text-brand-400 mb-0.5" />).
                     </p>
                   </div>
 
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      אם אין לכם, לחצו על הכפתור הכחול <span className="font-semibold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">Create API key</span> (ימין למעלה), אשרו "Create key", ובחרו "Copy key".
+                      {t('onboarding.step3Part1')} <span className="font-semibold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">Create API key</span> {t('onboarding.step3Part2')}
                     </p>
                   </div>
 
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">4</div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      חזרו לכאן והדביקו (Ctrl+V) בשורה למטה (מפתח API).
+                      {t('onboarding.step4Text')}
                     </p>
                   </div>
 
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">5</div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      לחצו על "אמת מפתח" למטה. <span className="text-xs text-brand-600 dark:text-brand-400 font-medium block mt-1">אם יש לכם מפתח ללא אמצעי תשלום, המערכת תבחר במודל חינמי. לקבלת תוצאות חכמות יותר, תמיד עדיף להשתמש במודל מתקדם עם תשלום סמלי.</span>
+                      {t('onboarding.step5Text')} <span className="text-xs text-brand-600 dark:text-brand-400 font-medium block mt-1">{t('onboarding.step5Note')}</span>
                     </p>
                   </div>
                 </div>
@@ -931,23 +934,57 @@ export default function OnboardingView() {
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   {t('onboarding.geminiApiKey')}
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Key size={16} className="text-slate-400" />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Key size={16} className="text-slate-400" />
+                    </div>
+                    <input 
+                      type="password" 
+                      className="input-base pl-10 text-left w-full" 
+                      value={tempApiKey} 
+                      onChange={(e) => {
+                        setTempApiKey(e.target.value);
+                        setKeyError(null);
+                        setKeySuccess(false);
+                        setAvailableModels([]);
+                      }} 
+                      placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'} 
+                      dir="ltr"
+                    />
+                    {tempApiKey.trim() && !keySuccess && !isValidating && (
+                      <button 
+                        onClick={handleValidateKey}
+                        className="absolute inset-y-1.5 right-1.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-md transition-colors"
+                      >
+                        {t('onboarding.validateKey', 'אמת מפתח')}
+                      </button>
+                    )}
+                    {isValidating && (
+                      <div className="absolute inset-y-0 right-3 flex items-center">
+                        <Loader2 size={16} className="animate-spin text-brand-500" />
+                      </div>
+                    )}
                   </div>
-                  <input 
-                    type="password" 
-                    className="input-base pl-10 text-left" 
-                    value={tempApiKey} 
-                    onChange={(e) => {
-                      setTempApiKey(e.target.value);
-                      setKeyError(null);
-                      setKeySuccess(false);
-                      setAvailableModels([]);
-                    }} 
-                    placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'} 
-                    dir="ltr"
-                  />
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                          setTempApiKey(text);
+                          setKeyError(null);
+                          setKeySuccess(false);
+                          setAvailableModels([]);
+                          handleValidateKey(text);
+                        }
+                      } catch (err) {
+                        showToast({ type: 'error', message: 'לא ניתן לגשת ללוח ההעתקות. נסה להדביק ידנית.' });
+                      }
+                    }}
+                    className="btn-secondary whitespace-nowrap text-xs h-[42px] px-3 flex-shrink-0"
+                  >
+                    הדבק
+                  </button>
                 </div>
                 <p className="text-xs text-slate-500 mt-2 flex items-start gap-1">
                   <Info size={14} className="shrink-0 mt-0.5" />
@@ -966,7 +1003,7 @@ export default function OnboardingView() {
               {keySuccess && (
                 <p className="text-xs text-green-500 mt-2 flex items-center gap-1 animate-fade-in">
                   <CheckCircle2 size={12} />
-                  המפתח אומת בהצלחה!
+                  {t('onboarding.keySuccess')}
                 </p>
               )}
             </div>
@@ -980,7 +1017,7 @@ export default function OnboardingView() {
                   className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-all cursor-pointer"
                 />
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
-                  דלג על AI כרגע (יצירת טיול ריק בלבד, ניתן להוסיף מפתח מאוחר יותר)
+                  {t('onboarding.skipAI')}
                 </span>
               </label>
             </div>
@@ -991,7 +1028,7 @@ export default function OnboardingView() {
                   {t('onboarding.selectModel', 'Select AI Model')}
                 </label>
                 <p className="text-xs text-brand-600 dark:text-brand-400 font-medium mb-2">
-                  ✨ שימוש במודלים מתקדמים (כמו מודל ה-Pro) יניב תוצאות טובות בהרבה בתכנון המסלול, אך לרוב דורש הגדרת אמצעי תשלום (Billing) בחשבון גוגל.
+                  ✨ {t('onboarding.advancedModelNote')}
                 </p>
                 <select className="input-base" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
                   {availableModels.length > 0 ? availableModels.map(m => <option key={m} value={m}>{m}</option>) : (

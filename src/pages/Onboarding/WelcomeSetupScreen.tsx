@@ -9,6 +9,7 @@ import { useAIStore } from '@/store/useAIStore';
 import { fetchGeminiModels, fetchOpenAIModels, fetchAnthropicModels, validateAIConnection, type AIProvider } from '@/services/ai';
 import { showToast } from '@/components/ui/Toast';
 import { APP_VERSION } from '@/config/version';
+import LanguageDropdown from '@/components/LanguageDropdown';
 
 export default function WelcomeSetupScreen() {
   const { t } = useTranslation();
@@ -37,14 +38,15 @@ export default function WelcomeSetupScreen() {
     fallbackModel: string;
   } | null>(null);
 
-  const handleValidateKey = async () => {
-    if (!tempApiKey.trim() && tempProvider !== 'ollama') return;
+  const handleValidateKey = async (keyParam?: string | React.MouseEvent) => {
+    const keyToUse = typeof keyParam === 'string' ? keyParam : tempApiKey;
+    if (!keyToUse.trim() && tempProvider !== 'ollama') return;
     setIsValidating(true);
     setKeyError(null);
     setKeySuccess(false);
     try {
       if (tempProvider === 'gemini') {
-        const models = await fetchGeminiModels(tempApiKey.trim());
+        const models = await fetchGeminiModels(keyToUse.trim());
         setAvailableModels(models);
         const defaultModel = models.includes('gemini-2.5-pro') ? 'gemini-2.5-pro' : models[0];
         if (!selectedModel || !models.includes(selectedModel)) {
@@ -53,7 +55,7 @@ export default function WelcomeSetupScreen() {
       } else if (tempProvider === 'openai') {
         let models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
         try {
-          const dynamicModels = await fetchOpenAIModels(tempApiKey.trim());
+          const dynamicModels = await fetchOpenAIModels(keyToUse.trim());
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch OpenAI models, using fallback", e); }
         setAvailableModels(models);
@@ -63,7 +65,7 @@ export default function WelcomeSetupScreen() {
       } else if (tempProvider === 'anthropic') {
         let models = ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'];
         try {
-          const dynamicModels = await fetchAnthropicModels(tempApiKey.trim());
+          const dynamicModels = await fetchAnthropicModels(keyToUse.trim());
           if (dynamicModels.length > 0) models = dynamicModels;
         } catch(e) { console.warn("Failed to fetch Anthropic models, using fallback", e); }
         setAvailableModels(models);
@@ -81,7 +83,7 @@ export default function WelcomeSetupScreen() {
       let isConnectionValid = false;
 
       try {
-        isConnectionValid = await validateAIConnection(tempProvider, tempApiKey.trim(), modelToTest);
+        isConnectionValid = await validateAIConnection(tempProvider, keyToUse.trim(), modelToTest);
       } catch (err: any) {
         const errMsg = err?.message || String(err);
         const isQuotaError = errMsg.includes('GeminiOverloadError') || errMsg.includes('429') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('RESOURCE_EXHAUSTED');
@@ -234,12 +236,15 @@ export default function WelcomeSetupScreen() {
   };
 
   return (
-    <div className="max-w-xl mx-auto py-12 px-4 animate-fade-in">
+    <div className="max-w-xl mx-auto py-12 px-4 animate-fade-in relative">
+      <div className="absolute top-4 right-4 flex items-center gap-4 z-50">
+        <LanguageDropdown />
+        <div className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">v{APP_VERSION}</div>
+      </div>
       <div className="text-center mb-8 relative">
-        <div className="absolute top-0 right-0 text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">v{APP_VERSION}</div>
         <img src="/logo.png" alt="TripAp Logo" className="w-20 h-20 mx-auto mb-4 object-contain drop-shadow-xl" />
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">ברוכים הבאים לטיול! 👋</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2">רגע לפני שמתחילים, נשלים כמה פרטים קטנים.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('onboarding.welcomeTripTitle')}</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-2">{t('onboarding.welcomeTripSubtitle')}</p>
       </div>
 
       <div className="card p-6 md:p-8">
@@ -247,7 +252,7 @@ export default function WelcomeSetupScreen() {
           <div className="space-y-6 animate-fade-in">
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                איך תרצו שנקרא לכם?
+                {t('onboarding.howToCallYou')}
               </label>
               <input
                 type="text"
@@ -262,7 +267,7 @@ export default function WelcomeSetupScreen() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                  גיל (אופציונלי)
+                  {t('onboarding.yourAge')}
                 </label>
                 <input
                   type="number"
@@ -276,7 +281,7 @@ export default function WelcomeSetupScreen() {
 
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                  העדפות אישיות (אופציונלי)
+                  {t('onboarding.personalPrefs')}
                 </label>
                 <input
                   type="text"
@@ -291,7 +296,7 @@ export default function WelcomeSetupScreen() {
             
             <p className="text-xs text-slate-500 mt-1 flex items-start gap-1">
               <Info size={14} className="shrink-0 mt-0.5" />
-              הפרטים האישיים יתווספו להעדפות הטיול הכלליות כך שה-AI יוכל להתחשב בהם בתכנון (העדפות מזון, נגישות וכדומה).
+              {t('onboarding.personalPrefsHelp')}
             </p>
 
             <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 rounded-xl p-4 mt-6">
@@ -300,10 +305,9 @@ export default function WelcomeSetupScreen() {
                   <ShieldCheck size={20} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-1">המידע שלך מאובטח</h4>
+                  <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-1">{t('onboarding.secureInfoTitle')}</h4>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
-                    התקשורת מהמכשיר שלך לענן הטיולים מוצפנת לחלוטין (Encrypted in Transit - HTTPS/WSS). 
-                    המידע נשמר על גבי השרתים המאובטחים של Google Firebase תחת הרשאות חסיגות כך שרק אתה (או מי שהזמנת) תוכלו לקרוא ולערוך את פרטי הטיול.
+                    {t('onboarding.secureInfoDesc')}
                   </p>
                 </div>
               </div>
@@ -315,7 +319,7 @@ export default function WelcomeSetupScreen() {
               disabled={isSaving || !name.trim()}
             >
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-              המשך
+              {t('app.next')}
             </button>
           </div>
         )}
@@ -338,7 +342,7 @@ export default function WelcomeSetupScreen() {
 
             <div className="mb-4">
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                ספק AI
+                {t('settings.aiProvider')}
               </label>
               <select 
                 className="input-base cursor-pointer"
@@ -360,7 +364,7 @@ export default function WelcomeSetupScreen() {
             {tempProvider !== 'ollama' && (
               <div className="mb-4">
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                  מפתח API
+                  {t('onboarding.geminiApiKey')}
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
@@ -385,7 +389,7 @@ export default function WelcomeSetupScreen() {
                         onClick={handleValidateKey}
                         className="absolute inset-y-1.5 right-1.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-md transition-colors"
                       >
-                        אמת מפתח
+                        {t('onboarding.validateKey')}
                       </button>
                     )}
                     {isValidating && (
@@ -403,6 +407,7 @@ export default function WelcomeSetupScreen() {
                           setKeyError(null);
                           setKeySuccess(false);
                           setAvailableModels([]);
+                          handleValidateKey(text);
                         }
                       } catch (err) {
                         showToast({ type: 'error', message: 'לא ניתן לגשת ללוח ההעתקות. נסה להדביק ידנית.' });
@@ -436,7 +441,7 @@ export default function WelcomeSetupScreen() {
               {keySuccess && (
                 <p className="text-xs text-green-500 mt-2 flex items-center gap-1 animate-fade-in">
                   <Sparkles size={12} />
-                  המפתח אומת בהצלחה!
+                  {t('onboarding.keySuccess')}
                 </p>
               )}
             </div>
@@ -444,10 +449,10 @@ export default function WelcomeSetupScreen() {
             {availableModels.length > 0 && (
               <div className="mt-4 animate-fade-in">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                  בחר מודל
+                  {t('onboarding.selectModel', 'Select Model')}
                 </label>
                 <p className="text-xs text-brand-600 dark:text-brand-400 font-medium mb-2">
-                  ✨ שימוש במודלים מתקדמים (כמו מודל ה-Pro) יניב תוצאות טובות בהרבה בתכנון המסלול, אך לרוב דורש הגדרת אמצעי תשלום (Billing) בחשבון גוגל.
+                  ✨ {t('onboarding.advancedModelNote')}
                 </p>
                 <select className="input-base" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
                   {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
