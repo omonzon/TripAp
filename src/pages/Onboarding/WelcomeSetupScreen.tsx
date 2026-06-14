@@ -23,8 +23,8 @@ export default function WelcomeSetupScreen() {
   const [name, setName] = useState(appUser?.name || '');
   const [age, setAge] = useState('');
   const [personalPreferences, setPersonalPreferences] = useState('');
-  const [tempProvider, setTempProvider] = useState<AIProvider['type']>(providerType || 'gemini');
-  const [tempApiKey, setTempApiKey] = useState('');
+  const [tempProvider, setTempProvider] = useState<AIProvider['type']>(useAIStore.getState().providerType || 'gemini');
+  const [tempApiKey, setTempApiKey] = useState(useAIStore.getState().apiKey || '');
   const [isValidating, setIsValidating] = useState(false);
   const [keyError, setKeyError] = useState<string | null>(null);
   const [keySuccess, setKeySuccess] = useState(false);
@@ -362,36 +362,56 @@ export default function WelcomeSetupScreen() {
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   מפתח API
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Key size={16} className="text-slate-400" />
-                  </div>
-                  <input 
-                    type="password" 
-                    className="input-base pl-10 text-left" 
-                    value={tempApiKey} 
-                    onChange={(e) => {
-                      setTempApiKey(e.target.value);
-                      setKeyError(null);
-                      setKeySuccess(false);
-                      setAvailableModels([]);
-                    }} 
-                    placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'} 
-                    dir="ltr"
-                  />
-                  {tempApiKey.trim() && !keySuccess && !isValidating && (
-                    <button 
-                      onClick={handleValidateKey}
-                      className="absolute inset-y-1.5 right-1.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-md transition-colors"
-                    >
-                      אמת מפתח
-                    </button>
-                  )}
-                  {isValidating && (
-                    <div className="absolute inset-y-0 right-3 flex items-center">
-                      <Loader2 size={16} className="animate-spin text-brand-500" />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Key size={16} className="text-slate-400" />
                     </div>
-                  )}
+                    <input 
+                      type="password" 
+                      className="input-base pl-10 text-left w-full" 
+                      value={tempApiKey} 
+                      onChange={(e) => {
+                        setTempApiKey(e.target.value);
+                        setKeyError(null);
+                        setKeySuccess(false);
+                        setAvailableModels([]);
+                      }} 
+                      placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'} 
+                      dir="ltr"
+                    />
+                    {tempApiKey.trim() && !keySuccess && !isValidating && (
+                      <button 
+                        onClick={handleValidateKey}
+                        className="absolute inset-y-1.5 right-1.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-md transition-colors"
+                      >
+                        אמת מפתח
+                      </button>
+                    )}
+                    {isValidating && (
+                      <div className="absolute inset-y-0 right-3 flex items-center">
+                        <Loader2 size={16} className="animate-spin text-brand-500" />
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                          setTempApiKey(text);
+                          setKeyError(null);
+                          setKeySuccess(false);
+                          setAvailableModels([]);
+                        }
+                      } catch (err) {
+                        showToast({ type: 'error', message: 'לא ניתן לגשת ללוח ההעתקות. נסה להדביק ידנית.' });
+                      }
+                    }}
+                    className="btn-secondary whitespace-nowrap text-xs h-[42px] px-3 flex-shrink-0"
+                  >
+                    הדבק
+                  </button>
                 </div>
                 
                 {tempProvider === 'gemini' && (

@@ -16,7 +16,7 @@ const LANGUAGE_PAIRS = [
   { from: 'auto', to: 'is', label: '→ Íslenska' },
   { from: 'auto', to: 'fr', label: '→ Français' },
   { from: 'auto', to: 'de', label: '→ Deutsch' },
-  { from: 'auto', to: 'nl', label: '→ Nederlands' },
+  { from: 'auto', to: 'ru', label: '→ Русский' },
 ];
 
 interface MenuAnalysis {

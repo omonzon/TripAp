@@ -43,7 +43,7 @@ const LANGUAGES = [
   { code: 'fr', label: 'Français 🇫🇷' },
   { code: 'de', label: 'Deutsch 🇩🇪' },
   { code: 'es', label: 'Español 🇪🇸' },
-  { code: 'nl', label: 'Nederlands 🇳🇱' },
+  { code: 'ru', label: 'Русский 🇷🇺' },
 ] as const;
 
 const TASK_LABELS: Record<TaskType, string> = {

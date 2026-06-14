@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { runDailyReport } from './generate_daily_report.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,6 +91,18 @@ async function startDaemon() {
       await processTask({ id, ref: docRef, data: () => data });
     }
   }, 60 * 1000); // check every minute
+
+  // Daily report scheduling (runs every day at 8:XX AM)
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getHours() === 8) {
+      try {
+        await runDailyReport(auth, db);
+      } catch(e) {
+        console.error("Daily report failed", e);
+      }
+    }
+  }, 60 * 1000);
 
   console.log("[Daemon] Listening for pending commands...");
   onSnapshot(commandsRef, (snapshot) => {
