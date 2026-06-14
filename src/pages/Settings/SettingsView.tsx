@@ -913,7 +913,23 @@ export default function SettingsView() {
                 className="flex-1 py-2.5 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none font-mono disabled:opacity-50"
                 disabled={!isOnline}
               />
-              <button onClick={() => setShowKey(s => !s)} className="text-slate-400 hover:text-slate-600 p-1">
+              <button 
+                onClick={async () => {
+                  try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) setLocalKey(text);
+                  } catch (e) {
+                    console.error('Failed to read clipboard', e);
+                    showToast({ type: 'error', message: 'לא הצלחנו לגשת ללוח. נסה להדביק ידנית.' });
+                  }
+                }}
+                className="text-xs text-brand-600 dark:text-brand-400 font-medium whitespace-nowrap hover:text-brand-700 transition-colors px-2 border-s border-slate-200 dark:border-slate-600 ms-1"
+                dir="rtl"
+                title="הדבק מהלוח"
+              >
+                הדבק
+              </button>
+              <button onClick={() => setShowKey(s => !s)} className="text-slate-400 hover:text-slate-600 p-1 shrink-0">
                 {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
